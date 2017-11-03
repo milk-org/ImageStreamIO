@@ -42,7 +42,7 @@
 
 
 
-#include "ImageStruct.h"
+#include "ImageStreamIO/ImageStruct.h"
 #include "ImageStreamIO/ImageStreamIO.h"
 
 

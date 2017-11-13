@@ -74,7 +74,7 @@ static int clock_gettime(int clk_id, struct mach_timespec *t){
 void __attribute__ ((constructor)) libinit_ImageStreamIO()
 {
 	init_ImageStreamIO();
-	printf(" ...... Loading module %s\n", __FILE__);
+//	printf(" ...... Loading module %s\n", __FILE__);
 }
 
 

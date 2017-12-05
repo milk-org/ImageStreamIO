@@ -16,6 +16,11 @@
 #ifndef _IMAGESTREAMIO_H
 #define _IMAGESTREAMIO_H
  
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+   
 
 int_fast8_t init_ImageStreamIO();
 
@@ -62,6 +67,9 @@ long ImageStreamIO_semflush(IMAGE *image, long index);
 ///@}
 
 
+#ifdef __cplusplus
+} //extern "C"
+#endif
 
 
 #endif

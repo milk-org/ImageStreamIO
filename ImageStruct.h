@@ -30,6 +30,10 @@
 #include <semaphore.h>
 
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #define SHAREDMEMDIR        "/tmp"        /**< location of file mapped semaphores */
 
@@ -416,7 +420,9 @@ typedef struct          		/**< structure used to store data arrays              
     
 } __attribute__ ((__packed__)) IMAGE;
 
-
+#ifdef __cplusplus
+} //extern "C"
+#endif
 
 
 #endif

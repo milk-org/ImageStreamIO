@@ -7,7 +7,6 @@
  * 
  * 
  * @author  O. Guyon
- * @date    27 Jul 2017
  *
  * 
  * @bug No known bugs.
@@ -1066,9 +1065,19 @@ long ImageStreamIO_sempost(IMAGE *image, long index)
                 sem_post(image->semptr[index]);
         }
     }
+    
+    if(image->semlog!=NULL)
+    {
+		int semval;
+    
+        sem_getvalue(image->semlog, &semval);
+        if(semval<SEMAPHORE_MAXVAL)
+            sem_post(image->semlog);
+    }
 
     return(1);
 }
+
 
 
 
@@ -1167,6 +1176,16 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
                     sem_post(image->semptr[index]);
             }
         }
+        
+        if(image->semlog!=NULL)
+		{
+		int semval;
+    
+        sem_getvalue(image->semlog, &semval);
+        if(semval<SEMAPHORE_MAXVAL)
+            sem_post(image->semlog);
+		}        
+        
         sleep(dtus);
     }
 

@@ -33,10 +33,19 @@ int_fast8_t init_ImageStreamIO();
 /* =============================================================================================== */
 
 /** @brief Create shared memory image stream */
-int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t *size, uint8_t atype, int shared, int NBkw);
+int ImageStreamIO_createIm( IMAGE *image, ///< [out] IMAGE structure which will have its members allocated and initialized.
+                            const char *name, ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
+                            long naxis, ///< [in] number of axes in the image.
+                            uint32_t *size, ///< [in] the size of the image along each axis.  Must have naxis elements.
+                            uint8_t atype, ///< [in] data type code
+                            int shared,  ///< [in] if true then a shared memory buffer is allocated.  If false, only local storage is used.
+                            int NBkw ///< [in] the number of keywords to allocate.
+                          );
 
 /** @brief Read / connect to existing shared memory image stream */
-long ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image);
+long ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, ///< [in] the name of the shared memory file to access, as in SHAREDMEMDIR/<name>_im.shm
+                                                 IMAGE *image ///< [out] the IMAGE structure to connect to the stream
+                                               );
 
 
 

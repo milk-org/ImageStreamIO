@@ -59,7 +59,7 @@ static int clock_gettime(int clk_id, struct mach_timespec *t){
     double seconds = ((double)time * (double)timebase.numer)/((double)timebase.denom * 1e9);
     t->tv_sec = seconds;
     t->tv_nsec = nseconds;
-    return 0;
+    return EXIT_SUCCESS;
 }
 #else
 #include <time.h>
@@ -105,7 +105,7 @@ int ImageStreamIO_printERROR(const char *file, const char *func, int line, char 
 
     fprintf(stderr,"%c[%d;%dm %s  %c[%d;m\n", (char) 27, 1, 31, errmessage, (char) 27, 0);
 
-    return(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
 
@@ -660,7 +660,7 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t 
         image->kw[kw].type = 'N';
 
 
-    return(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
 
@@ -1011,7 +1011,7 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem)
     
     printf("image->md[0].sem = %ld\n", (long) image->md[0].sem);
     
-    return(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
 
@@ -1075,7 +1075,7 @@ long ImageStreamIO_sempost(IMAGE *image, long index)
             sem_post(image->semlog);
     }
 
-    return(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
 
@@ -1113,7 +1113,7 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index)
 			}
         }
         
-   if(image->semlog!=NULL)
+    if(image->semlog!=NULL)
     {
 		int semval;
     
@@ -1122,7 +1122,7 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index)
             sem_post(image->semlog);
     }
 
-    return(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
 
@@ -1189,7 +1189,7 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
         sleep(dtus);
     }
 
-    return(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
 

@@ -81,7 +81,7 @@ int_fast8_t init_ImageStreamIO()
 {
 	// any initialization needed ?
 	
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 
@@ -105,7 +105,7 @@ int ImageStreamIO_printERROR(const char *file, const char *func, int line, char 
 
     fprintf(stderr,"%c[%d;%dm %s  %c[%d;m\n", (char) 27, 1, 31, errmessage, (char) 27, 0);
 
-    return(0);
+    return(EXIT_SUCCESS);
 }
 
 
@@ -660,7 +660,7 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t 
         image->kw[kw].type = 'N';
 
 
-    return(0);
+    return(EXIT_SUCCESS);
 }
 
 
@@ -1011,7 +1011,7 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem)
     
     printf("image->md[0].sem = %ld\n", (long) image->md[0].sem);
     
-    return(0);
+    return(EXIT_SUCCESS);
 }
 
 
@@ -1075,7 +1075,7 @@ long ImageStreamIO_sempost(IMAGE *image, long index)
             sem_post(image->semlog);
     }
 
-    return(1);
+    return(EXIT_SUCCESS);
 }
 
 
@@ -1122,7 +1122,7 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index)
             sem_post(image->semlog);
     }
 
-    return(1);
+    return(EXIT_SUCCESS);
 }
 
 
@@ -1189,7 +1189,7 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
         sleep(dtus);
     }
 
-    return(1);
+    return(EXIT_SUCCESS);
 }
 
 
@@ -1215,6 +1215,8 @@ long ImageStreamIO_semwait(IMAGE *image, long index)
             printf("ERROR: image %s semaphore # %ld does no exist\n", image->md[0].name, index);
     else
             sem_wait(image->semptr[index]);
+
+	return(EXIT_SUCCESS);
 }
 
 
@@ -1268,5 +1270,7 @@ long ImageStreamIO_semflush(IMAGE *image, long index)
 
         }
     }
+    
+    return(EXIT_SUCCESS);
 }
 

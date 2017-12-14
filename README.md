@@ -25,7 +25,11 @@ The interface protocol can be either:
 For options (1) and (2) with C, you can install milk package:
 https://github.com/milk-org/milk
 
+
 ### Command line interface (slow) details 
+
+Download and install the [milk package](https://github.com/milk-org/milk).
+
 The scripts to interface FITS files with our data streams are in:
 https://github.com/milk-org/milk/tree/master/scripts
 
@@ -33,11 +37,10 @@ Look for scripts :
 - shmim2fits : Converts stream to FITS file
 - Fits2shm : Writes FITS file to stream
 
+
 ### C interface (fast) details 
 
 Link ImageStreamIO to your program and call IO functions directly.
 
-See example source code in ImageStremIO module: ImCreate_test.c
-
-https://github.com/milk-org/ImageStreamIO/blob/master/ImCreate_test.c
+See example source code in ImageStremIO module: [ImCreate_test.c](https://github.com/milk-org/ImageStreamIO/blob/master/ImCreate_test.c).
 	

@@ -34,8 +34,8 @@
 
 int main()
 {
-	IMAGE *imarray;     // pointer to array of images
-	int NBIMAGES = 10;  // can hold 10 images
+	IMAGE *imarray;    // pointer to array of images
+	int NBIMAGES = 1;  // can hold 1 image
 	long naxis;        // number of axis
 	uint8_t atype;     // data type
 	uint32_t *imsize;  // image size 
@@ -81,7 +81,7 @@ int main()
 	long ii, jj;
 	float x, y, x0, y0, xc, yc, dx, dy;
 	float squarerad=20;
-	long dtus = 10000; // update every 10ms
+	long dtus = 1000; // update every 1ms
 	float dangle = 0.02;
 	
 	int s;
@@ -119,16 +119,7 @@ int main()
 			}
 		
 		// POST ALL SEMAPHORES
-		for(s=0; s<imarray[0].md[0].sem; s++)
-        {
-            sem_getvalue(imarray[0].semptr[s], &semval);
-            if(semval<SEMAPHORE_MAXVAL)
-                sem_post(imarray[0].semptr[s]);
-        }
-		sem_getvalue(imarray[0].semlog, &semval);
-        if(semval<SEMAPHORE_MAXVAL)
-            sem_post(imarray[0].semlog);
-		
+		ImageStreamIO_sempost(&imarray[0], -1);
 		
 		imarray[0].md[0].write = 0; // Done writing data
 		imarray[0].md[0].cnt0++;

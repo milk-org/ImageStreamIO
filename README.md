@@ -35,6 +35,9 @@ Look for scripts :
 
 ### C interface (fast) details 
 
+Link ImageStreamIO to your program and call IO functions directly.
+
 See example source code in ImageStremIO module: ImCreate_test.c
 
+https://github.com/milk-org/ImageStreamIO/blob/master/ImCreate_test.c
 	

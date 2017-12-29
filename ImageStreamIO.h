@@ -22,6 +22,7 @@ extern "C"
 #endif
    
 
+void __attribute__ ((constructor)) libinit_ImageStreamIO();
 int_fast8_t init_ImageStreamIO();
 
 

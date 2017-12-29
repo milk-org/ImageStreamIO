@@ -67,12 +67,18 @@ static int clock_gettime(int clk_id, struct mach_timespec *t){
 
 
 
+static int INITSTATUS_ImageStreamIO = 0;
+
 
 
 
 void __attribute__ ((constructor)) libinit_ImageStreamIO()
 {
-	init_ImageStreamIO();
+	if ( INITSTATUS_ImageStreamIO == 0 )
+	{
+		init_ImageStreamIO();
+		INITSTATUS_ImageStreamIO = 1;
+	}
 }
 
 

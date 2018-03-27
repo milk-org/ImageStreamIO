@@ -255,6 +255,9 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t 
     }
     else
     {
+        image->shmfd = 0;
+        image->memsize = 0;
+
         image->md = (IMAGE_METADATA*) malloc(sizeof(IMAGE_METADATA));
         image->md[0].shared = 0;
         if(NBkw>0)
@@ -968,9 +971,10 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem)
 
 	
 	printf("Creating %ld semaphores\n", NBsem);
-	
+	// fprintf(stderr, "%d here", __LINE__);
+
 	// Remove pre-existing semaphores if any
-    if(image->md[0].sem != NBsem)
+    if((image->md[0].sem>0) && (image->md[0].sem != NBsem))
     {
         // Close existing semaphores ...
         for(s=0; s < image->md[0].sem; s++)
@@ -992,9 +996,6 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem)
    
     if(image->md[0].sem == 0)
     {
-        if(image->semptr != NULL)
-            free(image->semptr);
-
         image->md[0].sem = NBsem;
         printf("malloc semptr %d entries\n", image->md[0].sem);
         image->semptr = (sem_t**) malloc(sizeof(sem_t**)*image->md[0].sem);

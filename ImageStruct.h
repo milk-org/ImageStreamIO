@@ -35,8 +35,12 @@ extern "C"
 {
 #endif
 
-#define SHAREDMEMDIR        "/tmp"        /**< location of file mapped semaphores */
 
+// comment this line if data should not be packed
+// packing data should be use with extreme care, so it is recommended to disable this feature
+// #define DATA_PACKED	
+
+#define SHAREDMEMDIR        "/tmp"        /**< location of file mapped semaphores */
 
 #define SEMAPHORE_MAXVAL    10 	          /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 
@@ -116,9 +120,11 @@ typedef struct
     } value;
 
     char comment[80];
-
+#ifdef DATA_PACKED
 } __attribute__ ((__packed__)) IMAGE_KEYWORD;
-
+#else
+} IMAGE_KEYWORD;
+#endif
 
 
 
@@ -211,9 +217,11 @@ typedef struct
 	uint16_t dtus;               
 	
 	uint8_t lambda_index;  
-
-}  __attribute__ ((__packed__)) EVENT_UI8_UI8_UI16_UI8;
-
+#ifdef DATA_PACKED
+} __attribute__ ((__packed__)) EVENT_UI8_UI8_UI16_UI8;
+#else
+} EVENT_UI8_UI8_UI16_UI8;
+#endif
 
 
 
@@ -323,10 +331,11 @@ typedef struct
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
     
     // total size is 171 byte = 1368 bit
-    
+#ifdef DATA_PACKED
 } __attribute__ ((__packed__)) IMAGE_METADATA;
-
-
+#else
+} IMAGE_METADATA;
+#endif
 
 
 
@@ -417,8 +426,13 @@ typedef struct          		/**< structure used to store data arrays              
     // mem offset 136    
     
     // total size is 136 byte = 1088 bit
-    
+#ifdef DATA_PACKED
 } __attribute__ ((__packed__)) IMAGE;
+#else
+} IMAGE;
+#endif
+
+
 
 #ifdef __cplusplus
 } //extern "C"

@@ -744,19 +744,19 @@ long ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
         // some verification
         if(image->md[0].size[0]*image->md[0].size[1]>10000000000)
         {
-            printf("IMAGE \"%s\" SEEMS BIG... ABORTING\n", name);
+            printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name);
             rval = -1;
             return(rval);
         }
         if(image->md[0].size[0]<1)
         {
-            printf("IMAGE \"%s\" AXIS SIZE < 1... ABORTING\n", name);
+            printf("IMAGE \"%s\" AXIS SIZE < 1... NOT LOADING\n", name);
             rval = -1;
             return(rval);
         }
         if(image->md[0].size[1]<1)
         {
-            printf("IMAGE \"%s\" AXIS SIZE < 1... ABORTING\n", name);
+            printf("IMAGE \"%s\" AXIS SIZE < 1... NOT LOADING\n", name);
             rval = -1;
             return(rval);
         }

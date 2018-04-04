@@ -696,9 +696,9 @@ long ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
         image->used = 0;
         printf("Cannot import shared memory file %s \n", name);
         rval = -1;
+        return(rval);
     }
-    else
-    {
+
 		char sname[200];
 		IMAGE_METADATA *map;
 		long s;
@@ -746,19 +746,19 @@ long ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
         {
             printf("IMAGE \"%s\" SEEMS BIG... ABORTING\n", name);
             rval = -1;
-            exit(0);
+            return(rval);
         }
         if(image->md[0].size[0]<1)
         {
             printf("IMAGE \"%s\" AXIS SIZE < 1... ABORTING\n", name);
             rval = -1;
-            exit(0);
+            return(rval);
         }
         if(image->md[0].size[1]<1)
         {
             printf("IMAGE \"%s\" AXIS SIZE < 1... ABORTING\n", name);
             rval = -1;
-            exit(0);
+            return(rval);
         }
 
 
@@ -923,7 +923,7 @@ long ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
 
 		
 
-    }
+    
 
     return(rval);
 }

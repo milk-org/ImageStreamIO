@@ -133,7 +133,15 @@ int ImageStreamIO_printERROR(const char *file, const char *func, int line, char 
 
 
 
-int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t *size, uint8_t atype, int shared, int NBkw)
+int ImageStreamIO_createIm(
+		IMAGE       *image, 
+		const char  *name, 
+		long         naxis, 
+		uint32_t    *size, 
+		uint8_t      atype, 
+		int          shared, 
+		int          NBkw
+		)
 {
     long i,ii;
     time_t lt;
@@ -198,7 +206,7 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t 
 
 
         if(atype == _DATATYPE_FLOAT)
-            sharedsize += nelement*SIZEOF_DATATYPE_FLOAT;
+			sharedsize += nelement*SIZEOF_DATATYPE_FLOAT;
 
         if(atype == _DATATYPE_DOUBLE)
             sharedsize += nelement*SIZEOF_DATATYPE_DOUBLE;
@@ -231,7 +239,7 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t 
         result = lseek(SM_fd, sharedsize-1, SEEK_SET);
         if (result == -1) {
             close(SM_fd);
-            ImageStreamIO_printERROR(__FILE__,__func__,__LINE__,"Error calling lseek() to 'stretch' the file");
+            ImageStreamIO_printERROR(__FILE__,__func__,__LINE__, "Error calling lseek() to 'stretch' the file");
             exit(0);
         }
 
@@ -249,6 +257,8 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t 
             exit(0);
         }
 
+		printf("shared memory space = %ld bytes\n", sharedsize); //TEST
+		
         image->md = (IMAGE_METADATA*) map;
         image->md[0].shared = 1;
         image->md[0].sem = 0;
@@ -536,8 +546,10 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t 
             mapv += sizeof(float)*nelement;
             image->kw = (IMAGE_KEYWORD*) (mapv);
         }
-        else
+        else {
+           // printf("allocating %ld bytes\n", nelement*sizeof(float));//TEST
             image->array.F = (float*) calloc ((size_t) nelement, sizeof(float));
+		}
 
         if(image->array.F == NULL)
         {
@@ -680,7 +692,10 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis, uint32_t 
 
 
 
-long ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
+long ImageStreamIO_read_sharedmem_image_toIMAGE(
+		const char *name, 
+		IMAGE *image
+		)
 {
     int SM_fd;
     char SM_fname[200];    

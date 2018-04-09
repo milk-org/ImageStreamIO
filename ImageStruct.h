@@ -38,7 +38,7 @@ extern "C"
 
 // comment this line if data should not be packed
 // packing data should be use with extreme care, so it is recommended to disable this feature
-#define DATA_PACKED	
+// #define DATA_PACKED	
 
 #define SHAREDMEMDIR        "/tmp"        /**< location of file mapped semaphores */
 

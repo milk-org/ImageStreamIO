@@ -1,8 +1,10 @@
-project(lib_ImageStreamIO_project)
+project(ImageStreamIO LANGUAGES C)
 
-include_directories ("${PROJECT_SOURCE_DIR}/src")
-include_directories ("${PROJECT_SOURCE_DIR}/..")
 add_library(ImageStreamIO SHARED ImageStreamIO.c)
+target_include_directories (ImageStreamIO PUBLIC
+"${PROJECT_SOURCE_DIR}/src")
+target_include_directories (ImageStreamIO PUBLIC
+"${PROJECT_SOURCE_DIR}/..")
 
 install(TARGETS ImageStreamIO DESTINATION lib)
 install(FILES ImageStreamIO.h DESTINATION include)

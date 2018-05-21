@@ -232,37 +232,42 @@ typedef struct
 
 /** @brief Image metadata
  * 
- * This structure has a fixed size regardless of implementation
- *
- * @note size = 171 byte = 1368 bit
+ * This structure has a fixed size regardless of implementation when packed
+ * @note size = 171 byte = 1368 bit when packed
+ * 
+ * 
  *  
  */ 
 typedef struct
 {
     /** @brief Image Name */
     char name[80];   
-    // mem offset = 80
+    
+    // mem offset = 80 when packed
 
 	/** @brief Number of axis
 	 * 
 	 * @warning 1, 2 or 3. Values above 3 not allowed.   
 	 */
     uint8_t naxis;                
-    // mem offset = 81
+    
+    // mem offset = 81 when packed
     
     /** @brief Image size along each axis 
      * 
      *  If naxis = 1 (1D image), size[1] and size[2] are irrelevant
      */
     uint32_t size[3];
-	// mem offset = 93
+	
+	// mem offset = 93 when packed
 
 	/** @brief Number of elements in image
 	 * 
 	 * This is computed upon image creation 
 	 */ 
     uint64_t nelement;             
-    // mem offset = 101
+    
+    // mem offset = 101 when packed
     
     /** @brief Data type
      * 
@@ -282,11 +287,13 @@ typedef struct
      * 
      */
     uint8_t atype;                 
-	// mem offset = 102
+	
+	// mem offset = 102 when packed
 
     double creation_time;           /**< creation time (since process start)                                          */
     double last_access;             /**< last time the image was accessed  (since process start)                      */
-    // mem offset = 118
+    
+    // mem offset = 118 when packed
     
     /** @brief Acquisition time (beginning of exposure   
      * 
@@ -309,18 +316,22 @@ typedef struct
 		struct timespec ts;
 		TIMESPECFIXED tsfixed;
 	} atime;
-    // mem offset = 134
+    
+    // mem offset = 134 when packed
     
     
     uint8_t shared;                 /**< 1 if in shared memory                                                        */
     uint8_t status;              	/**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
-	// mem offset = 136
+	
+	// mem offset = 136 when packed
 
 	uint8_t logflag;                    /**< set to 1 to start logging         */
-    uint16_t sem; 				        /**< number of semaphores in use, specified at image creation      */
-	// mem offset = 139
+    uint16_t sem; 				   
+         /**< number of semaphores in use, specified at image creation      */
+	
+	// mem offset = 139 when packed
 
-	uint64_t : 0; // align array to 8-byte boundary for speed  -> pushed mem offset to 144
+	uint64_t : 0; // align array to 8-byte boundary for speed  -> pushed mem offset to 144 when packed
     
     uint64_t cnt0;               	/**< counter (incremented if image is updated)                                    */
     uint64_t cnt1;               	/**< in 3D rolling buffer image, this is the last slice written                   */
@@ -330,7 +341,8 @@ typedef struct
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
     
-    // total size is 171 byte = 1368 bit
+    // total size is 171 byte = 1368 bit when packed
+
 #ifdef DATA_PACKED
 } __attribute__ ((__packed__)) IMAGE_METADATA;
 #else

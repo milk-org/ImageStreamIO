@@ -112,7 +112,7 @@ int ImageStreamIO_printERROR(const char *file, const char *func, int line, char 
               fprintf(stderr,"C Error: %s\n", buff );
            }
            else
-             fprintf(stderr,"Unknown C Error\n");*/
+             fprintf(stderr,"Unknown C Error\n");
         #else
            //GNU strerror_r does not necessarily use buff, and uses errno to report errors.
            int _errno = errno;

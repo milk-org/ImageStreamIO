@@ -107,7 +107,7 @@ int ImageStreamIO_printERROR(const char *file, const char *func, int line, char 
         
         //Test for which version of strerror_r we're using (XSI or GNU)
         #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !defined(_GNU_SOURCE))
-           if( strerror_r( errno, buff, 256 ) == 0 ) 
+           if( strerror_r( errno, buff, sizeof(buff) ) == 0 ) 
            {
               fprintf(stderr,"C Error: %s\n", buff );
            }
@@ -117,7 +117,7 @@ int ImageStreamIO_printERROR(const char *file, const char *func, int line, char 
            //GNU strerror_r does not necessarily use buff, and uses errno to report errors.
            int _errno = errno;
            errno = 0;
-           char * estr = strerror_r( _errno, buff, 256 );
+           char * estr = strerror_r( _errno, buff, sizeof(buff) );
         
            if(errno == 0) 
               fprintf(stderr,"%c[%d;%dmC Error: %s%c[%d;m\n", (char) 27, 1, 31, estr, 27, 0 );

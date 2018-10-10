@@ -23,6 +23,13 @@ extern "C"
 {
 #endif
    
+#include "ImageStruct.h"
+
+
+#ifdef HAVE_CUDA
+#include "helper_cuda.h"
+#endif
+
 
 void __attribute__ ((constructor)) libinit_ImageStreamIO();
 int_fast8_t init_ImageStreamIO();
@@ -75,7 +82,7 @@ int ImageStreamIO_bitpix( uint8_t atype /**< [in] the type code (see ImageStruct
 /* =============================================================================================== */
 /* =============================================================================================== */
 
-/** @brief Create shared memory image stream */
+/** @brief Create shared memory image stream (legacy API) */
 int ImageStreamIO_createIm( IMAGE *image,      ///< [out] IMAGE structure which will have its members allocated and initialized.
                             const char *name,  ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
                             long naxis,        ///< [in] number of axes in the image.
@@ -109,6 +116,18 @@ int ImageStreamIO_destroyIm( IMAGE *image /**< [in] The IMAGE structure to deall
 int ImageStreamIO_openIm( IMAGE *image,    ///< [out] IMAGE structure which will be attached to the existing IMAGE
                           const char *name ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
                         );
+/** @brief Create shared memory image stream */
+int ImageStreamIO_createIm_gpu( IMAGE *image,      ///< [out] IMAGE structure which will have its members allocated and initialized.
+                            const char *name,  ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
+                            long naxis,        ///< [in] number of axes in the image.
+                            uint32_t *size,    ///< [in] the size of the image along each axis.  Must have naxis elements.
+                            uint8_t atype,     ///< [in] data type code
+                            int8_t location,   ///< [in] if -1 then a CPU memory buffer is allocated. If >=0, GPU memory buffer is allocated on devive `location`.
+                            int shared,        ///< [in] if true then a shared memory buffer is allocated.  If false, only local storage is used.
+                            int NBkw           ///< [in] the number of keywords to allocate.
+                          );
+
+void* ImageStreamIO_get_image_d_ptr(IMAGE *image);
 
 /** @brief Read / connect to existing shared memory image stream */
 int ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, ///< [in] the name of the shared memory file to access, as in SHAREDMEMDIR/<name>_im.shm

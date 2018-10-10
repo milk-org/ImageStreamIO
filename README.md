@@ -23,7 +23,7 @@ The interface protocol can be either:
 - Option #2 from C program supports >10 kHz (- so it is limited by camera speed, not software) and timing stability is ~10us
 
 For options (1) and (2) with C, you can install milk package:
-https://github.com/milk-org/milk
+<https://github.com/milk-org/milk>
 
 
 ### Command line interface (slow) details 
@@ -31,7 +31,7 @@ https://github.com/milk-org/milk
 Download and install the [milk package](https://github.com/milk-org/milk).
 
 The scripts to interface FITS files with our data streams are in:
-https://github.com/milk-org/milk/tree/master/scripts
+<https://github.com/milk-org/milk/tree/master/scripts>
 
 Look for scripts :
 - shmim2fits : Converts stream to FITS file

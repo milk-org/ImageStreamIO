@@ -29,6 +29,10 @@
 #include <unistd.h>
 #include <semaphore.h>
 
+#ifdef HAVE_CUDA
+// CUDA runtime includes
+#include <cuda_runtime_api.h>
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -321,17 +325,18 @@ typedef struct
     
     
     uint8_t shared;                 /**< 1 if in shared memory                                                        */
+    int8_t location;                /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
     uint8_t status;              	/**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
 	
-	// mem offset = 136 when packed
+	// mem offset = 137 when packed
 
 	uint8_t logflag;                    /**< set to 1 to start logging         */
     uint16_t sem; 				   
          /**< number of semaphores in use, specified at image creation      */
 	
-	// mem offset = 139 when packed
+	// mem offset = 140 when packed
 
-	uint64_t : 0; // align array to 8-byte boundary for speed  -> pushed mem offset to 144 when packed
+	uint32_t : 0; // align array to 8-byte boundary for speed  -> pushed mem offset to 144 when packed
     
     uint64_t cnt0;               	/**< counter (incremented if image is updated)                                    */
     uint64_t cnt1;               	/**< in 3D rolling buffer image, this is the last slice written                   */
@@ -341,6 +346,11 @@ typedef struct
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
     
+#ifdef HAVE_CUDA
+    cudaIpcMemHandle_t cudaMemHandle;
+	// mem offset 248
+#endif
+
     // total size is 171 byte = 1368 bit when packed
 
 #ifdef DATA_PACKED
@@ -409,6 +419,8 @@ typedef struct          		/**< structure used to store data arrays              
 	 */ 
     union
     {
+        void * raw; // raw pointer
+
         uint8_t *UI8;  // char
         int8_t  *SI8;   
 
@@ -428,6 +440,7 @@ typedef struct          		/**< structure used to store data arrays              
         complex_double *CD;
 
 		EVENT_UI8_UI8_UI16_UI8 *event1121;
+
     } array;                 	/**< pointer to data array */
 	// mem offset 120
 

@@ -3,10 +3,8 @@ project(ImageStreamIO LANGUAGES C)
 add_compile_options(-Ofast)
 
 add_library(ImageStreamIO SHARED ImageStreamIO.c)
-target_include_directories (ImageStreamIO PUBLIC
-"${PROJECT_SOURCE_DIR}/src")
-target_include_directories (ImageStreamIO PUBLIC
-"${PROJECT_SOURCE_DIR}/..")
+target_include_directories (ImageStreamIO PUBLIC ${PROJECT_SOURCE_DIR}
+"${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/..")
 
 if(USE_CUDA)
 find_package( CUDA REQUIRED )

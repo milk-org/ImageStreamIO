@@ -675,10 +675,8 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
              sname);
 
       if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) ==
-          SEM_FAILED) {
+          SEM_FAILED)
         perror("semaphore initilization");
-      } else
-        sem_init(image->semptr[s], 1, 0);
     }
   }
 

@@ -500,20 +500,7 @@ int ImageStreamIO_destroyIm(IMAGE *image) {
     image->semlog = NULL;
 
     // close and remove all semaphores
-    if (image->md[0].sem > 0) {
-      // Close existing semaphores ...
-      for (long s = 0; s < image->md[0].sem; s++) {
-        sem_close(image->semptr[s]);
-
-        snprintf(fname, sizeof(fname), "/dev/shm/sem.%s_sem%02ld",
-                 image->md[0].name, s);
-        sem_unlink(fname);
-      }
-      image->md[0].sem = 0;
-
-      free(image->semptr);
-      image->semptr = NULL;
-    }
+    ImageStreamIO_destroysem(image);
 
     close(image->shmfd);
 
@@ -715,6 +702,46 @@ int ImageStreamIO_closeIm(IMAGE *image) {
 /*
  * ## Purpose
  *
+ * Destroy semaphore of a shmim
+ *
+ * ## Arguments
+ *
+ * @param[in]
+ * image	IMAGE*
+ * 			pointer to shmim
+ */
+
+int ImageStreamIO_destroysem(IMAGE *image) {
+  long s;
+  int r;
+  char command[200];
+  int semfile[100];
+
+  // Remove semaphores if any
+  if (image->md[0].sem > 0) {
+    // Close existing semaphores ...
+    for (s = 0; s < image->md[0].sem; s++) {
+      sem_close(image->semptr[s]);
+      char fname[200];
+      sem_unlink(fname);
+  
+      // ... and remove associated files
+      snprintf(fname, sizeof(fname), "/dev/shm/sem.%s_sem%02ld",
+               image->md[0].name, s);
+      remove(fname);
+    }
+    image->md[0].sem = 0;
+
+    free(image->semptr);
+    image->semptr = NULL;
+
+  }
+  return EXIT_SUCCESS;
+}
+
+/*
+ * ## Purpose
+ *
  * Create semaphore of a shmim
  *
  * ## Arguments
@@ -736,37 +763,18 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem) {
   printf("Creating %ld semaphores\n", NBsem);
 
   // Remove pre-existing semaphores if any
-  if ((image->md[0].sem > 0) && (image->md[0].sem != NBsem)) {
-    // Close existing semaphores ...
-    for (s = 0; s < image->md[0].sem; s++)
-      sem_close(image->semptr[s]);
-    image->md[0].sem = 0;
+  ImageStreamIO_destroysem(image);
 
-    // ... and remove associated files
-    long s1;
-    for (s1 = NBsem; s1 < 100; s1++) {
-      char fname[200];
-      snprintf(fname, sizeof(fname), "/dev/shm/sem.%s_sem%02ld",
-               image->md[0].name, s1);
-      remove(fname);
-    }
-    free(image->semptr);
-    image->semptr = NULL;
-  }
+  printf("malloc semptr %ld entries\n", NBsem);
+  image->semptr = (sem_t **)malloc(sizeof(sem_t **) * NBsem);
 
-  if (image->md[0].sem == 0) {
-    printf("malloc semptr %ld entries\n", NBsem);
-    image->semptr = (sem_t **)malloc(sizeof(sem_t **) * NBsem);
+  for (s = 0; s < NBsem; s++) {
+    char sname[200];
+    snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md[0].name, s);
 
-    for (s = 0; s < NBsem; s++) {
-      char sname[200];
-      snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md[0].name, s);
-
-      // Note that if sem already exists, the inialization to 1 is ignored!
-      if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) ==
-          SEM_FAILED) {
-        perror("semaphore initilization");
-      }
+    if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 0)) ==
+        SEM_FAILED) {
+      perror("semaphore initilization");
     }
 
     image->md[0].sem =

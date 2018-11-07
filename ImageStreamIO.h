@@ -154,6 +154,21 @@ int ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structure wh
 /* =============================================================================================== */
 /* =============================================================================================== */
 
+/** @brief Destroy shmim semaphores 
+ *
+ * ## Purpose
+ *
+ * Destroy semaphore of a shmim
+ *
+ * ## Arguments
+ *
+ * @param[in]
+ * image	IMAGE*
+ * 			pointer to shmim
+ */
+
+int ImageStreamIO_destroysem(IMAGE *image);
+
 /** @brief Create shmim semaphores 
  *
  * ## Purpose

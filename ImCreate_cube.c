@@ -3,6 +3,7 @@
  * 
  * compile with:
  * gcc ImCreate_cube.c ImageStreamIO.c -o ImCreate_cube -lm -lpthread 
+ * gcc ImCreate_cube.c ImageStreamIO.c -DHAVE_CUDA -o ImCreate_test -lm -lpthread -I/opt/cuda/include -L/opt/cuda/lib64 -lcudart
  * 
  * Required files in compilation directory :
  * ImCreate_cube.c   : source code (this file)
@@ -47,7 +48,7 @@ int main()
 	
 	// image size will be 512 x 512
 	imsize = (uint32_t *) malloc(sizeof(uint32_t)*naxis);
-	imsize[0] = 100;
+	imsize[0] = 10;
 	imsize[1] = 512;
 	imsize[2] = 512;
 	
@@ -79,6 +80,7 @@ int main()
 	
 	int s;
 	int semval;
+	unsigned int index;
 	float *current_image;
 
 	// writes a square in image
@@ -96,13 +98,14 @@ int main()
 		
 		imarray.md->write = 1; // set this flag to 1 when writing data
 
-		imarray.md->cnt1++;
-		if(imarray.md->cnt1 == imarray.md->size[0])
-			imarray.md->cnt1=0;
-        printf("%lu %lu\r", imarray.md->cnt0, imarray.md->cnt1);
+		index = imarray.md->cnt1 +1;
+		if(index == imarray.md->size[0])
+			index=0;
 
-		current_image = imarray.array.F + imarray.md->cnt1 * imarray.md->size[1] * imarray.md->size[2];
-        // printf("%d, %x \n", imarray.md->cnt1 * imarray.md->size[1] * imarray.md->size[2], current_image);
+		current_image = imarray.array.F + index * imarray.md->size[1] * imarray.md->size[2];
+        // printf("%lu %lu %lu %x\r", imarray.md->cnt0, imarray.md->cnt1, index, 
+		// 				current_image);
+        // printf("%d, %x \n", index * imarray.md->size[1] * imarray.md->size[2], current_image);
 		for(ii=0; ii<imarray.md->size[1]; ii++)
 			for(jj=0; jj<imarray.md->size[2]; jj++)
 			{
@@ -117,11 +120,12 @@ int main()
 				//else
 				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0;
 			}
+		imarray.md->cnt1 = index;
+		imarray.md->cnt0++;
 		// POST ALL SEMAPHORES
 		ImageStreamIO_sempost(&imarray, -1);
 		
 		imarray.md->write = 0; // Done writing data
-		imarray.md->cnt0++;
 				
 		usleep(dtus);
 		angle += dangle;

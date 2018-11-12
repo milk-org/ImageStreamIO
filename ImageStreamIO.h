@@ -26,11 +26,6 @@ extern "C"
 #include "ImageStruct.h"
 
 
-#ifdef HAVE_CUDA
-#include "helper_cuda.h"
-#endif
-
-
 void __attribute__ ((constructor)) libinit_ImageStreamIO();
 int_fast8_t init_ImageStreamIO();
 

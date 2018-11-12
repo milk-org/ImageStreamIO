@@ -32,6 +32,11 @@
 #ifdef HAVE_CUDA
 // CUDA runtime includes
 #include <cuda_runtime_api.h>
+#else
+// CUDA cudaIpcMemHandle_t is a struct of 64 bytes
+// This is needed for for compatibility between ImageStreamIO
+// compiled with or without HAVE_CUDA precompiler flag
+typedef char cudaIpcMemHandle_t[64];
 #endif
 
 #ifdef __cplusplus
@@ -346,10 +351,8 @@ typedef struct
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
     
-#ifdef HAVE_CUDA
     cudaIpcMemHandle_t cudaMemHandle;
 	// mem offset 248
-#endif
 
     // total size is 171 byte = 1368 bit when packed
 

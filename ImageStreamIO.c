@@ -67,6 +67,10 @@ static int clock_gettime(int clk_id, struct mach_timespec *t) {
 #include <time.h>
 #endif
 
+#ifdef HAVE_CUDA
+#include "helper_cuda.h"
+#endif
+
 static int INITSTATUS_ImageStreamIO = 0;
 
 void __attribute__((constructor)) libinit_ImageStreamIO() {
@@ -226,56 +230,48 @@ uint64_t ImageStreamIO_offset_data(IMAGE *image, void *map) {
   if (atype == _DATATYPE_UINT8) {
     printf("atype = UINT8\n");
     image->array.UI8 = (uint8_t *)map;
-    offset = SIZEOF_DATATYPE_UINT8 * image->md[0].nelement;
   } else if (atype == _DATATYPE_INT8) {
     printf("atype = INT8\n");
     image->array.SI8 = (int8_t *)map;
-    offset = SIZEOF_DATATYPE_INT8 * image->md[0].nelement;
   } else if (atype == _DATATYPE_UINT16) {
     printf("atype = UINT16\n");
     image->array.UI16 = (uint16_t *)map;
-    offset = SIZEOF_DATATYPE_UINT16 * image->md[0].nelement;
   } else if (atype == _DATATYPE_INT16) {
     printf("atype = INT16\n");
     image->array.SI16 = (int16_t *)map;
-    offset = SIZEOF_DATATYPE_INT16 * image->md[0].nelement;
   } else if (atype == _DATATYPE_UINT32) {
     printf("atype = UINT32\n");
     image->array.UI32 = (uint32_t *)map;
-    offset = SIZEOF_DATATYPE_UINT32 * image->md[0].nelement;
   } else if (atype == _DATATYPE_INT32) {
     printf("atype = INT32\n");
     image->array.SI32 = (int32_t *)map;
-    offset = SIZEOF_DATATYPE_INT32 * image->md[0].nelement;
   } else if (atype == _DATATYPE_UINT64) {
     printf("atype = UINT64\n");
     image->array.UI64 = (uint64_t *)map;
-    offset = SIZEOF_DATATYPE_UINT64 * image->md[0].nelement;
   } else if (atype == _DATATYPE_INT64) {
     printf("atype = INT64\n");
     image->array.SI64 = (int64_t *)map;
-    offset = SIZEOF_DATATYPE_INT64 * image->md[0].nelement;
   } else if (atype == _DATATYPE_FLOAT) {
     printf("atype = FLOAT\n");
     image->array.F = (float *)map;
-    offset = SIZEOF_DATATYPE_FLOAT * image->md[0].nelement;
   } else if (atype == _DATATYPE_DOUBLE) {
     printf("atype = DOUBLE\n");
     image->array.D = (double *)map;
-    offset = SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
   } else if (atype == _DATATYPE_COMPLEX_FLOAT) {
     printf("atype = COMPLEX_FLOAT\n");
     image->array.CF = (complex_float *)map;
-    offset = SIZEOF_DATATYPE_COMPLEX_FLOAT * image->md[0].nelement;
   } else if (atype == _DATATYPE_COMPLEX_DOUBLE) {
     printf("atype = COMPLEX_DOUBLE\n");
     image->array.CD = (complex_double *)map;
-    offset = SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
   }
 
   if (image->md[0].location >= 0) {
     printf("atype = GPUIPC\n");
     image->array.raw = NULL;
+    offset = 0;
+  } else {
+    image->array.raw = map;
+    offset = ImageStreamIO_typesize(atype) * image->md[0].nelement;
   }
 
   return offset;
@@ -317,7 +313,9 @@ int ImageStreamIO_initialize_buffer(IMAGE *image) {
     }
 #endif
   }
+
   ImageStreamIO_offset_data(image, image->array.raw);
+
   return EXIT_SUCCESS;
 }
 
@@ -804,6 +802,17 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem) {
  *          if index=-1, post all semaphores
  */
 long ImageStreamIO_sempost(IMAGE *image, long index) {
+  if (image->md[0].location >= 0) {
+#ifdef HAVE_CUDA
+    checkCudaErrors(cudaSetDevice(image->md[0].location));
+    checkCudaErrors(cudaDeviceSynchronize());
+#else
+    ImageStreamIO_printERROR(
+        "Error calling ImageStreamIO_sempost(), CACAO needs to be "
+        "compiled with -DUSE_CUDA=ON");
+#endif
+  }
+
   if (index < 0) {
     long s;
 
@@ -856,6 +865,17 @@ long ImageStreamIO_sempost(IMAGE *image, long index) {
 long ImageStreamIO_sempost_excl(IMAGE *image, long index) {
   long s;
 
+  if (image->md[0].location >= 0) {
+#ifdef HAVE_CUDA
+    checkCudaErrors(cudaSetDevice(image->md[0].location));
+    checkCudaErrors(cudaDeviceSynchronize());
+#else
+    ImageStreamIO_printERROR(
+        "Error calling ImageStreamIO_sempost(), CACAO needs to be "
+        "compiled with -DUSE_CUDA=ON");
+#endif
+  }
+
   for (s = 0; s < image->md[0].sem; s++) {
     if (s != index) {
       int semval;
@@ -898,36 +918,7 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index) {
  */
 long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus) {
   while (1) {
-    if (index < 0) {
-      long s;
-
-      for (s = 0; s < image->md[0].sem; s++) {
-        int semval;
-
-        sem_getvalue(image->semptr[s], &semval);
-        if (semval < SEMAPHORE_MAXVAL)
-          sem_post(image->semptr[s]);
-      }
-    } else {
-      if (index > image->md[0].sem - 1)
-        printf("ERROR: image %s semaphore # %ld does no exist\n",
-               image->md[0].name, index);
-      else {
-        int semval;
-
-        sem_getvalue(image->semptr[index], &semval);
-        if (semval < SEMAPHORE_MAXVAL)
-          sem_post(image->semptr[index]);
-      }
-    }
-
-    if (image->semlog != NULL) {
-      int semval;
-
-      sem_getvalue(image->semlog, &semval);
-      if (semval < SEMAPHORE_MAXVAL)
-        sem_post(image->semlog);
-    }
+    ImageStreamIO_sempost(image, index);
 
     sleep(dtus);
   }

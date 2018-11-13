@@ -3,8 +3,16 @@ project(ImageStreamIO LANGUAGES C)
 add_compile_options(-Ofast)
 
 add_library(ImageStreamIO SHARED ImageStreamIO.c)
-target_include_directories (ImageStreamIO PUBLIC ${PROJECT_SOURCE_DIR}
-"${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/..")
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CFITSIO REQUIRED cfitsio)
+link_directories( ${CFITSIO_LIBRARY_DIRS} )
+
+target_include_directories (ImageStreamIO PUBLIC 
+${PROJECT_SOURCE_DIR}
+${PROJECT_SOURCE_DIR}/src
+${PROJECT_SOURCE_DIR}/..
+${CFITSIO_INCLUDE_DIRS})
 
 if(USE_CUDA)
 find_package( CUDA REQUIRED )

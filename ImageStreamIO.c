@@ -31,11 +31,11 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
-#include <fcntl.h> // for open
+#include <fcntl.h>  // for open
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <semaphore.h>
-#include <unistd.h> // for close
+#include <unistd.h>  // for close
 
 #include <fitsio.h>
 
@@ -86,7 +86,7 @@ int_fast8_t init_ImageStreamIO() {
   return EXIT_SUCCESS;
 }
 
-#define ImageStreamIO_printERROR(msg)                                          \
+#define ImageStreamIO_printERROR(msg) \
   ImageStreamIO_printERROR_(__FILE__, __func__, __LINE__, msg);
 
 int ImageStreamIO_printERROR_(const char *file, const char *func, int line,
@@ -98,7 +98,7 @@ int ImageStreamIO_printERROR_(const char *file, const char *func, int line,
     char buff[256];
 
 // Test for which version of strerror_r we're using (XSI or GNU)
-#if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) &&                   \
+#if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && \
      !defined(_GNU_SOURCE))
     if (strerror_r(errno, buff, sizeof(buff)) == 0) {
       fprintf(stderr, "C Error: %s\n", buff);
@@ -118,7 +118,7 @@ int ImageStreamIO_printERROR_(const char *file, const char *func, int line,
       fprintf(stderr, "%c[%d;%dmUnknown C Error%c[%d;m\n", (char)27, 1, 31, 27,
               0);
 
-    errno = _errno; // restore it in case it's used later.
+    errno = _errno;  // restore it in case it's used later.
 #endif
 
   } else
@@ -159,64 +159,64 @@ int ImageStreamIO_filename(char *file_name, size_t ssz, const char *im_name) {
 
 int ImageStreamIO_typesize(uint8_t atype) {
   switch (atype) {
-  case _DATATYPE_UINT8:
-    return SIZEOF_DATATYPE_UINT8;
-  case _DATATYPE_INT8:
-    return SIZEOF_DATATYPE_INT8;
-  case _DATATYPE_UINT16:
-    return SIZEOF_DATATYPE_UINT16;
-  case _DATATYPE_INT16:
-    return SIZEOF_DATATYPE_INT16;
-  case _DATATYPE_UINT32:
-    return SIZEOF_DATATYPE_UINT32;
-  case _DATATYPE_INT32:
-    return SIZEOF_DATATYPE_INT32;
-  case _DATATYPE_UINT64:
-    return SIZEOF_DATATYPE_UINT64;
-  case _DATATYPE_INT64:
-    return SIZEOF_DATATYPE_INT64;
-  case _DATATYPE_FLOAT:
-    return SIZEOF_DATATYPE_FLOAT;
-  case _DATATYPE_DOUBLE:
-    return SIZEOF_DATATYPE_DOUBLE;
-  case _DATATYPE_COMPLEX_FLOAT:
-    return SIZEOF_DATATYPE_COMPLEX_FLOAT;
-  case _DATATYPE_COMPLEX_DOUBLE:
-    return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
-  case _DATATYPE_EVENT_UI8_UI8_UI16_UI8:
-    return SIZEOF_DATATYPE_EVENT_UI8_UI8_UI16_UI8;
+    case _DATATYPE_UINT8:
+      return SIZEOF_DATATYPE_UINT8;
+    case _DATATYPE_INT8:
+      return SIZEOF_DATATYPE_INT8;
+    case _DATATYPE_UINT16:
+      return SIZEOF_DATATYPE_UINT16;
+    case _DATATYPE_INT16:
+      return SIZEOF_DATATYPE_INT16;
+    case _DATATYPE_UINT32:
+      return SIZEOF_DATATYPE_UINT32;
+    case _DATATYPE_INT32:
+      return SIZEOF_DATATYPE_INT32;
+    case _DATATYPE_UINT64:
+      return SIZEOF_DATATYPE_UINT64;
+    case _DATATYPE_INT64:
+      return SIZEOF_DATATYPE_INT64;
+    case _DATATYPE_FLOAT:
+      return SIZEOF_DATATYPE_FLOAT;
+    case _DATATYPE_DOUBLE:
+      return SIZEOF_DATATYPE_DOUBLE;
+    case _DATATYPE_COMPLEX_FLOAT:
+      return SIZEOF_DATATYPE_COMPLEX_FLOAT;
+    case _DATATYPE_COMPLEX_DOUBLE:
+      return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
+    case _DATATYPE_EVENT_UI8_UI8_UI16_UI8:
+      return SIZEOF_DATATYPE_EVENT_UI8_UI8_UI16_UI8;
 
-  default:
-    ImageStreamIO_printERROR("invalid type code");
-    return EXIT_FAILURE;
+    default:
+      ImageStreamIO_printERROR("invalid type code");
+      return EXIT_FAILURE;
   }
 }
 
 int ImageStreamIO_bitpix(uint8_t atype) {
   switch (atype) {
-  case _DATATYPE_UINT8:
-    return BYTE_IMG;
-  case _DATATYPE_INT8:
-    return SBYTE_IMG;
-  case _DATATYPE_UINT16:
-    return USHORT_IMG;
-  case _DATATYPE_INT16:
-    return SHORT_IMG;
-  case _DATATYPE_UINT32:
-    return ULONG_IMG;
-  case _DATATYPE_INT32:
-    return LONG_IMG;
-  case _DATATYPE_UINT64:
-    return ULONGLONG_IMG;
-  case _DATATYPE_INT64:
-    return LONGLONG_IMG;
-  case _DATATYPE_FLOAT:
-    return FLOAT_IMG;
-  case _DATATYPE_DOUBLE:
-    return DOUBLE_IMG;
-  default:
-    ImageStreamIO_printERROR("bitpix not implemented for type");
-    return EXIT_FAILURE;
+    case _DATATYPE_UINT8:
+      return BYTE_IMG;
+    case _DATATYPE_INT8:
+      return SBYTE_IMG;
+    case _DATATYPE_UINT16:
+      return USHORT_IMG;
+    case _DATATYPE_INT16:
+      return SHORT_IMG;
+    case _DATATYPE_UINT32:
+      return ULONG_IMG;
+    case _DATATYPE_INT32:
+      return LONG_IMG;
+    case _DATATYPE_UINT64:
+      return ULONGLONG_IMG;
+    case _DATATYPE_INT64:
+      return LONGLONG_IMG;
+    case _DATATYPE_FLOAT:
+      return FLOAT_IMG;
+    case _DATATYPE_DOUBLE:
+      return DOUBLE_IMG;
+    default:
+      ImageStreamIO_printERROR("bitpix not implemented for type");
+      return EXIT_FAILURE;
   }
 }
 
@@ -278,7 +278,7 @@ uint64_t ImageStreamIO_offset_data(IMAGE *image, void *map) {
 }
 
 int ImageStreamIO_initialize_buffer(IMAGE *image) {
-  void *map; // pointed cast in bytes
+  void *map;  // pointed cast in bytes
   const size_t size_element = ImageStreamIO_typesize(image->md[0].atype);
 
   if (image->md[0].location == -1) {
@@ -353,16 +353,15 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
   char kname[16];
 
   nelement = 1;
-  for (i = 0; i < naxis; i++)
-    nelement *= size[i];
+  for (i = 0; i < naxis; i++) nelement *= size[i];
 
   // compute total size to be allocated
   if (shared == 1) {
     char sname[200];
 
     // create semlog
-    size_t sharedsize = 0;     // shared memory size in bytes
-    size_t datasharedsize = 0; // shared memory size in bytes used by the data
+    size_t sharedsize = 0;      // shared memory size in bytes
+    size_t datasharedsize = 0;  // shared memory size in bytes used by the data
 
     snprintf(sname, sizeof(sname), "%s_semlog", name);
     remove(sname);
@@ -393,7 +392,7 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
     char SM_fname[200];
     ImageStreamIO_filename(SM_fname, 200, name);
 
-    int SM_fd; // shared memory file descriptor
+    int SM_fd;  // shared memory file descriptor
     SM_fd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
     if (SM_fd == -1) {
       perror("Error opening file for writing");
@@ -454,7 +453,7 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
   image->md[0].location = location;
   image->md[0].atype = atype;
   image->md[0].naxis = naxis;
-  strncpy(image->name, name, 80); // local name
+  strncpy(image->name, name, 80);  // local name
   strncpy(image->md[0].name, name, 80);
   image->md[0].nelement = 1;
   for (i = 0; i < naxis; i++) {
@@ -474,13 +473,12 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
   image->md[0].cnt1 = 0;
 
   if (shared == 1)
-    ImageStreamIO_createsem(image, 10); // by default, create 10 semaphores
+    ImageStreamIO_createsem(image, 10);  // by default, create 10 semaphores
   else
-    image->md[0].sem = 0; // no semaphores
+    image->md[0].sem = 0;  // no semaphores
 
   // initialize keywords
-  for (kw = 0; kw < image->md[0].NBkw; kw++)
-    image->kw[kw].type = 'N';
+  for (kw = 0; kw < image->md[0].NBkw; kw++) image->kw[kw].type = 'N';
 
   return EXIT_SUCCESS;
 }
@@ -513,8 +511,7 @@ int ImageStreamIO_destroyIm(IMAGE *image) {
     free(image->array.UI8);
 
     free(image->md);
-    if (image->kw)
-      free(image->kw);
+    if (image->kw) free(image->kw);
   }
 
   image->semlog = NULL;
@@ -533,8 +530,7 @@ int ImageStreamIO_openIm(IMAGE *image, const char *name) {
 }
 
 void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
-  if (image->array.raw != NULL)
-    return image->array.raw;
+  if (image->array.raw != NULL) return image->array.raw;
 
   void *d_ptr = NULL;
   if (image->md[0].location >= 0) {
@@ -659,8 +655,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
       printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
              sname);
 
-      if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) ==
-          SEM_FAILED)
+      if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED)
         perror("semaphore initilization");
     }
   }
@@ -722,7 +717,7 @@ int ImageStreamIO_destroysem(IMAGE *image) {
       sem_close(image->semptr[s]);
       char fname[200];
       sem_unlink(fname);
-  
+
       // ... and remove associated files
       snprintf(fname, sizeof(fname), "/dev/shm/sem.%s_sem%02ld",
                image->md[0].name, s);
@@ -732,7 +727,6 @@ int ImageStreamIO_destroysem(IMAGE *image) {
 
     free(image->semptr);
     image->semptr = NULL;
-
   }
   return EXIT_SUCCESS;
 }
@@ -770,13 +764,12 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem) {
     char sname[200];
     snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md[0].name, s);
 
-    if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 0)) ==
-        SEM_FAILED) {
+    if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 0)) == SEM_FAILED) {
       perror("semaphore initilization");
     }
 
     image->md[0].sem =
-        NBsem; // Do this last so nobody accesses before init is done.
+        NBsem;  // Do this last so nobody accesses before init is done.
   }
 
   printf("image->md[0].sem = %ld\n", (long)image->md[0].sem);
@@ -820,8 +813,7 @@ long ImageStreamIO_sempost(IMAGE *image, long index) {
       int semval;
 
       sem_getvalue(image->semptr[s], &semval);
-      if (semval < SEMAPHORE_MAXVAL)
-        sem_post(image->semptr[s]);
+      if (semval < SEMAPHORE_MAXVAL) sem_post(image->semptr[s]);
     }
   } else {
     if (index > image->md[0].sem - 1)
@@ -831,8 +823,7 @@ long ImageStreamIO_sempost(IMAGE *image, long index) {
       int semval;
 
       sem_getvalue(image->semptr[index], &semval);
-      if (semval < SEMAPHORE_MAXVAL)
-        sem_post(image->semptr[index]);
+      if (semval < SEMAPHORE_MAXVAL) sem_post(image->semptr[index]);
     }
   }
 
@@ -840,8 +831,7 @@ long ImageStreamIO_sempost(IMAGE *image, long index) {
     int semval;
 
     sem_getvalue(image->semlog, &semval);
-    if (semval < SEMAPHORE_MAXVAL)
-      sem_post(image->semlog);
+    if (semval < SEMAPHORE_MAXVAL) sem_post(image->semlog);
   }
 
   return EXIT_SUCCESS;
@@ -881,8 +871,7 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index) {
       int semval;
 
       sem_getvalue(image->semptr[s], &semval);
-      if (semval < SEMAPHORE_MAXVAL)
-        sem_post(image->semptr[s]);
+      if (semval < SEMAPHORE_MAXVAL) sem_post(image->semptr[s]);
     }
   }
 
@@ -890,8 +879,7 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index) {
     int semval;
 
     sem_getvalue(image->semlog, &semval);
-    if (semval < SEMAPHORE_MAXVAL)
-      sem_post(image->semlog);
+    if (semval < SEMAPHORE_MAXVAL) sem_post(image->semlog);
   }
 
   return EXIT_SUCCESS;
@@ -976,8 +964,7 @@ long ImageStreamIO_semflush(IMAGE *image, long index) {
       int i;
 
       sem_getvalue(image->semptr[s], &semval);
-      for (i = 0; i < semval; i++)
-        sem_trywait(image->semptr[s]);
+      for (i = 0; i < semval; i++) sem_trywait(image->semptr[s]);
     }
   } else {
     if (index > image->md[0].sem - 1)
@@ -990,8 +977,7 @@ long ImageStreamIO_semflush(IMAGE *image, long index) {
 
       s = index;
       sem_getvalue(image->semptr[s], &semval);
-      for (i = 0; i < semval; i++)
-        sem_trywait(image->semptr[s]);
+      for (i = 0; i < semval; i++) sem_trywait(image->semptr[s]);
     }
   }
 

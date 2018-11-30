@@ -124,8 +124,8 @@ typedef struct
 
     union {
         int64_t numl;
-        double numf;
-        char valstr[16];
+        double  numf;
+        char    valstr[16];
     } value;
 
     char comment[80];

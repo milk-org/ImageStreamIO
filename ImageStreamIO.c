@@ -310,6 +310,8 @@ int ImageStreamIO_initialize_buffer(IMAGE *image) {
     if (image->md[0].shared == 1) {
       checkCudaErrors(
           cudaIpcGetMemHandle(&image->md[0].cudaMemHandle, image->array.raw));
+        checkCudaErrors(cudaStreamCreate(&(image->md->cudaStream)));
+
     }
     checkCudaErrors(cudaStreamCreate(&(image->md[0].cudaStream)));
 #endif

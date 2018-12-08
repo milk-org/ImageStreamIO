@@ -862,8 +862,9 @@ int ImageStreamIO_destroyIm( IMAGE *image )
 }  
 
 
-int ImageStreamIO_openIm( IMAGE *image,     
-                           const char *name  
+int ImageStreamIO_openIm(
+	     IMAGE *image,     
+    const char *name  
                         )
 {
    return ImageStreamIO_read_sharedmem_image_toIMAGE(name, image);
@@ -873,13 +874,27 @@ int ImageStreamIO_openIm( IMAGE *image,
 
 
 
-int ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, 
-                                                IMAGE *image
-                                              )
+
+
+/**
+ * ## Purpose
+ * 
+ * Read shared memory image\n
+ * 
+ * 
+ * 
+ * ## Details
+ * 
+ */
+
+int ImageStreamIO_read_sharedmem_image_toIMAGE(
+    const char *name,
+    IMAGE *image
+)
 {
     int SM_fd;
-    char SM_fname[200];    
-	int rval = -1;
+    char SM_fname[200];
+    int rval = -1;
 
 
     ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name);
@@ -893,234 +908,235 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name,
         return(rval);
     }
 
-		char sname[200];
-		IMAGE_METADATA *map;
-		long s;
-		struct stat file_stat;
-		
-		long snb = 0;
-        int sOK = 1;
-		
-		
-		rval = 0; // we assume by default success
-		
-        fstat(SM_fd, &file_stat);
-        printf("File %s size: %zd\n", SM_fname, file_stat.st_size);
+    char sname[200];
+    IMAGE_METADATA *map;
+    long s;
+    struct stat file_stat;
+
+    long snb = 0;
+    int sOK = 1;
+
+
+    rval = 0; // we assume by default success
+
+    fstat(SM_fd, &file_stat);
+    printf("File %s size: %zd\n", SM_fname, file_stat.st_size);
 
 
 
 
-        map = (IMAGE_METADATA*) mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, SM_fd, 0);
-        if (map == MAP_FAILED) {
-            close(SM_fd);
-            perror("Error mmapping the file");
-            rval = -1;
-            exit(0);
-        }
+    map = (IMAGE_METADATA*) mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, SM_fd, 0);
+    if (map == MAP_FAILED) {
+        close(SM_fd);
+        perror("Error mmapping the file");
+        rval = -1;
+        exit(0);
+    }
 
 
 
-        image->memsize = file_stat.st_size;
+    image->memsize = file_stat.st_size;
 
-        image->shmfd = SM_fd;
-
-
-
-        image->md = map;
-
-		uint8_t atype;
-        atype = image->md[0].atype;
-        image->md[0].shared = 1;
+    image->shmfd = SM_fd;
 
 
-        printf("image size = %ld %ld\n", (long) image->md[0].size[0], (long) image->md[0].size[1]);
-        fflush(stdout);
-        // some verification
-        if(image->md[0].size[0]*image->md[0].size[1]>10000000000)
+
+    image->md = map;
+
+    uint8_t atype;
+    atype = image->md[0].atype;
+    image->md[0].shared = 1;
+
+
+    printf("image size = %ld %ld\n", (long) image->md[0].size[0], (long) image->md[0].size[1]);
+    fflush(stdout);
+    // some verification
+    if(image->md[0].size[0]*image->md[0].size[1]>10000000000)
+    {
+        printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name);
+        rval = -1;
+        return(rval);
+    }
+    if(image->md[0].size[0]<1)
+    {
+        printf("IMAGE \"%s\" AXIS SIZE < 1... NOT LOADING\n", name);
+        rval = -1;
+        return(rval);
+    }
+    if(image->md[0].size[1]<1)
+    {
+        printf("IMAGE \"%s\" AXIS SIZE < 1... NOT LOADING\n", name);
+        rval = -1;
+        return(rval);
+    }
+
+
+    char *mapv;
+    mapv = (char*) map;
+    mapv += sizeof(IMAGE_METADATA);
+
+
+
+    printf("atype = %d\n", (int) atype);
+    fflush(stdout);
+
+    if(atype == _DATATYPE_UINT8)
+    {
+        printf("atype = UINT8\n");
+        image->array.UI8 = (uint8_t*) mapv;
+        mapv += SIZEOF_DATATYPE_UINT8 * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_INT8)
+    {
+        printf("atype = INT8\n");
+        image->array.SI8 = (int8_t*) mapv;
+        mapv += SIZEOF_DATATYPE_INT8 * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_UINT16)
+    {
+        printf("atype = UINT16\n");
+        image->array.UI16 = (uint16_t*) mapv;
+        mapv += SIZEOF_DATATYPE_UINT16 * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_INT16)
+    {
+        printf("atype = INT16\n");
+        image->array.SI16 = (int16_t*) mapv;
+        mapv += SIZEOF_DATATYPE_INT16 * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_UINT32)
+    {
+        printf("atype = UINT32\n");
+        image->array.UI32 = (uint32_t*) mapv;
+        mapv += SIZEOF_DATATYPE_UINT32 * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_INT32)
+    {
+        printf("atype = INT32\n");
+        image->array.SI32 = (int32_t*) mapv;
+        mapv += SIZEOF_DATATYPE_INT32 * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_UINT64)
+    {
+        printf("atype = UINT64\n");
+        image->array.UI64 = (uint64_t*) mapv;
+        mapv += SIZEOF_DATATYPE_UINT64 * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_INT64)
+    {
+        printf("atype = INT64\n");
+        image->array.SI64 = (int64_t*) mapv;
+        mapv += SIZEOF_DATATYPE_INT64 * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_FLOAT)
+    {
+        printf("atype = FLOAT\n");
+        image->array.F = (float*) mapv;
+        mapv += SIZEOF_DATATYPE_FLOAT * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_DOUBLE)
+    {
+        printf("atype = DOUBLE\n");
+        image->array.D = (double*) mapv;
+        mapv += SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_COMPLEX_FLOAT)
+    {
+        printf("atype = COMPLEX_FLOAT\n");
+        image->array.CF = (complex_float*) mapv;
+        mapv += SIZEOF_DATATYPE_COMPLEX_FLOAT * image->md[0].nelement;
+    }
+
+    if(atype == _DATATYPE_COMPLEX_DOUBLE)
+    {
+        printf("atype = COMPLEX_DOUBLE\n");
+        image->array.CD = (complex_double*) mapv;
+        mapv += SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
+    }
+
+
+
+    printf("%ld keywords\n", (long) image->md[0].NBkw);
+    fflush(stdout);
+
+    image->kw = (IMAGE_KEYWORD*) (mapv);
+
+    int kw;
+    for(kw=0; kw<image->md[0].NBkw; kw++)
+    {
+        if(image->kw[kw].type == 'L')
+            printf("%d  %s %ld %s\n", kw, image->kw[kw].name, image->kw[kw].value.numl, image->kw[kw].comment);
+        if(image->kw[kw].type == 'D')
+            printf("%d  %s %lf %s\n", kw, image->kw[kw].name, image->kw[kw].value.numf, image->kw[kw].comment);
+        if(image->kw[kw].type == 'S')
+            printf("%d  %s %s %s\n", kw, image->kw[kw].name, image->kw[kw].value.valstr, image->kw[kw].comment);
+    }
+
+
+    // mapv += sizeof(IMAGE_KEYWORD)*image->md[0].NBkw;
+
+    strncpy(image->name, name, strlen(name));
+
+
+    // looking for semaphores
+    while(sOK==1)
+    {
+        snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md[0].name, snb);
+        sem_t *stest;
+        if((stest = sem_open(sname, 0, 0644, 0))== SEM_FAILED)
+            sOK = 0;
+        else
         {
-            printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name);
-            rval = -1;
-            return(rval);
+            sem_close(stest);
+            snb++;
         }
-        if(image->md[0].size[0]<1)
-        {
-            printf("IMAGE \"%s\" AXIS SIZE < 1... NOT LOADING\n", name);
-            rval = -1;
-            return(rval);
-        }
-        if(image->md[0].size[1]<1)
-        {
-            printf("IMAGE \"%s\" AXIS SIZE < 1... NOT LOADING\n", name);
-            rval = -1;
-            return(rval);
-        }
-
-
-		char *mapv;
-        mapv = (char*) map;
-        mapv += sizeof(IMAGE_METADATA);
+    }
+    printf("%ld semaphores detected  (image->md[0].sem = %d)\n", snb, (int) image->md[0].sem);
 
 
 
-        printf("atype = %d\n", (int) atype);
-        fflush(stdout);
-        
-        if(atype == _DATATYPE_UINT8)
-        {
-            printf("atype = UINT8\n");
-            image->array.UI8 = (uint8_t*) mapv;
-            mapv += SIZEOF_DATATYPE_UINT8 * image->md[0].nelement;
-        }
 
-        if(atype == _DATATYPE_INT8)
-        {
-            printf("atype = INT8\n");
-            image->array.SI8 = (int8_t*) mapv;
-            mapv += SIZEOF_DATATYPE_INT8 * image->md[0].nelement;
-        }
-
-        if(atype == _DATATYPE_UINT16)
-        {
-            printf("atype = UINT16\n");
-            image->array.UI16 = (uint16_t*) mapv;
-            mapv += SIZEOF_DATATYPE_UINT16 * image->md[0].nelement;
-        }
-
-        if(atype == _DATATYPE_INT16)
-        {
-            printf("atype = INT16\n");
-            image->array.SI16 = (int16_t*) mapv;
-            mapv += SIZEOF_DATATYPE_INT16 * image->md[0].nelement;
-        }
-
-        if(atype == _DATATYPE_UINT32)
-        {
-            printf("atype = UINT32\n");
-            image->array.UI32 = (uint32_t*) mapv;
-            mapv += SIZEOF_DATATYPE_UINT32 * image->md[0].nelement;
-        }
-
-        if(atype == _DATATYPE_INT32)
-        {
-            printf("atype = INT32\n");
-            image->array.SI32 = (int32_t*) mapv;
-            mapv += SIZEOF_DATATYPE_INT32 * image->md[0].nelement;
-        }
-
-        if(atype == _DATATYPE_UINT64)
-        {
-            printf("atype = UINT64\n");
-            image->array.UI64 = (uint64_t*) mapv;
-            mapv += SIZEOF_DATATYPE_UINT64 * image->md[0].nelement;
-        }
-
-        if(atype == _DATATYPE_INT64)
-        {
-            printf("atype = INT64\n");
-            image->array.SI64 = (int64_t*) mapv;
-            mapv += SIZEOF_DATATYPE_INT64 * image->md[0].nelement;
-        }
-
-        if(atype == _DATATYPE_FLOAT)
-        {
-            printf("atype = FLOAT\n");
-            image->array.F = (float*) mapv;
-            mapv += SIZEOF_DATATYPE_FLOAT * image->md[0].nelement;
-        }
-
-        if(atype == _DATATYPE_DOUBLE)
-        {
-            printf("atype = DOUBLE\n");
-            image->array.D = (double*) mapv;
-            mapv += SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
-        }
-        
-        if(atype == _DATATYPE_COMPLEX_FLOAT)
-        {
-            printf("atype = COMPLEX_FLOAT\n");
-            image->array.CF = (complex_float*) mapv;
-            mapv += SIZEOF_DATATYPE_COMPLEX_FLOAT * image->md[0].nelement;
-        }
-        
-        if(atype == _DATATYPE_COMPLEX_DOUBLE)
-        {
-            printf("atype = COMPLEX_DOUBLE\n");
-            image->array.CD = (complex_double*) mapv;
-            mapv += SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
-        }
+    //        image->md[0].sem = snb;
+    image->semptr = (sem_t**) malloc(sizeof(sem_t*) * image->md[0].sem);
+    for(s=0; s < image->md[0].sem; s++)
+    {
+        snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md[0].name, s);
+        if ((image->semptr[s] = sem_open(sname, 0, 0644, 0))== SEM_FAILED) {
+            printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n", sname);
 
 
-
-        printf("%ld keywords\n", (long) image->md[0].NBkw);
-        fflush(stdout);
-
-        image->kw = (IMAGE_KEYWORD*) (mapv);
-
-		int kw;
-        for(kw=0; kw<image->md[0].NBkw; kw++)
-        {
-            if(image->kw[kw].type == 'L')
-                printf("%d  %s %ld %s\n", kw, image->kw[kw].name, image->kw[kw].value.numl, image->kw[kw].comment);
-            if(image->kw[kw].type == 'D')
-                printf("%d  %s %lf %s\n", kw, image->kw[kw].name, image->kw[kw].value.numf, image->kw[kw].comment);
-            if(image->kw[kw].type == 'S')
-                printf("%d  %s %s %s\n", kw, image->kw[kw].name, image->kw[kw].value.valstr, image->kw[kw].comment);
-        }
-
-
-       // mapv += sizeof(IMAGE_KEYWORD)*image->md[0].NBkw;
-
-        strncpy(image->name, name, sizeof(name));
-
-
-
- 
-        // looking for semaphores       
-		while(sOK==1)
-        {
-            snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md[0].name, snb);
-            sem_t *stest;
-            if((stest = sem_open(sname, 0, 0644, 0))== SEM_FAILED)
-                sOK = 0;
-            else
-                {
-                    sem_close(stest);
-                    snb++;
-                }
-        }
-        printf("%ld semaphores detected  (image->md[0].sem = %d)\n", snb, (int) image->md[0].sem);
-
-
-		
-
-//        image->md[0].sem = snb;
-        image->semptr = (sem_t**) malloc(sizeof(sem_t*) * image->md[0].sem);
-        for(s=0; s<image->md[0].sem; s++)
-        {
-            snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md[0].name, s);
-            if ((image->semptr[s] = sem_open(sname, 0, 0644, 0))== SEM_FAILED) {
-                printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n", sname);
-				
-				
-			if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
-				perror("semaphore initilization");
+            if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
+                perror("semaphore initialization");
             }
             else
-               sem_init(image->semptr[s], 1, 0);		
-            }
+                sem_init(image->semptr[s], 1, 0);
         }
-        
-        snprintf(sname, sizeof(sname), "%s_semlog", image->md[0].name);
-        if ((image->semlog = sem_open(sname, 0, 0644, 0))== SEM_FAILED) {
-                printf("ERROR: could not open semaphore %s\n", sname);
-            }
+    }
 
-		
+    snprintf(sname, sizeof(sname), "%s_semlog", image->md[0].name);
+    if ((image->semlog = sem_open(sname, 0, 0644, 0))== SEM_FAILED) {
+        printf("ERROR: could not open semaphore %s\n", sname);
+    }
 
-    
+
+
+
 
     return(rval);
 }
+
+
+
 
 
 

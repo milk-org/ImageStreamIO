@@ -247,12 +247,12 @@ int ImageStreamIO_bitpix( uint8_t atype )
 /* =============================================================================================== */
 
 
-int ImageStreamIO_createIm( IMAGE       *image, 
-                            const char  *name, 
-                            long         naxis, 
-                            uint32_t    *size, 
-                            uint8_t      atype, 
-                            int          shared, 
+int ImageStreamIO_createIm( IMAGE       *image,
+                            const char  *name,
+                            long         naxis,
+                            uint32_t    *size,
+                            uint8_t      atype,
+                            int          shared,
                             int          NBkw
                           )
 {
@@ -260,15 +260,13 @@ int ImageStreamIO_createIm( IMAGE       *image,
     time_t lt;
     long nelement;
     struct timespec timenow;
-    
+
     IMAGE_METADATA *map;
     char *mapv; // pointed cast in bytes
 
     int kw;
     char comment[80];
     char kname[16];
-    
-
 
     nelement = 1;
     for(i=0; i<naxis; i++)
@@ -277,11 +275,11 @@ int ImageStreamIO_createIm( IMAGE       *image,
     // compute total size to be allocated
     if(shared==1)
     {
-		char sname[200];
-		
-		
+        char sname[200];
+
+
         // create semlog
-		size_t sharedsize = 0; // shared memory size in bytes
+        size_t sharedsize = 0; // shared memory size in bytes
 
         snprintf(sname, sizeof(sname), "%s_semlog", name);
         remove(sname);
@@ -319,7 +317,7 @@ int ImageStreamIO_createIm( IMAGE       *image,
 
 
         if(atype == _DATATYPE_FLOAT)
-			sharedsize += nelement*SIZEOF_DATATYPE_FLOAT;
+            sharedsize += nelement*SIZEOF_DATATYPE_FLOAT;
 
         if(atype == _DATATYPE_DOUBLE)
             sharedsize += nelement*SIZEOF_DATATYPE_DOUBLE;
@@ -332,10 +330,11 @@ int ImageStreamIO_createIm( IMAGE       *image,
 
 
         sharedsize += NBkw*sizeof(IMAGE_KEYWORD);
+//        sharedsize += 2*IMAGE_NB_SEMAPHORE*sizeof(pid_t); // one read PID array, one write PID array
 
-		char SM_fname[200];
+        char SM_fname[200];
         ImageStreamIO_filename(SM_fname, 200, name);
-        
+
         int SM_fd; // shared memory file descriptor
         SM_fd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
         if (SM_fd == -1) {
@@ -349,7 +348,7 @@ int ImageStreamIO_createIm( IMAGE       *image,
         image->shmfd = SM_fd;
         image->memsize = sharedsize;
 
-		int result;
+        int result;
         result = lseek(SM_fd, sharedsize-1, SEEK_SET);
         if (result == -1) {
             close(SM_fd);
@@ -371,8 +370,8 @@ int ImageStreamIO_createIm( IMAGE       *image,
             exit(0);
         }
 
-		printf("shared memory space = %ld bytes\n", sharedsize); //TEST
-		
+        printf("shared memory space = %ld bytes\n", sharedsize); //TEST
+
         image->md = (IMAGE_METADATA*) map;
         image->md[0].shared = 1;
         image->md[0].sem = 0;
@@ -404,13 +403,13 @@ int ImageStreamIO_createIm( IMAGE       *image,
     {
         if(shared==1)
         {
-			mapv = (char*) map;
+            mapv = (char*) map;
             mapv += sizeof(IMAGE_METADATA);
             image->array.UI8 = (uint8_t*) (mapv);
             memset(image->array.UI8, '\0', nelement*sizeof(uint8_t));
             mapv += sizeof(uint8_t)*nelement;
             image->kw = (IMAGE_KEYWORD*) (mapv);
-		}
+        }
         else
             image->array.UI8 = (uint8_t*) calloc ((size_t) nelement, sizeof(uint8_t));
 
@@ -435,13 +434,13 @@ int ImageStreamIO_createIm( IMAGE       *image,
     {
         if(shared==1)
         {
-			mapv = (char*) map;
+            mapv = (char*) map;
             mapv += sizeof(IMAGE_METADATA);
             image->array.SI8 = (int8_t*) (mapv);
             memset(image->array.SI8, '\0', nelement*sizeof(int8_t));
             mapv += sizeof(int8_t)*nelement;
             image->kw = (IMAGE_KEYWORD*) (mapv);
-		}
+        }
         else
             image->array.SI8 = (int8_t*) calloc ((size_t) nelement, sizeof(int8_t));
 
@@ -529,7 +528,7 @@ int ImageStreamIO_createIm( IMAGE       *image,
     {
         if(shared==1)
         {
-			mapv = (char*) map;
+            mapv = (char*) map;
             mapv += sizeof(IMAGE_METADATA);
             image->array.UI32 = (uint32_t*) (mapv);
             memset(image->array.UI32, '\0', nelement*sizeof(uint32_t));
@@ -554,14 +553,14 @@ int ImageStreamIO_createIm( IMAGE       *image,
             exit(0);
         }
     }
-    
+
 
 
     if(atype == _DATATYPE_INT32)
     {
         if(shared==1)
         {
-			mapv = (char*) map;
+            mapv = (char*) map;
             mapv += sizeof(IMAGE_METADATA);
             image->array.SI32 = (int32_t*) (mapv);
             memset(image->array.SI32, '\0', nelement*sizeof(int32_t));
@@ -586,14 +585,14 @@ int ImageStreamIO_createIm( IMAGE       *image,
             exit(0);
         }
     }
-    
-    
-    
+
+
+
     if(atype == _DATATYPE_UINT64)
     {
         if(shared==1)
         {
-			mapv = (char*) map;
+            mapv = (char*) map;
             mapv += sizeof(IMAGE_METADATA);
             image->array.UI64 = (uint64_t*) (mapv);
             memset(image->array.UI64, '\0', nelement*sizeof(uint64_t));
@@ -618,12 +617,12 @@ int ImageStreamIO_createIm( IMAGE       *image,
             exit(0);
         }
     }
-    
+
     if(atype == _DATATYPE_INT64)
     {
         if(shared==1)
         {
-			mapv = (char*) map;
+            mapv = (char*) map;
             mapv += sizeof(IMAGE_METADATA);
             image->array.SI64 = (int64_t*) (mapv);
             memset(image->array.SI64, '\0', nelement*sizeof(int64_t));
@@ -661,9 +660,9 @@ int ImageStreamIO_createIm( IMAGE       *image,
             image->kw = (IMAGE_KEYWORD*) (mapv);
         }
         else {
-           // printf("allocating %ld bytes\n", nelement*sizeof(float));//TEST
+            // printf("allocating %ld bytes\n", nelement*sizeof(float));//TEST
             image->array.F = (float*) calloc ((size_t) nelement, sizeof(float));
-		}
+        }
 
         if(image->array.F == NULL)
         {
@@ -680,21 +679,21 @@ int ImageStreamIO_createIm( IMAGE       *image,
             exit(0);
         }
     }
-    
+
     if(atype == _DATATYPE_DOUBLE)
     {
         if(shared==1)
         {
-			mapv = (char*) map;
-			mapv += sizeof(IMAGE_METADATA);
-			image->array.D = (double*) (mapv);
+            mapv = (char*) map;
+            mapv += sizeof(IMAGE_METADATA);
+            image->array.D = (double*) (mapv);
             memset(image->array.D, '\0', nelement*sizeof(double));
             mapv += sizeof(double)*nelement;
             image->kw = (IMAGE_KEYWORD*) (mapv);
         }
         else
             image->array.D = (double*) calloc ((size_t) nelement, sizeof(double));
-  
+
         if(image->array.D == NULL)
         {
             ImageStreamIO_printERROR(__FILE__,__func__,__LINE__,"memory allocation failed");
@@ -710,14 +709,14 @@ int ImageStreamIO_createIm( IMAGE       *image,
             exit(0);
         }
     }
-    
+
     if(atype == _DATATYPE_COMPLEX_FLOAT)
     {
         if(shared==1)
         {
-			mapv = (char*) map;
-			mapv += sizeof(IMAGE_METADATA);
-			image->array.CF = (complex_float*) (mapv);			
+            mapv = (char*) map;
+            mapv += sizeof(IMAGE_METADATA);
+            image->array.CF = (complex_float*) (mapv);
             memset(image->array.CF, '\0', nelement*sizeof(complex_float));
             mapv += sizeof(complex_float)*nelement;
             image->kw = (IMAGE_KEYWORD*) (mapv);
@@ -740,14 +739,14 @@ int ImageStreamIO_createIm( IMAGE       *image,
             exit(0);
         }
     }
-    
+
     if(atype == _DATATYPE_COMPLEX_DOUBLE)
     {
         if(shared==1)
         {
-			mapv = (char*) map;
-			mapv += sizeof(IMAGE_METADATA);
-			image->array.CD = (complex_double*) (mapv);			
+            mapv = (char*) map;
+            mapv += sizeof(IMAGE_METADATA);
+            image->array.CD = (complex_double*) (mapv);
             memset(image->array.CD, '\0', nelement*sizeof(complex_double));
             mapv += sizeof(complex_double)*nelement;
             image->kw = (IMAGE_KEYWORD*) (mapv);
@@ -771,8 +770,15 @@ int ImageStreamIO_createIm( IMAGE       *image,
         }
     }
 
-
-
+	if(shared==1)
+        {
+			mapv += sizeof(IMAGE_KEYWORD)*image->md[0].NBkw;
+			image->semReadPID = (pid_t*) (mapv);
+			
+            mapv += sizeof(pid_t)*IMAGE_NB_SEMAPHORE;
+            image->semWritePID = (pid_t*) (mapv);
+        }
+	
 
     clock_gettime(CLOCK_REALTIME, &timenow);
     image->md[0].last_access = 1.0*timenow.tv_sec + 0.000000001*timenow.tv_nsec;
@@ -783,10 +789,22 @@ int ImageStreamIO_createIm( IMAGE       *image,
     image->md[0].nelement = nelement;
 
     if(shared==1)
-        ImageStreamIO_createsem(image, 10); // by default, create 10 semaphores
+    {
+        ImageStreamIO_createsem(image, IMAGE_NB_SEMAPHORE); // IMAGE_NB_SEMAPHORE defined in ImageStruct.h
+        
+        int semindex;
+        for(semindex=0; semindex<IMAGE_NB_SEMAPHORE; semindex++)
+        {
+			image->semReadPID[semindex] = 0;
+			image->semWritePID[semindex] = 0;
+		}
+    
+    }
     else
-		image->md[0].sem = 0; // no semaphores
-     
+    {
+        image->md[0].sem = 0; // no semaphores
+	}
+
 
 
     // initialize keywords
@@ -796,6 +814,14 @@ int ImageStreamIO_createIm( IMAGE       *image,
 
     return EXIT_SUCCESS;
 }
+
+
+
+
+
+
+
+
 
 int ImageStreamIO_destroyIm( IMAGE *image )
 {
@@ -1082,6 +1108,17 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
             printf("%d  %s %s %s\n", kw, image->kw[kw].name, image->kw[kw].value.valstr, image->kw[kw].comment);
     }
 
+	
+
+        
+			mapv += sizeof(IMAGE_KEYWORD)*image->md[0].NBkw;
+			image->semReadPID = (pid_t*) (mapv);
+			
+            mapv += sizeof(pid_t)*image->md[0].sem;
+            image->semWritePID = (pid_t*) (mapv);
+        
+
+
 
     // mapv += sizeof(IMAGE_KEYWORD)*image->md[0].NBkw;
 
@@ -1114,7 +1151,6 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
         if ((image->semptr[s] = sem_open(sname, 0, 0644, 0))== SEM_FAILED) {
             printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n", sname);
 
-
             if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
                 perror("semaphore initialization");
             }
@@ -1123,11 +1159,17 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
         }
     }
 
+
     snprintf(sname, sizeof(sname), "%s_semlog", image->md[0].name);
     if ((image->semlog = sem_open(sname, 0, 0644, 0))== SEM_FAILED) {
-        printf("ERROR: could not open semaphore %s\n", sname);
+        printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n", sname);
+        
+        if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
+                perror("semaphore initialization");
+            }
+            else
+                sem_init(image->semlog, 1, 0);
     }
-
 
 
 
@@ -1169,7 +1211,7 @@ int ImageStreamIO_closeIm(IMAGE * image)
 
 
 
-/*
+/**
  * ## Purpose
  * 
  * Create semaphore of a shmim
@@ -1184,7 +1226,10 @@ int ImageStreamIO_closeIm(IMAGE * image)
  * NBsem    number of semaphores to be created
  */
 
-int ImageStreamIO_createsem(IMAGE *image, long NBsem)
+int ImageStreamIO_createsem(
+	IMAGE *image, 
+	long   NBsem
+)
 {
     long s;
     int r;
@@ -1227,7 +1272,7 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem)
 			char sname[200];
             snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md[0].name, s);
             
-            //Note that if sem already exists, the inialization to 1 is ignored!
+            //Note that if sem already exists, the initialization to 1 is ignored!
             if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
                     perror("semaphore initilization");
                 }
@@ -1246,36 +1291,49 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem)
 
 
 
-/*
+/**
  * ## Purpose
- * 
+ *
  * Posts semaphore of a shmim
  * if index < 0, post all semaphores
- * 
+ *
  * ## Arguments
- * 
+ *
  * @param[in]
  * image	IMAGE*
  * 			pointer to shmim
- * 
+ *
  * @param[in]
  * index    semaphore index
  * 			index of semaphore to be posted
  *          if index=-1, post all semaphores
  */
-long ImageStreamIO_sempost(IMAGE *image, long index)
+long ImageStreamIO_sempost(
+    IMAGE *image,
+    long   index
+)
 {
+    pid_t writeProcessPID;
+
+    writeProcessPID = getpid();
+
+
     if(index<0)
     {
-		long s;
-		
+        long s;
+
         for(s=0; s<image->md[0].sem; s++)
         {
-			int semval;
-			
+            int semval;
+
             sem_getvalue(image->semptr[s], &semval);
+
             if(semval<SEMAPHORE_MAXVAL)
                 sem_post(image->semptr[s]);
+
+
+            image->semWritePID[s] = writeProcessPID;
+            
         }
     }
     else
@@ -1284,18 +1342,21 @@ long ImageStreamIO_sempost(IMAGE *image, long index)
             printf("ERROR: image %s semaphore # %ld does no exist\n", image->md[0].name, index);
         else
         {
-			int semval;
-			
+            int semval;
+
             sem_getvalue(image->semptr[index], &semval);
             if(semval<SEMAPHORE_MAXVAL)
                 sem_post(image->semptr[index]);
+
+            image->semWritePID[index] = writeProcessPID;
+
         }
     }
-    
+
     if(image->semlog!=NULL)
     {
-		int semval;
-    
+        int semval;
+
         sem_getvalue(image->semlog, &semval);
         if(semval<SEMAPHORE_MAXVAL)
             sem_post(image->semlog);
@@ -1308,7 +1369,7 @@ long ImageStreamIO_sempost(IMAGE *image, long index)
 
 
 
-/*
+/**
  * ## Purpose
  * 
  * Posts all semaphores of a shmim except one
@@ -1326,6 +1387,9 @@ long ImageStreamIO_sempost(IMAGE *image, long index)
 long ImageStreamIO_sempost_excl(IMAGE *image, long index)
 {
     long s;
+    pid_t writeProcessPID;
+    
+    writeProcessPID = getpid();
 
     for(s=0; s<image->md[0].sem; s++)
         {
@@ -1336,6 +1400,8 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index)
 				sem_getvalue(image->semptr[s], &semval);
 				if(semval<SEMAPHORE_MAXVAL)
 					sem_post(image->semptr[s]);
+				
+				image->semWritePID[s] = writeProcessPID;
 			}
         }
         
@@ -1353,7 +1419,7 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index)
 
 
 
-/*
+/**
  * ## Purpose
  * 
  * Posts all semaphores of a shmim at regular time intervals
@@ -1374,6 +1440,10 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index)
  */
 long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
 {
+	pid_t writeProcessPID;
+	
+	writeProcessPID = getpid();
+	
     while(1)
     {
         if(index<0)
@@ -1387,6 +1457,8 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
                 sem_getvalue(image->semptr[s], &semval);
                 if(semval<SEMAPHORE_MAXVAL)
                     sem_post(image->semptr[s]);
+                
+                image->semWritePID[s] = writeProcessPID;
             }
         }
         else
@@ -1400,6 +1472,8 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
                 sem_getvalue(image->semptr[index], &semval);
                 if(semval<SEMAPHORE_MAXVAL)
                     sem_post(image->semptr[index]);
+                
+                image->semWritePID[index] = writeProcessPID;
             }
         }
         
@@ -1420,34 +1494,45 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
 
 
 
-/*
+
+
+/**
  * ## Purpose
- * 
+ *
  * Wait on a shmim semaphore
- * 
+ *
  * ## Arguments
- * 
+ *
  * @param[in]
  * image	IMAGE*
  * 			pointer to shmim
- * 
+ *
  * @param[in]
  * index    semaphore index
- * 
+ *
  */
 long ImageStreamIO_semwait(IMAGE *image, long index)
 {
+	pid_t readProcessPID;
+	
+	readProcessPID = getpid();
+	
     if(index>image->md[0].sem-1)
-            printf("ERROR: image %s semaphore # %ld does not exist\n", image->md[0].name, index);
+        printf("ERROR: image %s semaphore # %ld does not exist\n", image->md[0].name, index);
     else
-            sem_wait(image->semptr[index]);
+    {
+		image->semReadPID[index] = readProcessPID;
+        sem_wait(image->semptr[index]);
+    }
 
-	return(EXIT_SUCCESS);
+    return(EXIT_SUCCESS);
 }
 
 
 
-/*
+
+
+/**
  * ## Purpose
  * 
  * Flush shmim semaphore

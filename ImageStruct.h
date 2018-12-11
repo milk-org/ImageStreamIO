@@ -43,7 +43,7 @@ extern "C"
 #define SHAREDMEMDIR        "/tmp"        /**< location of file mapped semaphores */
 
 #define SEMAPHORE_MAXVAL    10 	          /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
-
+#define IMAGE_NB_SEMAPHORE  10            /**< Number of semaphores per image */
 
 
 
@@ -343,6 +343,8 @@ typedef struct
     
     // total size is 171 byte = 1368 bit when packed
 
+
+
 #ifdef DATA_PACKED
 } __attribute__ ((__packed__)) IMAGE_METADATA;
 #else
@@ -351,7 +353,10 @@ typedef struct
 
 
 
- 
+
+
+
+
  
 
 /** @brief IMAGE structure
@@ -437,7 +442,16 @@ typedef struct          		/**< structure used to store data arrays              
     IMAGE_KEYWORD *kw;
     // mem offset 136    
     
-    // total size is 136 byte = 1088 bit
+    // PID of process that read shared memory stream
+    // Initialized at 0. Otherwise, when process is waiting on semaphore, its PID is written in this array
+    // The array can be used to look for available semaphores
+    pid_t *semReadPID;
+    
+    // PID of the process writing the data
+    pid_t *semWritePID;
+    
+    
+    // total size is 152 byte = 1216 bit
 #ifdef DATA_PACKED
 } __attribute__ ((__packed__)) IMAGE;
 #else

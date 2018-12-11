@@ -795,8 +795,8 @@ int ImageStreamIO_createIm( IMAGE       *image,
         int semindex;
         for(semindex=0; semindex<IMAGE_NB_SEMAPHORE; semindex++)
         {
-			image->semReadPID[semindex] = 0;
-			image->semWritePID[semindex] = 0;
+			image->semReadPID[semindex] = -1;
+			image->semWritePID[semindex] = -1;
 		}
     
     }
@@ -842,7 +842,8 @@ int ImageStreamIO_destroyIm( IMAGE *image )
       if( image->md[0].sem>0 )
       {
          // Close existing semaphores ...
-         for(long s=0; s < image->md[0].sem; s++)
+         long s;
+         for(s=0; s < image->md[0].sem; s++)
          {
             sem_close(image->semptr[s]);
             
@@ -1184,16 +1185,17 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
 
 int ImageStreamIO_closeIm(IMAGE * image)
 {
-   for(long s=0; s<image->md[0].sem; s++)
-   {
-      sem_close(image->semptr[s]);
-   }
-   
-   free(image->semptr);
-   
-   sem_close(image->semlog);
-   
-   return munmap( image->md, image->memsize);
+    long s;
+    for(s=0; s<image->md[0].sem; s++)
+    {
+        sem_close(image->semptr[s]);
+    }
+
+    free(image->semptr);
+
+    sem_close(image->semlog);
+
+    return munmap( image->md, image->memsize);
 }
 
 

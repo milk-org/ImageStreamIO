@@ -330,7 +330,7 @@ int ImageStreamIO_createIm( IMAGE       *image,
 
 
         sharedsize += NBkw*sizeof(IMAGE_KEYWORD);
-//        sharedsize += 2*IMAGE_NB_SEMAPHORE*sizeof(pid_t); // one read PID array, one write PID array
+        sharedsize += 2*IMAGE_NB_SEMAPHORE*sizeof(pid_t); // one read PID array, one write PID array
 
         char SM_fname[200];
         ImageStreamIO_filename(SM_fname, 200, name);

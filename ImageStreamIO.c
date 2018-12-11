@@ -905,13 +905,13 @@ int ImageStreamIO_openIm(
 
 /**
  * ## Purpose
- * 
+ *
  * Read shared memory image\n
- * 
- * 
- * 
+ *
+ *
+ *
  * ## Details
- * 
+ *
  */
 
 int ImageStreamIO_read_sharedmem_image_toIMAGE(
@@ -1109,15 +1109,15 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
             printf("%d  %s %s %s\n", kw, image->kw[kw].name, image->kw[kw].value.valstr, image->kw[kw].comment);
     }
 
-	
 
-        
-			mapv += sizeof(IMAGE_KEYWORD)*image->md[0].NBkw;
-			image->semReadPID = (pid_t*) (mapv);
-			
-            mapv += sizeof(pid_t)*image->md[0].sem;
-            image->semWritePID = (pid_t*) (mapv);
-        
+
+
+    mapv += sizeof(IMAGE_KEYWORD)*image->md[0].NBkw;
+    image->semReadPID = (pid_t*) (mapv);
+
+    mapv += sizeof(pid_t)*image->md[0].sem;
+    image->semWritePID = (pid_t*) (mapv);
+
 
 
 
@@ -1164,12 +1164,12 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
     snprintf(sname, sizeof(sname), "%s_semlog", image->md[0].name);
     if ((image->semlog = sem_open(sname, 0, 0644, 0))== SEM_FAILED) {
         printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n", sname);
-        
+
         if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
-                perror("semaphore initialization");
-            }
-            else
-                sem_init(image->semlog, 1, 0);
+            perror("semaphore initialization");
+        }
+        else
+            sem_init(image->semlog, 1, 0);
     }
 
 
@@ -1333,9 +1333,7 @@ long ImageStreamIO_sempost(
             if(semval<SEMAPHORE_MAXVAL)
                 sem_post(image->semptr[s]);
 
-
             image->semWritePID[s] = writeProcessPID;
-            
         }
     }
     else
@@ -1351,7 +1349,6 @@ long ImageStreamIO_sempost(
                 sem_post(image->semptr[index]);
 
             image->semWritePID[index] = writeProcessPID;
-
         }
     }
 

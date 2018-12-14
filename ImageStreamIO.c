@@ -310,10 +310,10 @@ int ImageStreamIO_initialize_buffer(IMAGE *image) {
     if (image->md[0].shared == 1) {
       checkCudaErrors(
           cudaIpcGetMemHandle(&image->md[0].cudaMemHandle, image->array.raw));
-        checkCudaErrors(cudaStreamCreate(&(image->md->cudaStream)));
+        // checkCudaErrors(cudaStreamCreate(&(image->md->cudaStream)));
 
     }
-    checkCudaErrors(cudaStreamCreate(&(image->md[0].cudaStream)));
+    // checkCudaErrors(cudaStreamCreate(&(image->md[0].cudaStream)));
 #endif
   }
 
@@ -541,7 +541,7 @@ void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
     checkCudaErrors(cudaSetDevice(image->md[0].location));
     checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr, image->md[0].cudaMemHandle,
                                          cudaIpcMemLazyEnablePeerAccess));
-    checkCudaErrors(cudaStreamCreate(&(image->md[0].cudaStream)));
+    // checkCudaErrors(cudaStreamCreate(&(image->md[0].cudaStream)));
 #else
     ImageStreamIO_printERROR(
         "Error calling ImageStreamIO_get_image_d_ptr(), CACAO needs to be "
@@ -802,7 +802,8 @@ long ImageStreamIO_sempost(IMAGE *image, long index) {
   if (image->md[0].location >= 0) {
 #ifdef HAVE_CUDA
     checkCudaErrors(cudaSetDevice(image->md[0].location));
-    checkCudaErrors(cudaStreamSynchronize(image->md[0].cudaStream));
+    // checkCudaErrors(cudaStreamSynchronize(image->md[0].cudaStream));
+    // checkCudaErrors(cudaDeviceSynchronize());
 #else
     ImageStreamIO_printERROR(
         "Error calling ImageStreamIO_sempost(), CACAO needs to be "

@@ -37,7 +37,6 @@
 // This is needed for for compatibility between ImageStreamIO
 // compiled with or without HAVE_CUDA precompiler flag
 typedef char cudaIpcMemHandle_t[64];
-typedef void * cudaStream_t;
 #endif
 
 #ifdef __cplusplus
@@ -353,7 +352,6 @@ typedef struct
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
     
     cudaIpcMemHandle_t cudaMemHandle;
-    cudaStream_t cudaStream;
 	// mem offset 248
 
     // total size is 171 byte = 1368 bit when packed

@@ -1518,6 +1518,7 @@ int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault)
 	
 	readProcessPID = getpid();
 	
+	// Check if default semindex is available
 	semindex = semindexdefault;
 	if( (image->semReadPID[semindex]==0) || (getpgid(image->semReadPID[semindex]) < 0))
 	{
@@ -1525,7 +1526,7 @@ int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault)
 		rval = semindex;
 	}
 	
-	
+	// if not, look for available semindex 
 	semindex = 0;
 	while( (OK == 0) && (semindex < image->md[0].sem) )
 	{

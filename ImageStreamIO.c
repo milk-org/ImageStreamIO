@@ -1494,6 +1494,58 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
 
 
 
+/**
+ * ## Purpose
+ *
+ * Get available shmim semaphore index
+ *
+ * ## Arguments
+ *
+ * @param[in]
+ * image	IMAGE*
+ * 			pointer to shmim
+ *
+ * @param[in]
+ * index    preferred semaphore index, if available
+ *
+ */
+int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault)
+{
+	pid_t readProcessPID;
+	int OK = 0; // toggles to 1 when semaphore is found
+	int semindex;
+	int rval = -1;
+	
+	readProcessPID = getpid();
+	
+	semindex = semindexdefault;
+	if( (image->semReadPID[semindex]==0) || (getpgid(image->semReadPID[semindex]) < 0))
+	{
+		OK = 1;
+		rval = semindex;
+	}
+	
+	
+	semindex = 0;
+	while( (OK == 0) && (semindex < image->md[0].sem) )
+	{
+		if( (image->semReadPID[semindex]==0) || (getpgid(image->semReadPID[semindex]) < 0))
+		{
+			rval = semindex;
+			OK = 1;
+		}
+		semindex++;
+	}
+
+	rval = semindexdefault; // remove this line when fully tested
+	image->semReadPID[rval] = readProcessPID;
+    
+    return(rval);
+}
+
+
+
+
 
 /**
  * ## Purpose
@@ -1512,17 +1564,10 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus)
  */
 long ImageStreamIO_semwait(IMAGE *image, long index)
 {
-	pid_t readProcessPID;
-	
-	readProcessPID = getpid();
-	
     if(index>image->md[0].sem-1)
         printf("ERROR: image %s semaphore # %ld does not exist\n", image->md[0].name, index);
     else
-    {
-		image->semReadPID[index] = readProcessPID;
         sem_wait(image->semptr[index]);
-    }
 
     return(EXIT_SUCCESS);
 }

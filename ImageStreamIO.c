@@ -947,7 +947,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
     rval = 0; // we assume by default success
 
     fstat(SM_fd, &file_stat);
-    printf("File %s size: %zd\n", SM_fname, file_stat.st_size);
+//    printf("File %s size: %zd\n", SM_fname, file_stat.st_size);
 
 
 
@@ -975,8 +975,8 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
     image->md[0].shared = 1;
 
 
-    printf("image size = %ld %ld\n", (long) image->md[0].size[0], (long) image->md[0].size[1]);
-    fflush(stdout);
+ //   printf("image size = %ld %ld\n", (long) image->md[0].size[0], (long) image->md[0].size[1]);
+ //   fflush(stdout);
     // some verification
     if(image->md[0].size[0]*image->md[0].size[1]>10000000000)
     {
@@ -1004,102 +1004,102 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
 
 
 
-    printf("atype = %d\n", (int) atype);
-    fflush(stdout);
+   // printf("atype = %d\n", (int) atype);
+   // fflush(stdout);
 
     if(atype == _DATATYPE_UINT8)
     {
-        printf("atype = UINT8\n");
+//        printf("atype = UINT8\n");
         image->array.UI8 = (uint8_t*) mapv;
         mapv += SIZEOF_DATATYPE_UINT8 * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_INT8)
     {
-        printf("atype = INT8\n");
+ //       printf("atype = INT8\n");
         image->array.SI8 = (int8_t*) mapv;
         mapv += SIZEOF_DATATYPE_INT8 * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_UINT16)
     {
-        printf("atype = UINT16\n");
+  //      printf("atype = UINT16\n");
         image->array.UI16 = (uint16_t*) mapv;
         mapv += SIZEOF_DATATYPE_UINT16 * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_INT16)
     {
-        printf("atype = INT16\n");
+  //      printf("atype = INT16\n");
         image->array.SI16 = (int16_t*) mapv;
         mapv += SIZEOF_DATATYPE_INT16 * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_UINT32)
     {
-        printf("atype = UINT32\n");
+  //      printf("atype = UINT32\n");
         image->array.UI32 = (uint32_t*) mapv;
         mapv += SIZEOF_DATATYPE_UINT32 * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_INT32)
     {
-        printf("atype = INT32\n");
+   //     printf("atype = INT32\n");
         image->array.SI32 = (int32_t*) mapv;
         mapv += SIZEOF_DATATYPE_INT32 * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_UINT64)
     {
-        printf("atype = UINT64\n");
+   //     printf("atype = UINT64\n");
         image->array.UI64 = (uint64_t*) mapv;
         mapv += SIZEOF_DATATYPE_UINT64 * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_INT64)
     {
-        printf("atype = INT64\n");
+   //     printf("atype = INT64\n");
         image->array.SI64 = (int64_t*) mapv;
         mapv += SIZEOF_DATATYPE_INT64 * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_FLOAT)
     {
-        printf("atype = FLOAT\n");
+   //     printf("atype = FLOAT\n");
         image->array.F = (float*) mapv;
         mapv += SIZEOF_DATATYPE_FLOAT * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_DOUBLE)
     {
-        printf("atype = DOUBLE\n");
+   //     printf("atype = DOUBLE\n");
         image->array.D = (double*) mapv;
         mapv += SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_COMPLEX_FLOAT)
     {
-        printf("atype = COMPLEX_FLOAT\n");
+   //     printf("atype = COMPLEX_FLOAT\n");
         image->array.CF = (complex_float*) mapv;
         mapv += SIZEOF_DATATYPE_COMPLEX_FLOAT * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_COMPLEX_DOUBLE)
     {
-        printf("atype = COMPLEX_DOUBLE\n");
+   //     printf("atype = COMPLEX_DOUBLE\n");
         image->array.CD = (complex_double*) mapv;
         mapv += SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
     }
 
 
 
-    printf("%ld keywords\n", (long) image->md[0].NBkw);
-    fflush(stdout);
+    //printf("%ld keywords\n", (long) image->md[0].NBkw);
+    //fflush(stdout);
 
     image->kw = (IMAGE_KEYWORD*) (mapv);
 
     int kw;
-    for(kw=0; kw<image->md[0].NBkw; kw++)
+    /*for(kw=0; kw<image->md[0].NBkw; kw++)
     {
         if(image->kw[kw].type == 'L')
             printf("%d  %s %ld %s\n", kw, image->kw[kw].name, image->kw[kw].value.numl, image->kw[kw].comment);
@@ -1107,7 +1107,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
             printf("%d  %s %lf %s\n", kw, image->kw[kw].name, image->kw[kw].value.numf, image->kw[kw].comment);
         if(image->kw[kw].type == 'S')
             printf("%d  %s %s %s\n", kw, image->kw[kw].name, image->kw[kw].value.valstr, image->kw[kw].comment);
-    }
+    }*/
 
 
 
@@ -1139,7 +1139,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
             snb++;
         }
     }
-    printf("%ld semaphores detected  (image->md[0].sem = %d)\n", snb, (int) image->md[0].sem);
+    //printf("%ld semaphores detected  (image->md[0].sem = %d)\n", snb, (int) image->md[0].sem);
 
 
 
@@ -1563,43 +1563,47 @@ int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault)
  * index    semaphore index
  *
  */
-long ImageStreamIO_semwait(IMAGE *image, long index)
+int ImageStreamIO_semwait(IMAGE *image, int index)
 {
+	int rval = -1;
+	
     if(index>image->md[0].sem-1)
     {
-        printf("ERROR: image %s semaphore # %ld does not exist\n", image->md[0].name, index);
-		return(-1);
+        printf("ERROR: image %s semaphore # %d does not exist\n", image->md[0].name, index);
     }
     else
-        sem_wait(image->semptr[index]);
+        rval = sem_wait(image->semptr[index]);
 
-    return(EXIT_SUCCESS);
+    return(rval);
 }
 
-long ImageStreamIO_semtrywait(IMAGE *image, long index)
+int ImageStreamIO_semtrywait(IMAGE *image, int index)
 {
+	int rval = -1;
+	
     if(index>image->md[0].sem-1)
     {
-        printf("ERROR: image %s semaphore # %ld does not exist\n", image->md[0].name, index);
-		return(-1);
+        printf("ERROR: image %s semaphore # %d does not exist\n", image->md[0].name, index);
     }
     else
-        sem_trywait(image->semptr[index]);
+        rval = sem_trywait(image->semptr[index]);
 
-    return(EXIT_SUCCESS);
+    return(rval);
 }
 
-long ImageStreamIO_semtimedwait(IMAGE *image, long index, const struct timespec *semwts)
+int ImageStreamIO_semtimedwait(IMAGE *image, int index, const struct timespec *semwts)
 {
+	int rval = -1;
+	
     if(index>image->md[0].sem-1)
     {
-        printf("ERROR: image %s semaphore # %ld does not exist\n", image->md[0].name, index);
+        printf("ERROR: image %s semaphore # %d does not exist\n", image->md[0].name, index);
 		return(-1);
     }
     else
-        sem_timedwait(image->semptr[index], semwts);
+        rval = sem_timedwait(image->semptr[index], semwts);
 
-    return(EXIT_SUCCESS);
+    return(rval);
 }
 
 

@@ -1576,6 +1576,19 @@ long ImageStreamIO_semwait(IMAGE *image, long index)
     return(EXIT_SUCCESS);
 }
 
+long ImageStreamIO_semtrywait(IMAGE *image, long index)
+{
+    if(index>image->md[0].sem-1)
+    {
+        printf("ERROR: image %s semaphore # %ld does not exist\n", image->md[0].name, index);
+		return(-1);
+    }
+    else
+        sem_trywait(image->semptr[index]);
+
+    return(EXIT_SUCCESS);
+}
+
 long ImageStreamIO_semtimedwait(IMAGE *image, long index, const struct timespec *semwts)
 {
     if(index>image->md[0].sem-1)

@@ -242,7 +242,7 @@ int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault);
  * 
  */
 long ImageStreamIO_semwait(IMAGE *image, long index);
-
+long ImageStreamIO_semtrywait(IMAGE *image, long index);
 long ImageStreamIO_semtimedwait(IMAGE *image, long index, const struct timespec *semwts);
 
 

@@ -310,10 +310,7 @@ int ImageStreamIO_initialize_buffer(IMAGE *image) {
     if (image->md[0].shared == 1) {
       checkCudaErrors(
           cudaIpcGetMemHandle(&image->md[0].cudaMemHandle, image->array.raw));
-        // checkCudaErrors(cudaStreamCreate(&(image->md->cudaStream)));
-
     }
-    // checkCudaErrors(cudaStreamCreate(&(image->md[0].cudaStream)));
 #endif
   }
 
@@ -541,7 +538,6 @@ void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
     checkCudaErrors(cudaSetDevice(image->md[0].location));
     checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr, image->md[0].cudaMemHandle,
                                          cudaIpcMemLazyEnablePeerAccess));
-    // checkCudaErrors(cudaStreamCreate(&(image->md[0].cudaStream)));
 #else
     ImageStreamIO_printERROR(
         "Error calling ImageStreamIO_get_image_d_ptr(), CACAO needs to be "
@@ -799,18 +795,6 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem) {
  *          if index=-1, post all semaphores
  */
 long ImageStreamIO_sempost(IMAGE *image, long index) {
-  if (image->md[0].location >= 0) {
-#ifdef HAVE_CUDA
-    checkCudaErrors(cudaSetDevice(image->md[0].location));
-    // checkCudaErrors(cudaStreamSynchronize(image->md[0].cudaStream));
-    // checkCudaErrors(cudaDeviceSynchronize());
-#else
-    ImageStreamIO_printERROR(
-        "Error calling ImageStreamIO_sempost(), CACAO needs to be "
-        "compiled with -DUSE_CUDA=ON");
-#endif
-  }
-
   if (index < 0) {
     long s;
 
@@ -859,17 +843,6 @@ long ImageStreamIO_sempost(IMAGE *image, long index) {
  */
 long ImageStreamIO_sempost_excl(IMAGE *image, long index) {
   long s;
-
-  if (image->md[0].location >= 0) {
-#ifdef HAVE_CUDA
-    checkCudaErrors(cudaSetDevice(image->md[0].location));
-    checkCudaErrors(cudaDeviceSynchronize());
-#else
-    ImageStreamIO_printERROR(
-        "Error calling ImageStreamIO_sempost(), CACAO needs to be "
-        "compiled with -DUSE_CUDA=ON");
-#endif
-  }
 
   for (s = 0; s < image->md[0].sem; s++) {
     if (s != index) {

@@ -241,6 +241,14 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index);
  */
 long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus);
 
+/** @brief Get available semaphore index
+ * 
+ * 
+ * 
+ */
+int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault);
+
+
 /** @brief Wait for semaphore 
  *
  * ## Purpose
@@ -257,7 +265,10 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus);
  * index    semaphore index
  * 
  */
-long ImageStreamIO_semwait(IMAGE *image, long index);
+int ImageStreamIO_semwait(IMAGE *image, int index);
+int ImageStreamIO_semtrywait(IMAGE *image, int index);
+int ImageStreamIO_semtimedwait(IMAGE *image, int index, const struct timespec *semwts);
+
 
 /** @brief Flush all semaphores of a shmim 
  *

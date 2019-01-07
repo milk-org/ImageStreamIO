@@ -365,11 +365,11 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
     remove(sname);
     image->semlog = NULL;
 
-    if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED)
+    if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED){
       perror("semaphore creation / initilization");
-    else
-      sem_init(image->semlog, 1, 0);
-
+    } else{
+      sem_init(image->semlog, 1, SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
+    }
     sharedsize = sizeof(IMAGE_METADATA);
 
     datasharedsize = nelement * ImageStreamIO_typesize(atype);
@@ -696,7 +696,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
       {
         perror("semaphore initilization");
       } else {
-        sem_init(image->semptr[s], 1, 0);
+        sem_init(image->semptr[s], 1, SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
       }
     }
   }
@@ -706,9 +706,9 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n", sname);
     if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
         perror("semaphore initialization");
+    } else {
+      sem_init(image->semptr[s], 1, SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
     }
-    else
-        sem_init(image->semlog, 1, 0);
   }
 
   return EXIT_SUCCESS;
@@ -812,6 +812,8 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem) {
 
     if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 0)) == SEM_FAILED) {
       perror("semaphore initilization");
+    } else {
+      sem_init(image->semptr[s], 1, SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
     }
 
     image->md[0].sem =
@@ -976,36 +978,31 @@ long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus) {
 int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault)
 {
 	pid_t readProcessPID;
-	int OK = 0; // toggles to 1 when semaphore is found
 	int semindex;
-	int rval = -1;
 	
 	readProcessPID = getpid();
 	
 	// Check if default semindex is available
-	semindex = semindexdefault;
-	if( (image->semReadPID[semindex]==0) || (getpgid(image->semReadPID[semindex]) < 0))
+	if( (image->semReadPID[semindexdefault]==0) || 
+      (getpgid(image->semReadPID[semindexdefault]) < 0))
 	{
-		OK = 1;
-		rval = semindex;
+	  image->semReadPID[semindexdefault] = readProcessPID;
+		return semindexdefault;
 	}
 	
 	// if not, look for available semindex 
 	semindex = 0;
-	while( (OK == 0) && (semindex < image->md[0].sem) )
-	{
-		if( (image->semReadPID[semindex]==0) || (getpgid(image->semReadPID[semindex]) < 0))
+	do {
+		if( (image->semReadPID[semindex]==0) || 
+        (getpgid(image->semReadPID[semindex]) < 0) )
 		{
-			rval = semindex;
-			OK = 1;
-		}
+      image->semReadPID[semindex] = readProcessPID;
+      return semindex;
+    }
 		semindex++;
-	}
-
-	rval = semindexdefault; // remove this line when fully tested
-	image->semReadPID[rval] = readProcessPID;
+	} while(semindex < image->md[0].sem);
     
-    return(rval);
+  return -1;
 }
 
 /*

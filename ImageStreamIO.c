@@ -929,7 +929,7 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index) {
   return EXIT_SUCCESS;
 }
 
-/*
+/**
  * ## Purpose
  *
  * Posts all semaphores of a shmim at regular time intervals

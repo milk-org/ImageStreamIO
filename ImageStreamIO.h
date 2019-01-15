@@ -102,6 +102,7 @@ int ImageStreamIO_createIm( IMAGE *image,      ///< [out] IMAGE structure which 
   */
 int ImageStreamIO_destroyIm( IMAGE *image /**< [in] The IMAGE structure to deallocate and remove from the system.*/);
 
+
 /** @brief Connect to an existing shared memory image stream 
   * 
   * Wrapper for  \ref ImageStreamIO_read_sharedmem_image_toIMAGE
@@ -109,6 +110,7 @@ int ImageStreamIO_destroyIm( IMAGE *image /**< [in] The IMAGE structure to deall
 int ImageStreamIO_openIm( IMAGE *image,    ///< [out] IMAGE structure which will be attached to the existing IMAGE
                           const char *name ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
                         );
+
 
 /** @brief Read / connect to existing shared memory image stream */
 int ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, ///< [in] the name of the shared memory file to access, as in SHAREDMEMDIR/<name>_im.shm
@@ -135,6 +137,7 @@ int ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structure wh
 /* =============================================================================================== */
 /* =============================================================================================== */
 
+
 /** @brief Create shmim semaphores 
  *
  * ## Purpose
@@ -151,6 +154,8 @@ int ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structure wh
  * NBsem    number of semaphores to be created
  */
 int ImageStreamIO_createsem(IMAGE *image, long NBsem);
+
+
 
 /** @brief Post all shmim semaphores 
  *
@@ -171,6 +176,8 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem);
  *          if index=-1, post all semaphores
  */
 long ImageStreamIO_sempost(IMAGE *image, long index);
+
+
 
 /** @brief Post all shmim semaphores except one 
  *

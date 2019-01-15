@@ -172,6 +172,8 @@ int ImageStreamIO_filename( char * file_name,
    }
 }
 
+
+
 int ImageStreamIO_typesize( uint8_t atype )
 {
    switch(atype)
@@ -1074,7 +1076,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
    //     printf("atype = DOUBLE\n");
         image->array.D = (double*) mapv;
-        mapv += SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
+        mapv += SIZEOF_DATATYPE_DOUBLE * image->md[0].nelement;
     }
 
     if(atype == _DATATYPE_COMPLEX_FLOAT)

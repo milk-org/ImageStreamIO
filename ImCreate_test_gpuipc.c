@@ -62,7 +62,7 @@ int main()
 	
 	// image will be in shared memory
 	shared = 1;
-	location = 0; // on GPU0
+	location = -1; // on GPU0
 	
 	// allocate space for 10 keywords
 	NBkw = 1;
@@ -78,8 +78,8 @@ int main()
 		h_ptr[i]=-i;
 	}
 
-	checkCudaErrors(cudaMemcpy(d_ptr, h_ptr, imsize[0]*imsize[1]*sizeof(float),
-		cudaMemcpyHostToDevice));
+	cudaMemcpy(d_ptr, h_ptr, imsize[0]*imsize[1]*sizeof(float),
+		cudaMemcpyHostToDevice);
 
 	printf("Wrote in SHM\n");	
 	for(int i=0; i<10 /*imsize[0]*imsize[1]*/; i++){
@@ -92,8 +92,8 @@ int main()
 	while(imarray[0].md[0].write );
 
 	printf("Read in SHM\n");	
-	checkCudaErrors(cudaMemcpy(h_ptr, d_ptr, imsize[0]*imsize[1]*sizeof(float),
-		cudaMemcpyDeviceToHost));
+	cudaMemcpy(h_ptr, d_ptr, imsize[0]*imsize[1]*sizeof(float),
+		cudaMemcpyDeviceToHost);
 	for(int i=0; i<10 /*imsize[0]*imsize[1]*/; i++){
 		printf("%f ", h_ptr[i]);
 	}

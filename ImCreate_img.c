@@ -42,15 +42,13 @@ int main()
 	int shared;        // 1 if image in shared memory
 	int NBkw;          // number of keywords supported
 
-
-	// image will be a cube
-	naxis = 3;
+	// image will be 2D
+	naxis = 2;
 	
 	// image size will be 512 x 512
 	imsize = (uint32_t *) malloc(sizeof(uint32_t)*naxis);
-	imsize[0] = 10;
+	imsize[0] = 512;
 	imsize[1] = 512;
-	imsize[2] = 512;
 	
 	// image will be float type
 	// see file ImageStruct.h for list of supported types
@@ -80,15 +78,14 @@ int main()
 	
 	int s;
 	int semval;
-	unsigned int index;
 	float *current_image;
 
 	// writes a square in image
 	// square location rotates around center
 	angle = 0.0;
 	r = 100.0;
-	x0 = 0.5*imarray.md->size[1];
-	y0 = 0.5*imarray.md->size[2];
+	x0 = 0.5*imarray.md->size[0];
+	y0 = 0.5*imarray.md->size[1];
 	while (1)
 	{
 		// disk location
@@ -98,29 +95,21 @@ int main()
 		
 		imarray.md->write = 1; // set this flag to 1 when writing data
 
-		index = imarray.md->cnt1 +1;
-		if(index == imarray.md->size[0])
-			index=0;
-
-		current_image = imarray.array.F + index * imarray.md->size[1] * imarray.md->size[2];
-       // printf("%lu %lu %lu %x\r", imarray.md->cnt0, imarray.md->cnt1, index, 
-		// 				current_image);
-       // printf("%d, %x \n", index * imarray.md->size[1] * imarray.md->size[2], current_image);
-		for(ii=0; ii<imarray.md->size[1]; ii++)
-			for(jj=0; jj<imarray.md->size[2]; jj++)
+		for(ii=0; ii<imarray.md->size[0]; ii++)
+			for(jj=0; jj<imarray.md->size[1]; jj++)
 			{
 				x = 1.0*ii;
 				y = 1.0*jj;
 				float dx = x-xc;
 				float dy = y-yc;
-				current_image[ii*imarray.md->size[2]+jj] = ii+imarray.md->cnt0; // cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
+				imarray.array.F[ii*imarray.md->size[1]+jj] = cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
 				
 				//if( (x-xc<squarerad) && (x-xc>-squarerad) && (y-yc<squarerad) && (y-yc>-squarerad))
 				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0;
 				//else
 				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0;
 			}
-		imarray.md->cnt1 = index;
+		imarray.md->cnt1 = 0;
 		imarray.md->cnt0++;
 		// POST ALL SEMAPHORES
 		ImageStreamIO_sempost(&imarray, -1);
@@ -129,8 +118,8 @@ int main()
 				
 		usleep(dtus);
 		angle += dangle;
-		if(angle > 2.0*M_PI)
-			angle -= 2.0*M_PI;
+		if(angle > 2.0*3.141592)
+			angle -= 2.0*3.141592;
 		//printf("Wrote square at position xc = %16f  yc = %16f\n", xc, yc);
 		//fflush(stdout);
 	}

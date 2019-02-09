@@ -113,7 +113,7 @@ int main()
 				y = 1.0*jj;
 				float dx = x-xc;
 				float dy = y-yc;
-				current_image[ii*imarray.md->size[2]+jj] = ii+imarray.md->cnt0; // cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
+				current_image[ii*imarray.md->size[2]+jj] = cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
 				
 				//if( (x-xc<squarerad) && (x-xc>-squarerad) && (y-yc<squarerad) && (y-yc>-squarerad))
 				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0;
@@ -129,8 +129,8 @@ int main()
 				
 		usleep(dtus);
 		angle += dangle;
-		if(angle > 2.0*M_PI)
-			angle -= 2.0*M_PI;
+		if(angle > 2.0*3.141592)
+			angle -= 2.0*3.141592;
 		//printf("Wrote square at position xc = %16f  yc = %16f\n", xc, yc);
 		//fflush(stdout);
 	}

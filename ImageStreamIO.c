@@ -486,7 +486,7 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
   image->md[0].cnt1 = 0;
 
   if (shared == 1) {
-    // ImageStreamIO_createsem(image, IMAGE_NB_SEMAPHORE); // IMAGE_NB_SEMAPHORE
+    ImageStreamIO_createsem(image, IMAGE_NB_SEMAPHORE); // IMAGE_NB_SEMAPHORE
     // defined in ImageStruct.h
 
     int semindex;

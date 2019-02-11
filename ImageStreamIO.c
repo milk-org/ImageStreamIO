@@ -439,12 +439,11 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
       image->array.raw = map;
       map += datasharedsize;
     } else if (location >= 0) {
-      image->array.raw = NULL;
     } else {
       perror("Error location unknown");
     }
     image->kw = (IMAGE_KEYWORD *)(map);
-    map += sizeof(IMAGE_KEYWORD) * image->md[0].NBkw;
+    map += sizeof(IMAGE_KEYWORD) * NBkw;
 
     image->semReadPID = (pid_t *)(map);
     map += sizeof(pid_t) * IMAGE_NB_SEMAPHORE;

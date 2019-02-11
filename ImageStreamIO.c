@@ -422,7 +422,7 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
       exit(0);
     }
 
-    map = mmap(0, sharedsize, PROT_READ | PROT_WRITE, MAP_SHARED, SM_fd, 0);
+    map = (uint8_t *)mmap(0, sharedsize, PROT_READ | PROT_WRITE, MAP_SHARED, SM_fd, 0);
     if (map == MAP_FAILED) {
       close(SM_fd);
       perror("Error mmapping the file");
@@ -608,7 +608,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
   // printf("File %s size: %zd\n", SM_fname, file_stat.st_size);
 
   map =
-      mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, SM_fd, 0);
+      (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, SM_fd, 0);
   if (map == MAP_FAILED) {
     close(SM_fd);
     perror("Error mmapping the file");
@@ -668,7 +668,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
   map += sizeof(pid_t) * image->md[0].sem;
   image->semWritePID = (pid_t *)(map);
 
-  strncpy(image->name, name, sizeof(name));
+  strcpy(image->name, name);
 
   // looking for semaphores
   while (sOK == 1) {

@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+#include <string.h>
 #include "ImageStruct.h"
 #include "ImageStreamIO.h"
 
@@ -60,11 +62,26 @@ int main()
 	shared = 1;
 	
 	// allocate space for 10 keywords
-	NBkw = 10;
-
+	NBkw = 3;
 	
 	// create an image in shared memory
 	ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, NBkw);
+
+    strcpy(imarray.kw[0].name, "symcode");
+    imarray.kw[0].type = 'L';
+    imarray.kw[0].value.numl = 5;
+    strcpy(imarray.kw[0].comment, "symcode value");
+
+    strcpy(imarray.kw[1].name, "exposure");
+    imarray.kw[1].type = 'D';
+    imarray.kw[1].value.numf = 8000.;
+    strcpy(imarray.kw[1].comment, "in us, exposure value");
+
+    strcpy(imarray.kw[2].name, "source");
+    imarray.kw[2].type = 'S';
+    strcpy(imarray.kw[2].value.valstr, "ImCreate_cube");
+    strcpy(imarray.kw[2].comment, "source value");
+
 
 	free(imsize);
 
@@ -82,6 +99,7 @@ int main()
 	int semval;
 	unsigned int index;
 	float *current_image;
+	struct timespec timenow;
 
 	// writes a square in image
 	// square location rotates around center
@@ -122,6 +140,9 @@ int main()
 			}
 		imarray.md->cnt1 = index;
 		imarray.md->cnt0++;
+		clock_gettime(CLOCK_REALTIME, &timenow);
+		imarray.md[0].last_access =
+			1.0 * timenow.tv_sec + 0.000000001 * timenow.tv_nsec;
 		// POST ALL SEMAPHORES
 		ImageStreamIO_sempost(&imarray, -1);
 		

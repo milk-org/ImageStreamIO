@@ -51,7 +51,7 @@ extern "C"
 
 #define SHAREDMEMDIR        "/tmp"        /**< location of file mapped semaphores */
 
-#define SEMAPHORE_MAXVAL     1 	          /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
+#define SEMAPHORE_MAXVAL    10 	          /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 #define SEMAPHORE_INITVAL    0 	          /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 #define IMAGE_NB_SEMAPHORE  10            /**< Number of semaphores per image */
 
@@ -343,7 +343,7 @@ typedef struct
 	
 	// mem offset = 140 when packed
 
-	uint32_t : 0; // align array to 8-byte boundary for speed  -> pushed mem offset to 144 when packed
+	uint64_t : 0; // align array to 8-byte boundary for speed  -> pushed mem offset to 144 when packed
     
     uint64_t cnt0;               	/**< counter (incremented if image is updated)                                    */
     uint64_t cnt1;               	/**< in 3D rolling buffer image, this is the last slice written                   */

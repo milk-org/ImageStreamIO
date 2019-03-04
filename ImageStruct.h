@@ -21,6 +21,9 @@
 #ifndef _IMAGESTRUCT_H
 #define _IMAGESTRUCT_H
 
+
+#define IMAGESTRUCT_VERSION "0.0.00"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -88,6 +91,9 @@ extern "C"
 
 #define _DATATYPE_INT64                                8  /**< int64_t       usually = long               */
 #define SIZEOF_DATATYPE_INT64	                       8
+
+#define _DATATYPE_HALF                                 13  /**< IEE 754 half-precision 16-bit (uses uint16_t for storage) */
+#define SIZEOF_DATATYPE_HALF	                       2
 
 #define _DATATYPE_FLOAT                                9  /**< IEEE 754 single-precision binary floating-point format: binary32 */
 #define SIZEOF_DATATYPE_FLOAT	                       4
@@ -251,18 +257,25 @@ typedef struct
  */ 
 typedef struct
 {
+	char version[32]; 
+	/** Image structure version. 
+	 * 
+	 * should be equal to IMAGESTRUCT_VERSION
+	 * 
+	 * Will be tested to ensure current software revision matches data.
+	 * If does not match, return error.
+	 */ 
+	
     /** @brief Image Name */
-    char name[80];   
+    char name[80];
     
-    // mem offset = 80 when packed
 
 	/** @brief Number of axis
 	 * 
-	 * @warning 1, 2 or 3. Values above 3 not allowed.   
+	 * @warning 1, 2 or 3. Values above 3 not supported.   
 	 */
     uint8_t naxis;                
     
-    // mem offset = 81 when packed
     
     /** @brief Image size along each axis 
      * 
@@ -270,7 +283,6 @@ typedef struct
      */
     uint32_t size[3];
 	
-	// mem offset = 93 when packed
 
 	/** @brief Number of elements in image
 	 * 
@@ -278,7 +290,7 @@ typedef struct
 	 */ 
     uint64_t nelement;             
     
-    // mem offset = 101 when packed
+    
     
     /** @brief Data type
      * 
@@ -295,68 +307,87 @@ typedef struct
      *  - 10: IEEE 754 double-precision binary floating-point format: binary64
      *  - 11: complex_float
      *  - 12: complex double
+     *  - 13: half precision floating-point
      * 
      */
-    uint8_t atype;                 
-	
-	// mem offset = 102 when packed
+    uint8_t datatype;
+    
 
-    double creation_time;           /**< creation time (since process start)                                          */
-    double last_access;             /**< last time the image was accessed  (since process start)                      */
+
+
+	
+	uint64_t imagetype;              /**< image type */
+	/**
+	 * 0x 0000 0000 0000 0001  Circular buffer, slice z axis is encoding time -> record writetime array
+	 * 0x 0000 0000 0000 0002  Image is mathematical vector or matrix
+	 * 0x 0000 0000 0000 0004  Image is stream received from another computer
+	 * 0x 0000 0000 0000 0008  Image is stream sent to other computer
+	 * 
+	 * 0x 0000 0000 000X 0000  axis[0] encoding code (0-15): 
+	 *    0: undefined (default)
+	 *    1: spatial coordinate
+	 *    2: temporal coordinate
+	 *    3: wavelength coordinate
+	 *    4: mapping index 
+	 * 
+	 * 
+	 * 
+	 */
+
+
+ 
+	
+	// relative timers using time relative to process start
+
+ //   double creationtime;             /**< Creation / load time of data structure (since process start)  */    
+//    double lastaccesstime;           /**< last time the image was accessed  (since process start)                      */
+
+
+
+	// absolute timers using struct timespec
+	
+	struct timespec creationtime;
+	struct timespec lastaccesstime;
+	
+	struct timespec atime;             /**< time at which data was acquires/created. This time CAN be copied from input to output */
+	struct timespec *atimearray;       /**< same as above with slice index          */
+
+	struct timespec writetime;         /**< last write time into data array         */
+	struct timespec *writetimearray;   /**< same as above with slice index          */     
+
     
-    // mem offset = 118 when packed
-    
-    /** @brief Acquisition time (beginning of exposure   
-     * 
-     * atime is defined as a union to ensure fixed 16-byte length regardless of struct timespec implementation
-     * 
-     * Data Type: struct timespec
-     * The struct timespec structure represents an elapsed time. It is declared in time.h and has the following members:
-     *    time_t tv_sec
-     * This represents the number of whole seconds of elapsed time.
-     *    long int tv_nsec
-     * This is the rest of the elapsed time (a fraction of a second), represented as the number of nanoseconds. It is always less than one billion.
-     * 
-     * On (most ?) 64-bit systems:
-     * sizeof(struct timespec) = 16 :  sizeof(long int) = 8;  sizeof(time_t) = 8
-     * 
-     * @warning sizeof(struct timespec) is implementation-specific, and could be smaller that 16 byte. Users may need to create and manage their own timespec implementation if data needs to be portable across machines.
-     */
-    union
-    {
-		struct timespec ts;
-		TIMESPECFIXED tsfixed;
-	} atime;
-    
-    // mem offset = 134 when packed
     
     
     uint8_t shared;                 /**< 1 if in shared memory                                                        */
     int8_t location;                /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
     uint8_t status;              	/**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
 	
-	// mem offset = 137 when packed
 
 	uint8_t logflag;                    /**< set to 1 to start logging         */
     uint16_t sem; 				   
          /**< number of semaphores in use, specified at image creation      */
 	
-	// mem offset = 140 when packed
 
-	uint64_t : 0; // align array to 8-byte boundary for speed  -> pushed mem offset to 144 when packed
+	uint64_t : 0; // align array to 8-byte boundary for speed  
     
     uint64_t cnt0;               	/**< counter (incremented if image is updated)                                    */
     uint64_t cnt1;               	/**< in 3D rolling buffer image, this is the last slice written                   */
     uint64_t cnt2;                  /**< in event mode, this is the # of events                                       */
-
+	uint64_t *cntarray;             /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
+	
     uint8_t  write;               	/**< 1 if image is being written                                                  */
+
+	uint64_t flag;                  /**< bitmask, encodes read/write permissions.... NOTE: enum instead of defines */
+	/** 
+	 * 0x0001   
+	 * 
+	 */
+	uint64_t *flagarray;            /**<  flag for each slice if needed (depends on imagetype) */
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
     
     cudaIpcMemHandle_t cudaMemHandle;
-	// mem offset 248
 
-    // total size is 171 byte = 1368 bit when packed
 
 #ifdef DATA_PACKED
 } __attribute__ ((__packed__)) IMAGE_METADATA;
@@ -444,7 +475,7 @@ typedef struct          		/**< structure used to store data arrays              
         complex_float *CF;
         complex_double *CD;
 
-		EVENT_UI8_UI8_UI16_UI8 *event1121;
+//		EVENT_UI8_UI8_UI16_UI8 *event1121; 
 
     } array;                 	/**< pointer to data array */
 	// mem offset 120

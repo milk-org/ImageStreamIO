@@ -460,6 +460,7 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
             image->kw = NULL;
     }
 
+    strncpy(image->md[0].version, IMAGESTRUCT_VERSION, 32);
     image->md[0].location = location;
     image->md[0].datatype = datatype;
     image->md[0].naxis = naxis;
@@ -618,6 +619,12 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     image->shmfd = SM_fd;
     image->md = (IMAGE_METADATA *)map;
     image->md[0].shared = 1;
+    
+    if(strcmp(image->md[0].version, IMAGESTRUCT_VERSION)){
+        ImageStreamIO_printERROR(
+            "Error calling ImageStreamIO_read_sharedmem_image_toIMAGE, incompatible version");
+        exit(EXIT_FAILURE);
+    }
 
     // printf("image size = ");
     uint64_t size = 1;

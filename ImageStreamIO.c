@@ -134,7 +134,7 @@ int ImageStreamIO_printERROR_(const char *file, const char *func, int line,
  */
 
 inline int ImageStreamIO_writeIndex(const IMAGE *image) {
-  int64_t write_index = image->md->cnt0 + 1;
+  const int write_index = image->md->cnt0 + 1;
   return write_index % image->md->size[0];
 }
 
@@ -142,24 +142,23 @@ inline int ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
   return image->md->cnt0;
 }
 
-void *ImageStreamIO_writeBuffer(const IMAGE *image) {
+uint8_t *ImageStreamIO_readBufferAt(const IMAGE *image, const int read_index) {
   if((image->md->imagetype & 0xF) != CIRCULAR_BUFFER) {
-    return image->array.raw;
+    return image->array.UI8;
   }
-  const unsigned long frame_size = image->md->size[1] * image->md->size[2];
-  const size_t size_element = ImageStreamIO_typesize(image->md->datatype);
-  const int64_t write_index = ImageStreamIO_writeIndex(image);
-  return image->array.raw + write_index * frame_size * size_element;
+  const uint64_t frame_size = image->md->size[1] * image->md->size[2];
+  const int size_element = ImageStreamIO_typesize(image->md->datatype);
+  return image->array.UI8 + read_index * frame_size * size_element;
+}
+
+void *ImageStreamIO_writeBuffer(const IMAGE *image) {
+  const int write_index = ImageStreamIO_writeIndex(image);
+  return (void*)ImageStreamIO_readBufferAt(image, write_index);
 }
 
 void *ImageStreamIO_readLastWroteBuffer(const IMAGE *image) {
-  if((image->md->imagetype & 0xF) != CIRCULAR_BUFFER) {
-    return image->array.raw;
-  }
-  const unsigned long frame_size = image->md->size[1] * image->md->size[2];
-  const size_t size_element = ImageStreamIO_typesize(image->md->datatype);
   const int64_t read_index = ImageStreamIO_readLastWroteIndex(image);
-  return image->array.raw + read_index * frame_size * size_element;
+  return (void*)ImageStreamIO_readBufferAt(image, read_index);
 }
 
 int ImageStreamIO_filename(char *file_name, size_t ssz, const char *im_name) {

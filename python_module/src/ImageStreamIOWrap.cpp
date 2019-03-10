@@ -23,6 +23,9 @@ struct ImageStreamIOType {
 
   Type type;
 
+  ImageStreamIOType()
+      : type(MATH_DATA_TYPE){};
+
   ImageStreamIOType(uint64_t type)
       : type(static_cast<ImageStreamIOType::Type>(type)){};
 
@@ -54,6 +57,10 @@ struct ImageStreamIODataType {
 
   DataType datatype;
   uint8_t asize;
+
+  ImageStreamIODataType()
+      : datatype(FLOAT),
+        asize(Size[FLOAT]){};
 
   ImageStreamIODataType(uint8_t datatype)
       : datatype(static_cast<ImageStreamIODataType::DataType>(datatype)),
@@ -98,7 +105,7 @@ std::string ImageStreamIODataTypeToPyFormat(ImageStreamIODataType dt) {
   }
 }
 
-ImageStreamIODataType PyFormatToImageStreamIODataType(std::string pf) {
+ImageStreamIODataType PyFormatToImageStreamIODataType(const std::string &pf) {
   if (pf == py::format_descriptor<uint8_t>::format())
     return ImageStreamIODataType::DataType::UINT8;
   if (pf == py::format_descriptor<int8_t>::format())

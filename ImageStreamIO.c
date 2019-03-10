@@ -708,7 +708,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     map += sizeof(struct timespec) * image->md->size[0];
 
     image->md->cntarray = (uint64_t *)(map);
-    map += sizeof(uint64_t) * image->md->size[0];
+    // map += sizeof(uint64_t) * image->md->size[0];
   }
 
   strncpy(image->name, name, 80);

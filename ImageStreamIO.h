@@ -119,7 +119,9 @@ int ImageStreamIO_createIm_gpu( IMAGE *image,      ///< [out] IMAGE structure wh
                             uint8_t atype,     ///< [in] data type code
                             int8_t location,   ///< [in] if -1 then a CPU memory buffer is allocated. If >=0, GPU memory buffer is allocated on devive `location`.
                             int shared,        ///< [in] if true then a shared memory buffer is allocated.  If false, only local storage is used.
-                            int NBkw           ///< [in] the number of keywords to allocate.
+                            int NBsem,         ///< [in] the number of semaphores to allocate.
+                            int NBkw,          ///< [in] the number of keywords to allocate.
+                            uint64_t imagetype ///< [in] type of the stream
                           );
 
 void* ImageStreamIO_get_image_d_ptr(IMAGE *image);

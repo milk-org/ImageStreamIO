@@ -133,6 +133,35 @@ int ImageStreamIO_printERROR_(const char *file, const char *func, int line,
 /* ===============================================================================================
  */
 
+inline int ImageStreamIO_writeIndex(const IMAGE *image) {
+  int64_t write_index = image->md->cnt0 + 1;
+  return write_index % image->md->size[0];
+}
+
+inline int ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
+  return image->md->cnt0;
+}
+
+void *ImageStreamIO_writeBuffer(const IMAGE *image) {
+  if((image->md->imagetype & 0xF) != CIRCULAR_BUFFER) {
+    return image->array.raw;
+  }
+  const unsigned long frame_size = image->md->size[1] * image->md->size[2];
+  const size_t size_element = ImageStreamIO_typesize(image->md->datatype);
+  const int64_t write_index = ImageStreamIO_writeIndex(image);
+  return image->array.raw + write_index * frame_size * size_element;
+}
+
+void *ImageStreamIO_readLastWroteBuffer(const IMAGE *image) {
+  if((image->md->imagetype & 0xF) != CIRCULAR_BUFFER) {
+    return image->array.raw;
+  }
+  const unsigned long frame_size = image->md->size[1] * image->md->size[2];
+  const size_t size_element = ImageStreamIO_typesize(image->md->datatype);
+  const int64_t read_index = ImageStreamIO_readLastWroteIndex(image);
+  return image->array.raw + read_index * frame_size * size_element;
+}
+
 int ImageStreamIO_filename(char *file_name, size_t ssz, const char *im_name) {
   int rv = snprintf(file_name, ssz, "%s/%s.im.shm", SHAREDMEMDIR, im_name);
 

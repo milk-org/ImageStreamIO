@@ -358,12 +358,13 @@ typedef struct
     
     
     
-    uint8_t shared;                 /**< 1 if in shared memory                                                        */
-    int8_t location;                /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
-    uint8_t status;              	/**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
-	
+    uint8_t  shared;                  /**< 1 if in shared memory                                                        */
+    int8_t   location;                /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
+    uint8_t  status;              	  /**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
+	uint64_t flag;                    /**< bitmask, encodes read/write permissions.... NOTE: enum instead of defines */
+	uint64_t *flagarray;              /**<  flag for each slice if needed (depends on imagetype) */	
 
-	uint8_t logflag;                    /**< set to 1 to start logging         */
+	uint8_t  logflag;                    /**< set to 1 to start logging         */
     uint16_t sem; 				   
          /**< number of semaphores in use, specified at image creation      */
 	
@@ -377,12 +378,7 @@ typedef struct
 	
     uint8_t  write;               	/**< 1 if image is being written                                                  */
 
-	uint64_t flag;                  /**< bitmask, encodes read/write permissions.... NOTE: enum instead of defines */
-	/** 
-	 * 0x0001   
-	 * 
-	 */
-	uint64_t *flagarray;            /**<  flag for each slice if needed (depends on imagetype) */
+
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
     

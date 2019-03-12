@@ -2,9 +2,6 @@
  * @file    ImageCreate.h
  * @brief   Function prototypes for ImageCreate
  * 
- *  
- * @author  O. Guyon
- * @date    12 Jul 2017
  *
  * 
  * @bug No known bugs.

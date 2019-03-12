@@ -201,8 +201,6 @@ int ImageStreamIO_typesize(uint8_t datatype) {
       return SIZEOF_DATATYPE_COMPLEX_FLOAT;
     case _DATATYPE_COMPLEX_DOUBLE:
       return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
-    case _DATATYPE_EVENT_UI8_UI8_UI16_UI8:
-      return SIZEOF_DATATYPE_EVENT_UI8_UI8_UI16_UI8;
 
     default:
       ImageStreamIO_printERROR("invalid type code");

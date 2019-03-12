@@ -6,8 +6,8 @@
  * Supports shared memory, low latency IPC through semaphores
  *
  * Dynamic allocation within IMAGE:
- * IMAGE includes a pointer to an array of IMAGE_METADATA (usually only one element, >1 element for polymorphism) 
- * IMAGE includes a pointer to an array of KEYWORDS 
+ * IMAGE includes a pointer to an array of IMAGE_METADATA (usually only one element, >1 element for polymorphism)
+ * IMAGE includes a pointer to an array of KEYWORDS
  * IMAGE includes a pointer to a data array
  *
  *
@@ -45,17 +45,17 @@ typedef char cudaIpcMemHandle_t[64];
 #define CLOCK_REALTIME 0
 #define CLOCK_MONOTONIC 0
 static int clock_gettime(int clk_id, struct mach_timespec *t) {
-  mach_timebase_info_data_t timebase;
-  mach_timebase_info(&timebase);
-  uint64_t time;
-  time = mach_absolute_time();
-  double nseconds =
-      ((double)time * (double)timebase.numer) / ((double)timebase.denom);
-  double seconds =
-      ((double)time * (double)timebase.numer) / ((double)timebase.denom * 1e9);
-  t->tv_sec = seconds;
-  t->tv_nsec = nseconds;
-  return EXIT_SUCCESS;
+    mach_timebase_info_data_t timebase;
+    mach_timebase_info(&timebase);
+    uint64_t time;
+    time = mach_absolute_time();
+    double nseconds =
+        ((double)time * (double)timebase.numer) / ((double)timebase.denom);
+    double seconds =
+        ((double)time * (double)timebase.numer) / ((double)timebase.denom * 1e9);
+    t->tv_sec = seconds;
+    t->tv_nsec = nseconds;
+    return EXIT_SUCCESS;
 }
 #else
 #include <time.h>
@@ -134,7 +134,7 @@ extern "C" {
 
 #define CIRCULAR_BUFFER \
   0x0001  // Circular buffer, slice z axis is encoding time -> record writetime
-          // array
+// array
 #define MATH_DATA 0x0002  // Image is mathematical vector or matrix
 #define IMG_RECV 0x0004   // Image is stream received from another computer
 #define IMG_SENT 0x0008   // Image is stream sent to other computer
@@ -154,21 +154,22 @@ extern "C" {
  * 	- value
  */
 typedef struct {
-  char name[16]; /**< keyword name */
-  char type;     /**< N: unused, L: long, D: double, S: 16-char string     */
-  uint64_t : 0;  // align array to 8-byte boundary for speed
+    char name[16]; /**< keyword name */
+    char type;     /**< N: unused, L: long, D: double, S: 16-char string     */
+    uint64_t : 0;  // align array to 8-byte boundary for speed
 
-  union {
-    int64_t numl;
-    double numf;
-    char valstr[16];
-  } value;
+    union {
+        int64_t numl;
+        double numf;
+        char valstr[16];
+    } value;
 
-  char comment[80];
+    char comment[80];
 #ifdef DATA_PACKED
 } __attribute__((__packed__)) IMAGE_KEYWORD;
 #else
-} IMAGE_KEYWORD;
+}
+IMAGE_KEYWORD;
 #endif
 
 /** @brief structure holding two 8-byte integers
@@ -176,127 +177,66 @@ typedef struct {
  * Used in an union with struct timespec to ensure fixed 16 byte length
  */
 typedef struct {
-  int64_t firstlong;
-  int64_t secondlong;
+    int64_t firstlong;
+    int64_t secondlong;
 } TIMESPECFIXED;
 
 typedef struct {
-  float re;
-  float im;
+    float re;
+    float im;
 } complex_float;
 
 typedef struct {
-  double re;
-  double im;
+    double re;
+    double im;
 } complex_double;
 
-/** @brief Photon detection events
- *
- * Log individual photon events on a 2D camera
- * Timing resolution = 1 us
- * Optimized for small size
- *
- * Max detector size 256 x 256 pix
- * Max "exposure" time is 2^16 us = 65.535 ms (15.28 Hz)
- * Wavelength resolution set by keywords in frame:
- *   LAMBDA_MIN, LAMBDA_MAX
- * lambda = LAMBDA_MIN + (LAMBDA_MAX-LAMBDA_MIN)/256*lambda_index
- *
- * USAGE:
- * An array of EVENT_UI8_UI8_UI16_UI8 is stored in the IMAGE structure
- * The array can be 1D (list of events), or 3D (N x 1 x M) for a circular buffer
- * where the z-index (slice) is incremented between each "exposure"
- * md[0].cnt2 contains the number of events in the last slice written
- * Detection events do not have to be ordered
- *
- * Write sequence in circular buffer :
- * - [1] create IMAGE structure type EVENT_UI8_UI8_UI16_UI8. Size n x 1 x m,
- * where n = max # of event per "exposure", m = number of slices in circular
- * buffer. Note that md[0].size[0]=m, md[0].size[1]=1, md[0].size[2]=m
- * - [2] set md[0].write=1 (start image write)
- * - [3] set k=md[0].cnt1=0 (slice index)
- * - [4] set md[0].cnt2=0 (# of events), ii=0 (event index in current slice)
- * - [5] store time in local variable (exposure start)
- * - [6] Write each event in array.EVENT_UI8_UI8_UI16_UI8[k*md[0].size[0]+ii].
- * After each event, increment ii (event index)
- * - [7] When "exposure" completed, set md[0].atime to exposure time start (see
- * step [5]), md[0].cnt1=k (last slice written),  md[0].cnt2=ii (number of
- * events), set md[0].write=0 (write completed), increment md[0].cnt0, and post
- * all semaphores
- * - [8] Increment k (if k=md[0].size[2], set k=0), return to step [4]
- *
- * @warning Array size will define the maximum number of events packed in IMAGE.
- * User is responsible for pushing out IMAGE and starting a new IMAGE or slice
- * when max number of events is reached.
- *
- */
-typedef struct {
-  uint8_t xpix;
 
-  uint8_t ypix;
-
-  /** @brief Detection time since beginning of "exposure" [us]
-   *
-   * Beginning of exposure is written to md[0].atime
-   *  */
-  uint16_t dtus;
-
-  uint8_t lambda_index;
-  uint64_t : 0;  // align array to 8-byte boundary for speed
-#ifdef DATA_PACKED
-} __attribute__((__packed__)) EVENT_UI8_UI8_UI16_UI8;
-#else
-} EVENT_UI8_UI8_UI16_UI8;
-#endif
 
 /** @brief Image metadata
  *
- * This structure has a fixed size regardless of implementation when packed
- * @note size = 171 byte = 1368 bit when packed
-<<<<<<< HEAD
- * 
- * 
- *  
- */ 
+ *
+ *
+ */
 typedef struct
 {
-	char version[32]; 
-	/** Image structure version. 
-	 * 
-	 * should be equal to IMAGESTRUCT_VERSION
-	 * 
-	 * Will be tested to ensure current software revision matches data.
-	 * If does not match, return error.
-	 */ 
-	
+    char version[32];
+    /** Image structure version.
+     *
+     * should be equal to IMAGESTRUCT_VERSION
+     *
+     * Will be tested to ensure current software revision matches data.
+     * If does not match, return error.
+     */
+
     /** @brief Image Name */
     char name[80];
-    
 
-	/** @brief Number of axis
-	 * 
-	 * @warning 1, 2 or 3. Values above 3 not supported.   
-	 */
-    uint8_t naxis;                
-    
-    
-    /** @brief Image size along each axis 
-     * 
+
+    /** @brief Number of axis
+     *
+     * @warning 1, 2 or 3. Values above 3 not supported.
+     */
+    uint8_t naxis;
+
+
+    /** @brief Image size along each axis
+     *
      *  If naxis = 1 (1D image), size[1] and size[2] are irrelevant
      */
     uint32_t size[3];
-	
 
-	/** @brief Number of elements in image
-	 * 
-	 * This is computed upon image creation 
-	 */ 
-    uint64_t nelement;             
-    
-    
-    
+
+    /** @brief Number of elements in image
+     *
+     * This is computed upon image creation
+     */
+    uint64_t nelement;
+
+
+
     /** @brief Data type
-     * 
+     *
      * Encoded according to data type defines.
      *  -  1: uint8_t
      * 	-  2: int8_t
@@ -311,83 +251,81 @@ typedef struct
      *  - 11: complex_float
      *  - 12: complex double
      *  - 13: half precision floating-point
-     * 
+     *
      */
     uint8_t datatype;
-    
 
 
 
-	
-	uint64_t imagetype;              /**< image type */
-	/**
-	 * 0x 0000 0000 0000 0001  Circular buffer, slice z axis is encoding time -> record writetime array
-	 * 0x 0000 0000 0000 0002  Image is mathematical vector or matrix
-	 * 0x 0000 0000 0000 0004  Image is stream received from another computer
-	 * 0x 0000 0000 0000 0008  Image is stream sent to other computer
-	 * 
-	 * 0x 0000 0000 000X 0000  axis[0] encoding code (0-15): 
-	 *    0: undefined (default)
-	 *    1: spatial coordinate
-	 *    2: temporal coordinate
-	 *    3: wavelength coordinate
-	 *    4: mapping index 
-	 * 
-	 * 
-	 * 
-	 */
 
 
- 
-	
-	// relative timers using time relative to process start
-
- //   double creationtime;             /**< Creation / load time of data structure (since process start)  */    
-//    double lastaccesstime;           /**< last time the image was accessed  (since process start)                      */
+    uint64_t imagetype;              /**< image type */
+    /**
+     * 0x 0000 0000 0000 0001  Circular buffer, slice z axis is encoding time -> record writetime array
+     * 0x 0000 0000 0000 0002  Image is mathematical vector or matrix
+     * 0x 0000 0000 0000 0004  Image is stream received from another computer
+     * 0x 0000 0000 0000 0008  Image is stream sent to other computer
+     *
+     * 0x 0000 0000 000X 0000  axis[0] encoding code (0-15):
+     *    0: undefined (default)
+     *    1: spatial coordinate
+     *    2: temporal coordinate
+     *    3: wavelength coordinate
+     *    4: mapping index
+     *
+     *
+     *
+     */
 
 
 
-	// absolute timers using struct timespec
-	
-	struct timespec creationtime;
-	struct timespec lastaccesstime;
-	
-	struct timespec atime;             /**< time at which data was acquires/created. This time CAN be copied from input to output */
-	struct timespec *atimearray;       /**< same as above with slice index          */
 
-	struct timespec writetime;         /**< last write time into data array         */
-	struct timespec *writetimearray;   /**< same as above with slice index          */     
+    // relative timers using time relative to process start
 
-    
-    
-    
+    //   double creationtime;             /**< Creation / load time of data structure (since process start)  */
+    //    double lastaccesstime;           /**< last time the image was accessed  (since process start)                      */
+
+
+
+    // absolute timers using struct timespec
+
+    struct timespec creationtime;
+    struct timespec lastaccesstime;
+
+    struct timespec atime;             /**< time at which data was acquires/created. This time CAN be copied from input to output */
+    struct timespec *atimearray;       /**< same as above with slice index          */
+
+    struct timespec writetime;         /**< last write time into data array         */
+    struct timespec *writetimearray;   /**< same as above with slice index          */
+
+
+
+
     uint8_t  shared;                  /**< 1 if in shared memory                                                        */
     int8_t   location;                /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
     uint8_t  status;              	  /**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
-	uint64_t flag;                    /**< bitmask, encodes read/write permissions.... NOTE: enum instead of defines */
-	uint64_t *flagarray;              /**<  flag for each slice if needed (depends on imagetype) */	
+    uint64_t flag;                    /**< bitmask, encodes read/write permissions.... NOTE: enum instead of defines */
+    uint64_t *flagarray;              /**<  flag for each slice if needed (depends on imagetype) */
 
-	uint8_t  logflag;                    /**< set to 1 to start logging         */
-    uint16_t sem; 				   
-         /**< number of semaphores in use, specified at image creation      */
-	
+    uint8_t  logflag;                    /**< set to 1 to start logging         */
+    uint16_t sem;
+    /**< number of semaphores in use, specified at image creation      */
 
-	uint64_t : 0; // align array to 8-byte boundary for speed  
-    
+
+    uint64_t : 0; // align array to 8-byte boundary for speed
+
     uint64_t cnt0;               	/**< counter (incremented if image is updated)                                    */
     uint64_t cnt1;               	/**< in 3D rolling buffer image, this is the last slice written                   */
     uint64_t cnt2;                  /**< in event mode, this is the # of events                                       */
-	uint64_t *cntarray;             /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
-	
+    uint64_t *cntarray;             /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
+
     uint8_t  write;               	/**< 1 if image is being written                                                  */
 
 
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
-    
-    cudaIpcMemHandle_t cudaMemHandle;
 
-  cudaIpcMemHandle_t cudaMemHandle;
+    cudaIpcMemHandle_t cudaMemHandle;
 
 #ifdef DATA_PACKED
 } __attribute__((__packed__)) IMAGE_METADATA;
@@ -395,108 +333,100 @@ typedef struct
 } IMAGE_METADATA;
 #endif
 
+
+
+
 /** @brief IMAGE structure
  * The IMAGE structure includes :
  *   - an array of IMAGE_KEWORD structures
  *   - an array of IMAGE_METADATA structures (usually only 1 element)
  *
- * @note size = 136 byte = 1088 bit
  *
  */
 typedef struct /**< structure used to store data arrays                      */
 {
-  char
-      name[80]; /**< local name (can be different from name in shared memory) */
-  // mem offset = 80
+    char
+    name[80]; /**< local name (can be different from name in shared memory) */
+    // mem offset = 80
 
-  /** @brief Image usage flag
-   *
-   * 1 if image is used, 0 otherwise. \n
-   * This flag is used when an array of IMAGE type is held in memory as a way to
-   * store multiple images. \n When an image is freed, the corresponding memory
-   * (in array) is freed and this flag set to zero. \n The active images can be
-   * listed by looking for IMAGE[i].used==1 entries.\n
-   *
-   */
-  uint8_t used;
-  // mem offset = 81
+    /** @brief Image usage flag
+     *
+     * 1 if image is used, 0 otherwise. \n
+     * This flag is used when an array of IMAGE type is held in memory as a way to
+     * store multiple images. \n When an image is freed, the corresponding memory
+     * (in array) is freed and this flag set to zero. \n The active images can be
+     * listed by looking for IMAGE[i].used==1 entries.\n
+     *
+     */
+    uint8_t used;
 
-  int32_t shmfd; /**< if shared memory, file descriptor */
-                 // mem offset = 85
+    int32_t shmfd; /**< if shared memory, file descriptor */
 
-  uint64_t memsize; /**< total size in memory if shared    */
-                    // mem offset = 93
+    uint64_t memsize; /**< total size in memory if shared    */
 
-  sem_t *semlog; /**< pointer to semaphore for logging  (8 bytes on 64-bit
+    sem_t *semlog; /**< pointer to semaphore for logging  (8 bytes on 64-bit
                     system) */
-                 // mem offset = 101
 
-  IMAGE_METADATA *md;
-  // mem offset = 109
+    IMAGE_METADATA *md;
 
-  uint64_t : 0;  // align array to 8-byte boundary for speed
-                 // mem offset pushed to 112
+    uint64_t : 0;  // align array to 8-byte boundary for speed
 
-  /** @brief data storage array
-   *
-   * The array is declared as a union, so that multiple data types can be
-   * supported
-   *
-   * For 2D image with pixel indices ii (x-axis) and jj (y-axis), the pixel
-   * values are stored as array.<TYPE>[ jj * md[0].size[0] + ii ] image
-   * md[0].size[0] is x-axis size, md[0].size[1] is y-axis size
-   *
-   * For 3D image with pixel indices ii (x-axis), jj (y-axis) and kk (z-axis),
-   * the pixel values are stored as array.<TYPE>[ kk * md[0].size[1] *
-   * md[0].size[0] + jj * md[0].size[0] + ii ] image md[0].size[0] is x-axis
-   * size, md[0].size[1] is y-axis size, md[0].size[2] is z-axis size
-   *
-   * @note Up to this point, all members of the structure have a fixed memory
-   * offset to the start point
-   */
-  union {
-    void *raw;  // raw pointer
+    /** @brief data storage array
+     *
+     * The array is declared as a union, so that multiple data types can be
+     * supported
+     *
+     * For 2D image with pixel indices ii (x-axis) and jj (y-axis), the pixel
+     * values are stored as array.<TYPE>[ jj * md[0].size[0] + ii ] image
+     * md[0].size[0] is x-axis size, md[0].size[1] is y-axis size
+     *
+     * For 3D image with pixel indices ii (x-axis), jj (y-axis) and kk (z-axis),
+     * the pixel values are stored as array.<TYPE>[ kk * md[0].size[1] *
+     * md[0].size[0] + jj * md[0].size[0] + ii ] image md[0].size[0] is x-axis
+     * size, md[0].size[1] is y-axis size, md[0].size[2] is z-axis size
+     *
+     * @note Up to this point, all members of the structure have a fixed memory
+     * offset to the start point
+     */
+    union {
+        void *raw;  // raw pointer
 
-    uint8_t *UI8;  // char
-    int8_t *SI8;
+        uint8_t *UI8;  // char
+        int8_t *SI8;
 
-    uint16_t *UI16;  // unsigned short
-    int16_t *SI16;
+        uint16_t *UI16;  // unsigned short
+        int16_t *SI16;
 
-    uint32_t *UI32;
-    int32_t *SI32;  // int
+        uint32_t *UI32;
+        int32_t *SI32;  // int
 
-    uint64_t *UI64;
-    int64_t *SI64;  // long
+        uint64_t *UI64;
+        int64_t *SI64;  // long
 
-    float *F;
-    double *D;
+        float *F;
+        double *D;
 
-    complex_float *CF;
-    complex_double *CD;
+        complex_float *CF;
+        complex_double *CD;
 
-    //		EVENT_UI8_UI8_UI16_UI8 *event1121;
+    } array; /**< pointer to data array */
 
-  } array; /**< pointer to data array */
-           // mem offset 120
 
-  sem_t **semptr; /**< array of pointers to semaphores   (each 8 bytes on 64-bit
+    sem_t **semptr; /**< array of pointers to semaphores   (each 8 bytes on 64-bit
                      system) */
-                  // mem offset 128
 
-  IMAGE_KEYWORD *kw;
-  // mem offset 136
+    IMAGE_KEYWORD *kw;
 
-  // PID of process that read shared memory stream
-  // Initialized at 0. Otherwise, when process is waiting on semaphore, its PID
-  // is written in this array The array can be used to look for available
-  // semaphores
-  pid_t *semReadPID;
+    // PID of process that read shared memory stream
+    // Initialized at 0. Otherwise, when process is waiting on semaphore, its PID
+    // is written in this array The array can be used to look for available
+    // semaphores
+    pid_t *semReadPID;
 
-  // PID of the process writing the data
-  pid_t *semWritePID;
+    // PID of the process writing the data
+    pid_t *semWritePID;
 
-  // total size is 152 byte = 1216 bit
+    // total size is 152 byte = 1216 bit
 #ifdef DATA_PACKED
 } __attribute__((__packed__)) IMAGE;
 #else

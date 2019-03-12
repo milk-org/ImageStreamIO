@@ -128,8 +128,8 @@ int main()
 		
 		usleep(dtus);
 		angle += dangle;
-		if(angle > 2.0*M_PI)
-			angle -= 2.0*M_PI;
+		if(angle > 2.0*3.141592)
+			angle -= 2.0*3.141592;
 		//printf("Wrote square at position xc = %16f  yc = %16f\n", xc, yc);
 		//fflush(stdout);
 	}

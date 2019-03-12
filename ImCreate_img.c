@@ -62,7 +62,7 @@ int main()
 
 	
 	// create an image in shared memory
-	ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, NBkw);
+	ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, IMAGE_NB_SEMAPHORE, NBkw, MATH_DATA);
 
 	free(imsize);
 

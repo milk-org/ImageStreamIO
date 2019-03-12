@@ -10,3 +10,5 @@ build
 .vscode
 ImCreate_test
 ImCreate_cube
+ImageStreamIOWrap.egg-info
+setup.cfg

@@ -65,22 +65,22 @@ int main()
 	NBkw = 3;
 	
 	// create an image in shared memory
-	ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, NBkw);
+	ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, 10, NBkw, 2);
 
-    strcpy(imarray.kw[0].name, "symcode");
+    strncpy(imarray.kw[0].name, "symcode", 16);
     imarray.kw[0].type = 'L';
     imarray.kw[0].value.numl = 5;
-    strcpy(imarray.kw[0].comment, "symcode value");
+    strncpy(imarray.kw[0].comment, "symcode value", 80);
 
-    strcpy(imarray.kw[1].name, "exposure");
+    strncpy(imarray.kw[1].name, "exposure", 16);
     imarray.kw[1].type = 'D';
     imarray.kw[1].value.numf = 8000.;
-    strcpy(imarray.kw[1].comment, "in us, exposure value");
+    strncpy(imarray.kw[1].comment, "in us, exposure value", 80);
 
-    strcpy(imarray.kw[2].name, "source");
+    strncpy(imarray.kw[2].name, "source", 16);
     imarray.kw[2].type = 'S';
-    strcpy(imarray.kw[2].value.valstr, "ImCreate_cube");
-    strcpy(imarray.kw[2].comment, "source value");
+    strncpy(imarray.kw[2].value.valstr, "ImCreate_cube", 16);
+    strncpy(imarray.kw[2].comment, "source value", 80);
 
 
 	free(imsize);
@@ -141,7 +141,7 @@ int main()
 		imarray.md->cnt1 = index;
 		imarray.md->cnt0++;
 		clock_gettime(CLOCK_REALTIME, &timenow);
-		imarray.md[0].last_access =
+		imarray.md[0].lastaccesstime =
 			1.0 * timenow.tv_sec + 0.000000001 * timenow.tv_nsec;
 		// POST ALL SEMAPHORES
 		ImageStreamIO_sempost(&imarray, -1);

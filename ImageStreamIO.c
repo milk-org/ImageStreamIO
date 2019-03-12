@@ -134,12 +134,12 @@ int ImageStreamIO_printERROR_(const char *file, const char *func, int line,
  */
 
 inline int ImageStreamIO_writeIndex(const IMAGE *image) {
-  const int write_index = image->md->cnt0 + 1;
+  const int write_index = image->md->cnt1 + 1;
   return write_index % image->md->size[0];
 }
 
 inline int ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
-  return image->md->cnt0;
+  return image->md->cnt1;
 }
 
 uint8_t *ImageStreamIO_readBufferAt(const IMAGE *image, const int read_index) {

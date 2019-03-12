@@ -193,6 +193,7 @@ typedef struct {
 
 
 
+
 /** @brief Image metadata
  *
  *
@@ -206,7 +207,7 @@ typedef struct
      * should be equal to IMAGESTRUCT_VERSION
      *
      * Will be tested to ensure current software revision matches data.
-     * If does not match, return error.
+     * If does not match, return error message with both versions.
      */
 
     /** @brief Image Name */

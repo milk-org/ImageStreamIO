@@ -9,6 +9,8 @@ find_package(pybind11 CONFIG REQUIRED)
 
 add_library(ImageStreamIOWrap MODULE src/ImageStreamIOWrap.cpp)
 
+target_compile_options(ImageStreamIOWrap PRIVATE -Wno-deprecated-declarations)
+
 target_include_directories(ImageStreamIOWrap PRIVATE inc)
 
 target_link_libraries(ImageStreamIOWrap

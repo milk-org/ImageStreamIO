@@ -11,9 +11,6 @@
  * IMAGE includes a pointer to a data array
  *
  *
- * @author  O. Guyon
- * @date    22 Jul 2017
- *
  * @bug No known bugs.
  *
  */

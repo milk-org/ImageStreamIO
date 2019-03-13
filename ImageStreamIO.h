@@ -36,6 +36,10 @@ int_fast8_t init_ImageStreamIO();
 /* =============================================================================================== */
 /* =============================================================================================== */
 
+int ImageStreamIO_writeIndex(const IMAGE *image);
+int ImageStreamIO_readLastWroteIndex(const IMAGE *image);
+uint8_t *ImageStreamIO_readBufferAt(const IMAGE *image, const int read_index);
+
 /** @brief Get the raw pointer where the producer should write.
   * 
   *

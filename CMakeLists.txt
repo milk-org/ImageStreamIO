@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-option(python_build "Compile Python Wrappers" ON)
+option(python_build "Compile Python Wrappers" OFF)
 
 if(python_build)
   include("cmake/HunterGate.cmake")

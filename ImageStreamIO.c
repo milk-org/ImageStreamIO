@@ -788,7 +788,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
             perror("semaphore initialization");
         } else {
             sem_init(
-                image->semptr[s], 1,
+                image->semlog, 1,
                 SEMAPHORE_INITVAL);  // SEMAPHORE_INITVAL defined in ImageStruct.h
         }
     }

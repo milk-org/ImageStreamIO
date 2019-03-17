@@ -79,6 +79,15 @@ int_fast8_t init_ImageStreamIO() {
 #define ImageStreamIO_printERROR(msg) \
   ImageStreamIO_printERROR_(__FILE__, __func__, __LINE__, msg);
 
+
+
+
+
+/**
+ * Print error to stderr
+ * 
+ * 
+ */
 int ImageStreamIO_printERROR_(const char *file, const char *func, int line,
                               char *errmessage) {
   fprintf(stderr,
@@ -658,7 +667,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
 
     fstat(SM_fd, &file_stat);
     
-    printf("File %s size: %zd\n", SM_fname, file_stat.st_size); fflush(stdout); //TEST
+    //printf("File %s size: %zd\n", SM_fname, file_stat.st_size); fflush(stdout); //TEST
 
     map = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
                           MAP_SHARED, SM_fd, 0);
@@ -680,10 +689,10 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
         exit(EXIT_FAILURE);
     }
 
-    printf("image size = "); fflush(stdout); //TEST
+    //printf("image size = "); fflush(stdout); //TEST
     uint64_t size = 1;
     for (uint8_t axis = 0; axis < image->md->naxis; ++axis) {
-        printf("%ld ", (long)image->md->size[axis]); fflush(stdout); //TEST
+        //printf("%ld ", (long)image->md->size[axis]); fflush(stdout); //TEST
         size *= image->md->size[axis];
     }
     // printf("\n");
@@ -704,7 +713,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     map += sizeof(IMAGE_METADATA);
     map += ImageStreamIO_offset_data(image, map);
 
-    printf("%ld keywords\n", (long)image->md->NBkw); fflush(stdout); //TEST
+    //printf("%ld keywords\n", (long)image->md->NBkw); fflush(stdout); //TEST
 
     image->kw = (IMAGE_KEYWORD *)(map);
     map += sizeof(IMAGE_KEYWORD) * image->md->NBkw;
@@ -730,7 +739,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
 
     if ((image->md->imagetype & 0xF000F) ==
             (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  
-				printf("circuar buffer\n"); fflush(stdout); //TEST
+				//printf("circuar buffer\n"); fflush(stdout); //TEST
 				
 				// Circular buffer
         image->md->atimearray = (struct timespec *)(map);
@@ -746,7 +755,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     strncpy(image->name, name, 80);
 
     // looking for semaphores
-    printf("Looking for semaphores\n"); fflush(stdout); //TEST
+    //printf("Looking for semaphores\n"); fflush(stdout); //TEST
     while (sOK == 1) {
         snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md->name, snb);
         sem_t *stest;
@@ -757,9 +766,8 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
             snb++;
         }
     }
-    printf("%ld semaphores detected  (image->md->sem = %d)\n", snb,
-           (int)image->md->sem);
-    fflush(stdout); //TEST
+    //printf("%ld semaphores detected  (image->md->sem = %d)\n", snb, (int)image->md->sem);
+    //fflush(stdout); //TEST
 
     //        image->md->sem = snb;
     image->semptr = (sem_t **)malloc(sizeof(sem_t *) * image->md->sem);

@@ -621,6 +621,9 @@ void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
   return d_ptr;
 }
 
+
+
+
 /**
  * ## Purpose
  *
@@ -633,160 +636,171 @@ void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
  */
 
 int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
-  int SM_fd;
-  char SM_fname[200];
+    int SM_fd;
+    char SM_fname[200];
 
-  ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name);
+    ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name);
 
-  SM_fd = open(SM_fname, O_RDWR);
-  if (SM_fd == -1) {
-    image->used = 0;
-    ImageStreamIO_printERROR(SM_fname);
-    return EXIT_FAILURE;
-  }
-
-  char sname[200];
-  uint8_t *map;
-  long s;
-  struct stat file_stat;
-
-  long snb = 0;
-  int sOK = 1;
-
-  fstat(SM_fd, &file_stat);
-  // printf("File %s size: %zd\n", SM_fname, file_stat.st_size);
-
-  map = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
-                        MAP_SHARED, SM_fd, 0);
-  if (map == MAP_FAILED) {
-    close(SM_fd);
-    perror("Error mmapping the file");
-    exit(EXIT_FAILURE);
-  }
-
-  image->memsize = file_stat.st_size;
-  image->shmfd = SM_fd;
-  image->md = (IMAGE_METADATA *)map;
-  image->md->shared = 1;
-
-  if (strcmp(image->md->version, IMAGESTRUCT_VERSION)) {
-    ImageStreamIO_printERROR(
-        "Error calling ImageStreamIO_read_sharedmem_image_toIMAGE, "
-        "incompatible version");
-    exit(EXIT_FAILURE);
-  }
-
-  // printf("image size = ");
-  uint64_t size = 1;
-  for (uint8_t axis = 0; axis < image->md->naxis; ++axis) {
-    // printf("%ld ", (long)image->md->size[axis]);
-    size *= image->md->size[axis];
-  }
-  // printf("\n");
-  fflush(stdout);
-
-  // some verification
-  if (size > 10000000000) {
-    printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name);
-    return EXIT_FAILURE;
-  }
-  for (uint8_t axis = 0; axis < image->md->naxis; ++axis) {
-    if (image->md->size[axis] < 1) {
-      printf("IMAGE \"%s\" AXIS %d SIZE < 1... NOT LOADING\n", name, axis);
-      return EXIT_FAILURE;
+    SM_fd = open(SM_fname, O_RDWR);
+    if (SM_fd == -1) {
+        image->used = 0;
+        ImageStreamIO_printERROR(SM_fname);
+        return EXIT_FAILURE;
     }
-  }
 
-  map += sizeof(IMAGE_METADATA);
-  map += ImageStreamIO_offset_data(image, map);
+    char sname[200];
+    uint8_t *map;
+    long s;
+    struct stat file_stat;
 
-  // printf("%ld keywords\n", (long)image->md->NBkw);
-  fflush(stdout);
+    long snb = 0;
+    int sOK = 1;
 
-  image->kw = (IMAGE_KEYWORD *)(map);
-  map += sizeof(IMAGE_KEYWORD) * image->md->NBkw;
-  /*
-    int kw;
-    for (kw = 0; kw < image->md->NBkw; kw++) {
-      if (image->kw[kw].type == 'L')
-        printf("%d  %s %ld %s\n", kw, image->kw[kw].name,
-               image->kw[kw].value.numl, image->kw[kw].comment);
-      if (image->kw[kw].type == 'D')
-        printf("%d  %s %lf %s\n", kw, image->kw[kw].name,
-               image->kw[kw].value.numf, image->kw[kw].comment);
-      if (image->kw[kw].type == 'S')
-        printf("%d  %s %s %s\n", kw, image->kw[kw].name,
-               image->kw[kw].value.valstr, image->kw[kw].comment);
+    fstat(SM_fd, &file_stat);
+    
+    printf("File %s size: %zd\n", SM_fname, file_stat.st_size); fflush(stdout); //TEST
+
+    map = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
+                          MAP_SHARED, SM_fd, 0);
+    if (map == MAP_FAILED) {
+        close(SM_fd);
+        perror("Error mmapping the file");
+        exit(EXIT_FAILURE);
     }
-  */
-  image->semReadPID = (pid_t *)(map);
-  map += sizeof(pid_t) * image->md->sem;
 
-  image->semWritePID = (pid_t *)(map);
-  map += sizeof(pid_t) * image->md->sem;
+    image->memsize = file_stat.st_size;
+    image->shmfd = SM_fd;
+    image->md = (IMAGE_METADATA *)map;
+    image->md->shared = 1;
 
-  if ((image->md->imagetype & 0xF000F) ==
-      (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  // Circular buffer
-    image->md->atimearray = (struct timespec *)(map);
-    map += sizeof(struct timespec) * image->md->size[0];
-
-    image->md->writetimearray = (struct timespec *)(map);
-    map += sizeof(struct timespec) * image->md->size[0];
-
-    image->md->cntarray = (uint64_t *)(map);
-    // map += sizeof(uint64_t) * image->md->size[0];
-  }
-
-  strncpy(image->name, name, 80);
-
-  // looking for semaphores
-  while (sOK == 1) {
-    snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md->name, snb);
-    sem_t *stest;
-    if ((stest = sem_open(sname, 0, 0644, 0)) == SEM_FAILED)
-      sOK = 0;
-    else {
-      sem_close(stest);
-      snb++;
+    if (strcmp(image->md->version, IMAGESTRUCT_VERSION)) {
+        ImageStreamIO_printERROR(
+            "Error calling ImageStreamIO_read_sharedmem_image_toIMAGE, "
+            "incompatible version");
+        exit(EXIT_FAILURE);
     }
-  }
-  // printf("%ld semaphores detected  (image->md->sem = %d)\n", snb,
-  //        (int)image->md->sem);
 
-  //        image->md->sem = snb;
-  image->semptr = (sem_t **)malloc(sizeof(sem_t *) * image->md->sem);
-  for (s = 0; s < image->md->sem; s++) {
-    snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md->name, s);
-    if ((image->semptr[s] = sem_open(sname, 0, 0644, 0)) == SEM_FAILED) {
-      printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
-             sname);
+    printf("image size = "); fflush(stdout); //TEST
+    uint64_t size = 1;
+    for (uint8_t axis = 0; axis < image->md->naxis; ++axis) {
+        printf("%ld ", (long)image->md->size[axis]); fflush(stdout); //TEST
+        size *= image->md->size[axis];
+    }
+    // printf("\n");
+    fflush(stdout);
 
-      if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) ==
-          SEM_FAILED) {
-        perror("semaphore initilization");
-      } else {
-        sem_init(
-            image->semptr[s], 1,
-            SEMAPHORE_INITVAL);  // SEMAPHORE_INITVAL defined in ImageStruct.h
+    // some verification
+    if (size > 10000000000) {
+        printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name); fflush(stdout);
+        return EXIT_FAILURE;
+    }
+    for (uint8_t axis = 0; axis < image->md->naxis; ++axis) {
+        if (image->md->size[axis] < 1) {
+            printf("IMAGE \"%s\" AXIS %d SIZE < 1... NOT LOADING\n", name, axis); fflush(stdout);
+            return EXIT_FAILURE;
+        }
+    }
+
+    map += sizeof(IMAGE_METADATA);
+    map += ImageStreamIO_offset_data(image, map);
+
+    printf("%ld keywords\n", (long)image->md->NBkw); fflush(stdout); //TEST
+
+    image->kw = (IMAGE_KEYWORD *)(map);
+    map += sizeof(IMAGE_KEYWORD) * image->md->NBkw;
+    /*
+      int kw;
+      for (kw = 0; kw < image->md->NBkw; kw++) {
+        if (image->kw[kw].type == 'L')
+          printf("%d  %s %ld %s\n", kw, image->kw[kw].name,
+                 image->kw[kw].value.numl, image->kw[kw].comment);
+        if (image->kw[kw].type == 'D')
+          printf("%d  %s %lf %s\n", kw, image->kw[kw].name,
+                 image->kw[kw].value.numf, image->kw[kw].comment);
+        if (image->kw[kw].type == 'S')
+          printf("%d  %s %s %s\n", kw, image->kw[kw].name,
+                 image->kw[kw].value.valstr, image->kw[kw].comment);
       }
-    }
-  }
+    */
+    image->semReadPID = (pid_t *)(map);
+    map += sizeof(pid_t) * image->md->sem;
 
-  snprintf(sname, sizeof(sname), "%s_semlog", image->md->name);
-  if ((image->semlog = sem_open(sname, 0, 0644, 0)) == SEM_FAILED) {
-    printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
-           sname);
-    if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
-      perror("semaphore initialization");
-    } else {
-      sem_init(
-          image->semptr[s], 1,
-          SEMAPHORE_INITVAL);  // SEMAPHORE_INITVAL defined in ImageStruct.h
-    }
-  }
+    image->semWritePID = (pid_t *)(map);
+    map += sizeof(pid_t) * image->md->sem;
 
-  return EXIT_SUCCESS;
+    if ((image->md->imagetype & 0xF000F) ==
+            (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  
+				printf("circuar buffer\n"); fflush(stdout); //TEST
+				
+				// Circular buffer
+        image->md->atimearray = (struct timespec *)(map);
+        map += sizeof(struct timespec) * image->md->size[0];
+
+        image->md->writetimearray = (struct timespec *)(map);
+        map += sizeof(struct timespec) * image->md->size[0];
+
+        image->md->cntarray = (uint64_t *)(map);
+        // map += sizeof(uint64_t) * image->md->size[0];
+    }
+
+    strncpy(image->name, name, 80);
+
+    // looking for semaphores
+    printf("Looking for semaphores\n"); fflush(stdout); //TEST
+    while (sOK == 1) {
+        snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md->name, snb);
+        sem_t *stest;
+        if ((stest = sem_open(sname, 0, 0644, 0)) == SEM_FAILED)
+            sOK = 0;
+        else {
+            sem_close(stest);
+            snb++;
+        }
+    }
+    printf("%ld semaphores detected  (image->md->sem = %d)\n", snb,
+           (int)image->md->sem);
+    fflush(stdout); //TEST
+
+    //        image->md->sem = snb;
+    image->semptr = (sem_t **)malloc(sizeof(sem_t *) * image->md->sem);
+    for (s = 0; s < image->md->sem; s++) {
+        snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md->name, s);
+        if ((image->semptr[s] = sem_open(sname, 0, 0644, 0)) == SEM_FAILED) {
+            printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
+                   sname);
+
+            if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) ==
+                    SEM_FAILED) {
+                perror("semaphore initilization");
+            } else {
+                sem_init(
+                    image->semptr[s], 1,
+                    SEMAPHORE_INITVAL);  // SEMAPHORE_INITVAL defined in ImageStruct.h
+            }
+        }
+    }
+
+    snprintf(sname, sizeof(sname), "%s_semlog", image->md->name);
+    if ((image->semlog = sem_open(sname, 0, 0644, 0)) == SEM_FAILED) {
+        printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
+               sname);
+        if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
+            perror("semaphore initialization");
+        } else {
+            sem_init(
+                image->semptr[s], 1,
+                SEMAPHORE_INITVAL);  // SEMAPHORE_INITVAL defined in ImageStruct.h
+        }
+    }
+
+    return EXIT_SUCCESS;
 }
+
+
+
+
+
+
 
 int ImageStreamIO_closeIm(IMAGE *image) {
   for (long s = 0; s < image->md->sem; s++) {

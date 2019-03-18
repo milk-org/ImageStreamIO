@@ -27,6 +27,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <dirent.h>
+
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>  // for open
@@ -61,7 +64,21 @@ void check(cudaError_t result, char const *const func, const char *const file,
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
 #endif
 
+#ifndef RETURN_SUCCESS
+#define RETURN_SUCCESS        0 
+#define RETURN_FAILURE       1   // generic error code
+#endif
+
+
+#ifndef __STDC_LIB_EXT1__
+typedef int errno_t;
+#endif
+
+
+
 static int INITSTATUS_ImageStreamIO = 0;
+
+
 
 void __attribute__((constructor)) libinit_ImageStreamIO() {
   if (INITSTATUS_ImageStreamIO == 0) {
@@ -171,26 +188,68 @@ void *ImageStreamIO_readLastWroteBuffer(const IMAGE *image) {
 }
 
 
+errno_t ImageStreamIO_shmdirname(char *shmdname)
+{
+    int shmdirOK = 0;
+    DIR *tmpdir;
+
+    // first, we try the env variable if it exists
+    char* MILK_SHM_DIR = getenv("MILK_SHM_DIR");
+    if(MILK_SHM_DIR != NULL) {
+        printf(" [ MILK_SHM_DIR ] '%s'\n", MILK_SHM_DIR);
+        sprintf(shmdname, "%s", MILK_SHM_DIR);
+
+        // does this direcory exist ?
+        tmpdir = opendir(shmdname);
+        if(tmpdir) // directory exits
+        {
+            shmdirOK = 1;
+            closedir(tmpdir);
+        }
+    }
+
+    // second, we try SHAREDMEMDIR default
+    if(shmdirOK == 0)
+    {
+        tmpdir = opendir(SHAREDMEMDIR);
+        if(tmpdir) // directory exits
+        {
+            sprintf(shmdname, "%s", SHAREDMEMDIR);
+            shmdirOK = 1;
+            closedir(tmpdir);
+        }
+    }
+
+    // if all above fails, set to /tmp
+    if(shmdirOK == 0)
+    {
+        tmpdir = opendir("/tmp");
+        if ( !tmpdir )
+            exit(EXIT_FAILURE);
+        else
+        {
+            sprintf(shmdname, "/tmp");
+            shmdirOK = 1;
+        }
+    }
+
+    return RETURN_SUCCESS;
+}
+
+
 
 int ImageStreamIO_filename(char *file_name, size_t ssz, const char *im_name) {
-
-	static int initSHAREDMEMDIR = 0;
-	static char tmpdirname[200];
 	
-	if ( initSHAREDMEMDIR == 0 ) // look for env variable CLI_TMP_DIR
+	static char shmdirname[200];
+	static int initSHAREDMEMDIR = 0;
+	
+	if(initSHAREDMEMDIR == 0)
 	{
-		char* CLI_TMP_DIR = getenv("MILK_SHM_DIR");
-		if(CLI_TMP_DIR != NULL){
-			printf(" [ MILK_SHM_DIR ] '%s'\n", CLI_TMP_DIR);
-			sprintf(tmpdirname, "%s", CLI_TMP_DIR);
-		}
-		else
-			sprintf(tmpdirname, "%s", SHAREDMEMDIR); // default	
-		
+		ImageStreamIO_shmdirname(shmdirname);
 		initSHAREDMEMDIR = 1;
-	}		
+	}
 
-    int rv = snprintf(file_name, ssz, "%s/%s.im.shm", tmpdirname, im_name);
+    int rv = snprintf(file_name, ssz, "%s/%s.im.shm", shmdirname, im_name);
 
     if (rv > 0 && rv < ssz)
         return 0;
@@ -202,6 +261,7 @@ int ImageStreamIO_filename(char *file_name, size_t ssz, const char *im_name) {
         return EXIT_FAILURE;
     }
 }
+
 
 
 
@@ -325,47 +385,49 @@ uint64_t ImageStreamIO_offset_data(IMAGE *image, void *map) {
   return offset;
 }
 
+
+
 int ImageStreamIO_initialize_buffer(IMAGE *image) {
-  void *map;  // pointed cast in bytes
-  const size_t size_element = ImageStreamIO_typesize(image->md->datatype);
+    void *map;  // pointed cast in bytes
+    const size_t size_element = ImageStreamIO_typesize(image->md->datatype);
 
-  if (image->md->location == -1) {
-    if (image->md->shared == 1) {
-      memset(image->array.raw, '\0', image->md->nelement * size_element);
-    } else {
-      image->array.raw = calloc((size_t)image->md->nelement, size_element);
-      if (image->array.raw == NULL) {
-        ImageStreamIO_printERROR("memory allocation failed");
-        fprintf(stderr, "%c[%d;%dm", (char)27, 1, 31);
-        fprintf(stderr, "Image name = %s\n", image->name);
-        fprintf(stderr, "Image size = ");
-        fprintf(stderr, "%ld", (long)image->md->size[0]);
-        for (int i = 1; i < image->md->naxis; i++)
-          fprintf(stderr, "x%ld", (long)image->md->size[i]);
-        fprintf(stderr, "\n");
-        fprintf(stderr, "Requested memory size = %ld elements = %f Mb\n",
-                (long)image->md->nelement,
-                1.0 / 1024 / 1024 * image->md->nelement * sizeof(uint8_t));
-        fprintf(stderr, " %c[%d;m", (char)27, 0);
-        exit(EXIT_FAILURE);
-      }
-    }
-  } else if (image->md->location >= 0) {
+    if (image->md->location == -1) {
+        if (image->md->shared == 1) {
+            memset(image->array.raw, '\0', image->md->nelement * size_element);
+        } else {
+            image->array.raw = calloc((size_t)image->md->nelement, size_element);
+            if (image->array.raw == NULL) {
+                ImageStreamIO_printERROR("memory allocation failed");
+                fprintf(stderr, "%c[%d;%dm", (char)27, 1, 31);
+                fprintf(stderr, "Image name = %s\n", image->name);
+                fprintf(stderr, "Image size = ");
+                fprintf(stderr, "%ld", (long)image->md->size[0]);
+                for (int i = 1; i < image->md->naxis; i++)
+                    fprintf(stderr, "x%ld", (long)image->md->size[i]);
+                fprintf(stderr, "\n");
+                fprintf(stderr, "Requested memory size = %ld elements = %f Mb\n",
+                        (long)image->md->nelement,
+                        1.0 / 1024 / 1024 * image->md->nelement * sizeof(uint8_t));
+                fprintf(stderr, " %c[%d;m", (char)27, 0);
+                exit(EXIT_FAILURE);
+            }
+        }
+    } else if (image->md->location >= 0) {
 #ifdef HAVE_CUDA
-    checkCudaErrors(cudaSetDevice(image->md->location));
-    checkCudaErrors(
-        cudaMalloc(&image->array.raw, size_element * image->md->nelement));
-    if (image->md->shared == 1) {
-      checkCudaErrors(
-          cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
-    }
+        checkCudaErrors(cudaSetDevice(image->md->location));
+        checkCudaErrors(
+            cudaMalloc(&image->array.raw, size_element * image->md->nelement));
+        if (image->md->shared == 1) {
+            checkCudaErrors(
+                cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
+        }
 #else
-    ImageStreamIO_printERROR(
-        "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
+        ImageStreamIO_printERROR(
+            "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
 #endif
-  }
+    }
 
-  return ImageStreamIO_offset_data(image, image->array.raw);
+    return ImageStreamIO_offset_data(image, image->array.raw);
 }
 
 /* ===============================================================================================
@@ -388,245 +450,285 @@ int ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis,
                                     MATH_DATA);
 }
 
+
+
 int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
                                uint32_t *size, uint8_t datatype,
                                int8_t location, int shared, int NBsem, int NBkw,
                                uint64_t imagetype) {
-  long i, ii;
-  time_t lt;
-  long nelement;
-  struct timespec timenow;
+    long i, ii;
+    time_t lt;
+    long nelement;
+    struct timespec timenow;
 
-  uint8_t *map;
+    uint8_t *map;
 
-  int kw;
-  char comment[80];
-  char kname[16];
+    int kw;
+    char comment[80];
+    char kname[16];
 
-  nelement = 1;
-  for (i = 0; i < naxis; i++) nelement *= size[i];
+	// Get shm directory name (only on first call to this function)
+	static char shmdirname[200];
+	static int initSHAREDMEMDIR = 0;
+	if(initSHAREDMEMDIR == 0)
+	{
+		int stri;
+		
+		ImageStreamIO_shmdirname(shmdirname);
+		for(stri=0; stri<strlen(shmdirname); stri++)
+			if(shmdirname[stri] == '/') // replace leading '/' by '.'
+				shmdirname[stri] = '.';
+		initSHAREDMEMDIR = 1;
+	}
 
-  if (((imagetype & 0xF000F) == (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) &&
-      (naxis != 3)) {
-    ImageStreamIO_printERROR(
-        "Error calling ImageStreamIO_createIm_gpu, "
-        "temporal circular buffer needs 3 dimensions");
-    return EXIT_FAILURE;
-  }
 
-  // compute total size to be allocated
-  if (shared == 1) {
-    char sname[200];
+    nelement = 1;
+    for (i = 0; i < naxis; i++) nelement *= size[i];
 
-    // create semlog
-    size_t sharedsize = 0;      // shared memory size in bytes
-    size_t datasharedsize = 0;  // shared memory size in bytes used by the data
+    if (((imagetype & 0xF000F) == (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) &&
+            (naxis != 3)) {
+        ImageStreamIO_printERROR(
+            "Error calling ImageStreamIO_createIm_gpu, "
+            "temporal circular buffer needs 3 dimensions");
+        return EXIT_FAILURE;
+    }
 
-    snprintf(sname, sizeof(sname), "%s_semlog", name);
-    remove(sname);
-    image->semlog = NULL;
+    // compute total size to be allocated
+    if (shared == 1) {
+        char sname[200];
 
-    if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
-      perror("semaphore creation / initilization");
+        // create semlog
+        size_t sharedsize = 0;      // shared memory size in bytes
+        size_t datasharedsize = 0;  // shared memory size in bytes used by the data
+
+        snprintf(sname, sizeof(sname), "%s.%s_semlog", shmdirname, name);
+        remove(sname);
+        image->semlog = NULL;
+
+        if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
+            fprintf(stderr, "Semaphore %s :", sname);
+            perror("semaphore creation / initialization");
+        } else {
+            sem_init(
+                image->semlog, 1,
+                SEMAPHORE_INITVAL);  // SEMAPHORE_INITVAL defined in ImageStruct.h
+        }
+        sharedsize = sizeof(IMAGE_METADATA);
+
+        datasharedsize = nelement * ImageStreamIO_typesize(datatype);
+
+        if (location == -1) {
+            // printf("shared memory space in CPU RAM = %ud bytes\n", sharedsize);
+            // //TEST
+            sharedsize += datasharedsize;
+        } else if (location >= 0) {
+            // printf("shared memory space in GPU%d RAM= %ud bytes\n", location,
+            // sharedsize); //TEST
+        } else {
+            perror("Error location unknown");
+        }
+
+        sharedsize += NBkw * sizeof(IMAGE_KEYWORD);
+        sharedsize +=
+            2 * NBsem * sizeof(pid_t);  // one read PID array, one write PID array
+
+        if ((imagetype & 0xF000F) ==
+                (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  // Circular buffer
+            // room for atimearray, writetimearray and cntarray
+            sharedsize += size[0] * (2 * sizeof(struct timespec) + sizeof(uint64_t));
+        }
+
+        char SM_fname[200];
+        ImageStreamIO_filename(SM_fname, 200, name);
+
+        int SM_fd;  // shared memory file descriptor
+        SM_fd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+        if (SM_fd == -1) {
+            perror("Error opening file for writing");
+            exit(EXIT_FAILURE);
+        }
+
+        image->shmfd = SM_fd;
+        image->memsize = sharedsize;
+
+        int result;
+        result = lseek(SM_fd, sharedsize - 1, SEEK_SET);
+        if (result == -1) {
+            close(SM_fd);
+            ImageStreamIO_printERROR("Error calling lseek() to 'stretch' the file");
+            exit(EXIT_FAILURE);
+        }
+
+        result = write(SM_fd, "", 1);
+        if (result != 1) {
+            close(SM_fd);
+            perror("Error writing last byte of the file");
+            exit(EXIT_FAILURE);
+        }
+
+        map = (uint8_t *)mmap(0, sharedsize, PROT_READ | PROT_WRITE, MAP_SHARED,
+                              SM_fd, 0);
+        if (map == MAP_FAILED) {
+            close(SM_fd);
+            perror("Error mmapping the file");
+            exit(EXIT_FAILURE);
+        }
+
+        image->md = (IMAGE_METADATA *)map;
+        image->md->shared = 1;
+        image->md->sem = NBsem;
+
+        map += sizeof(IMAGE_METADATA);
+
+        if (location == -1) {
+            image->array.raw = map;
+            map += datasharedsize;
+        } else if (location >= 0) {
+        } else {
+            perror("Error location unknown");
+        }
+        image->kw = (IMAGE_KEYWORD *)(map);
+        map += sizeof(IMAGE_KEYWORD) * NBkw;
+
+        image->semReadPID = (pid_t *)(map);
+        map += sizeof(pid_t) * NBsem;
+
+        image->semWritePID = (pid_t *)(map);
+        map += sizeof(pid_t) * NBsem;
+
+        if ((imagetype & 0xF000F) ==
+                (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  // Circular buffer
+            image->md->atimearray = (struct timespec *)(map);
+            map += sizeof(struct timespec) * size[0];
+
+            image->md->writetimearray = (struct timespec *)(map);
+            map += sizeof(struct timespec) * size[0];
+
+            image->md->cntarray = (uint64_t *)(map);
+            map += sizeof(uint64_t) * size[0];
+        }
+
     } else {
-      sem_init(
-          image->semlog, 1,
-          SEMAPHORE_INITVAL);  // SEMAPHORE_INITVAL defined in ImageStruct.h
+        image->shmfd = 0;
+        image->memsize = 0;
+
+        image->md = (IMAGE_METADATA *)malloc(sizeof(IMAGE_METADATA));
+        image->md->shared = 0;
+        if (NBkw > 0)
+            image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * NBkw);
+        else
+            image->kw = NULL;
     }
-    sharedsize = sizeof(IMAGE_METADATA);
 
-    datasharedsize = nelement * ImageStreamIO_typesize(datatype);
+    strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
+    image->md->imagetype = imagetype;  // Image is mathematical vector or matrix
+    image->md->location = location;
+    image->md->datatype = datatype;
+    image->md->naxis = naxis;
+    strncpy(image->name, name, 80);  // local name
+    strncpy(image->md->name, name, 80);
+    image->md->nelement = 1;
+    for (i = 0; i < naxis; i++) {
+        image->md->size[i] = size[i];
+        image->md->nelement *= size[i];
+    }
+    image->md->NBkw = NBkw;
 
-    if (location == -1) {
-      // printf("shared memory space in CPU RAM = %ud bytes\n", sharedsize);
-      // //TEST
-      sharedsize += datasharedsize;
-    } else if (location >= 0) {
-      // printf("shared memory space in GPU%d RAM= %ud bytes\n", location,
-      // sharedsize); //TEST
+    ImageStreamIO_initialize_buffer(image);
+
+    clock_gettime(CLOCK_REALTIME, &image->md->lastaccesstime);
+    clock_gettime(CLOCK_REALTIME, &image->md->creationtime);
+    // image->md->lastaccesstime =
+    //     1.0 * timenow.tv_sec + 0.000000001 * timenow.tv_nsec;
+    // image->md->creationtime = image->md->lastaccesstime;
+
+    image->md->write = 0;
+    image->md->cnt0 = 0;
+    image->md->cnt1 = 0;
+
+    if (shared == 1) {
+        ImageStreamIO_createsem(image, NBsem);  // IMAGE_NB_SEMAPHORE
+        // defined in ImageStruct.h
+
+        int semindex;
+        for (semindex = 0; semindex < NBsem; semindex++) {
+            image->semReadPID[semindex] = -1;
+            image->semWritePID[semindex] = -1;
+        }
+
     } else {
-      perror("Error location unknown");
+        image->md->sem = 0;  // no semaphores
     }
 
-    sharedsize += NBkw * sizeof(IMAGE_KEYWORD);
-    sharedsize +=
-        2 * NBsem * sizeof(pid_t);  // one read PID array, one write PID array
+    // initialize keywords
+    for (kw = 0; kw < image->md->NBkw; kw++) image->kw[kw].type = 'N';
 
-    if ((imagetype & 0xF000F) ==
-        (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  // Circular buffer
-      // room for atimearray, writetimearray and cntarray
-      sharedsize += size[0] * (2 * sizeof(struct timespec) + sizeof(uint64_t));
-    }
-
-    char SM_fname[200];
-    ImageStreamIO_filename(SM_fname, 200, name);
-
-    int SM_fd;  // shared memory file descriptor
-    SM_fd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
-    if (SM_fd == -1) {
-      perror("Error opening file for writing");
-      exit(EXIT_FAILURE);
-    }
-
-    image->shmfd = SM_fd;
-    image->memsize = sharedsize;
-
-    int result;
-    result = lseek(SM_fd, sharedsize - 1, SEEK_SET);
-    if (result == -1) {
-      close(SM_fd);
-      ImageStreamIO_printERROR("Error calling lseek() to 'stretch' the file");
-      exit(EXIT_FAILURE);
-    }
-
-    result = write(SM_fd, "", 1);
-    if (result != 1) {
-      close(SM_fd);
-      perror("Error writing last byte of the file");
-      exit(EXIT_FAILURE);
-    }
-
-    map = (uint8_t *)mmap(0, sharedsize, PROT_READ | PROT_WRITE, MAP_SHARED,
-                          SM_fd, 0);
-    if (map == MAP_FAILED) {
-      close(SM_fd);
-      perror("Error mmapping the file");
-      exit(EXIT_FAILURE);
-    }
-
-    image->md = (IMAGE_METADATA *)map;
-    image->md->shared = 1;
-    image->md->sem = NBsem;
-
-    map += sizeof(IMAGE_METADATA);
-
-    if (location == -1) {
-      image->array.raw = map;
-      map += datasharedsize;
-    } else if (location >= 0) {
-    } else {
-      perror("Error location unknown");
-    }
-    image->kw = (IMAGE_KEYWORD *)(map);
-    map += sizeof(IMAGE_KEYWORD) * NBkw;
-
-    image->semReadPID = (pid_t *)(map);
-    map += sizeof(pid_t) * NBsem;
-
-    image->semWritePID = (pid_t *)(map);
-    map += sizeof(pid_t) * NBsem;
-
-    if ((imagetype & 0xF000F) ==
-        (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  // Circular buffer
-      image->md->atimearray = (struct timespec *)(map);
-      map += sizeof(struct timespec) * size[0];
-
-      image->md->writetimearray = (struct timespec *)(map);
-      map += sizeof(struct timespec) * size[0];
-
-      image->md->cntarray = (uint64_t *)(map);
-      map += sizeof(uint64_t) * size[0];
-    }
-
-  } else {
-    image->shmfd = 0;
-    image->memsize = 0;
-
-    image->md = (IMAGE_METADATA *)malloc(sizeof(IMAGE_METADATA));
-    image->md->shared = 0;
-    if (NBkw > 0)
-      image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * NBkw);
-    else
-      image->kw = NULL;
-  }
-
-  strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
-  image->md->imagetype = imagetype;  // Image is mathematical vector or matrix
-  image->md->location = location;
-  image->md->datatype = datatype;
-  image->md->naxis = naxis;
-  strncpy(image->name, name, 80);  // local name
-  strncpy(image->md->name, name, 80);
-  image->md->nelement = 1;
-  for (i = 0; i < naxis; i++) {
-    image->md->size[i] = size[i];
-    image->md->nelement *= size[i];
-  }
-  image->md->NBkw = NBkw;
-
-  ImageStreamIO_initialize_buffer(image);
-
-  clock_gettime(CLOCK_REALTIME, &image->md->lastaccesstime);
-  clock_gettime(CLOCK_REALTIME, &image->md->creationtime);
-  // image->md->lastaccesstime =
-  //     1.0 * timenow.tv_sec + 0.000000001 * timenow.tv_nsec;
-  // image->md->creationtime = image->md->lastaccesstime;
-
-  image->md->write = 0;
-  image->md->cnt0 = 0;
-  image->md->cnt1 = 0;
-
-  if (shared == 1) {
-    ImageStreamIO_createsem(image, NBsem);  // IMAGE_NB_SEMAPHORE
-    // defined in ImageStruct.h
-
-    int semindex;
-    for (semindex = 0; semindex < NBsem; semindex++) {
-      image->semReadPID[semindex] = -1;
-      image->semWritePID[semindex] = -1;
-    }
-
-  } else {
-    image->md->sem = 0;  // no semaphores
-  }
-
-  // initialize keywords
-  for (kw = 0; kw < image->md->NBkw; kw++) image->kw[kw].type = 'N';
-
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
+
+
+
+
 
 int ImageStreamIO_destroyIm(IMAGE *image) {
-  if (image->memsize > 0) {
-    char fname[200];
+    if (image->memsize > 0) {
+        char fname[200];
 
-    // close and remove semlog
-    sem_close(image->semlog);
+        // Get shm directory name (only on first call to this function)
+        static char shmdirname[200];
+        static int initSHAREDMEMDIR = 0;
+        if(initSHAREDMEMDIR == 0)
+        {
+            int stri;
 
-    snprintf(fname, sizeof(fname), "/dev/shm/sem.%s_semlog", image->md->name);
-    sem_unlink(fname);
+            ImageStreamIO_shmdirname(shmdirname);
+            for(stri=0; stri<strlen(shmdirname); stri++)
+                if(shmdirname[stri] == '/') // replace leading '/' by '.'
+                    shmdirname[stri] = '.';
+            initSHAREDMEMDIR = 1;
+        }
+
+
+
+        // close and remove semlog
+        sem_close(image->semlog);
+
+        snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_semlog", shmdirname, image->md->name);
+        sem_unlink(fname);
+
+        image->semlog = NULL;
+
+        // close and remove all semaphores
+        ImageStreamIO_destroysem(image);
+
+        close(image->shmfd);
+
+        // Get this before unmapping.
+        ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
+
+        munmap(image->md, image->memsize);
+
+        // Remove the file
+        remove(fname);
+    } else {
+        free(image->array.UI8);
+
+        free(image->md);
+        if (image->kw) free(image->kw);
+    }
 
     image->semlog = NULL;
+    image->md = NULL;
 
-    // close and remove all semaphores
-    ImageStreamIO_destroysem(image);
+    image->array.UI8 = NULL;
 
-    close(image->shmfd);
+    image->semptr = NULL;
+    image->kw = NULL;
 
-    // Get this before unmapping.
-    ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
-
-    munmap(image->md, image->memsize);
-
-    // Remove the file
-    remove(fname);
-  } else {
-    free(image->array.UI8);
-
-    free(image->md);
-    if (image->kw) free(image->kw);
-  }
-
-  image->semlog = NULL;
-  image->md = NULL;
-
-  image->array.UI8 = NULL;
-
-  image->semptr = NULL;
-  image->kw = NULL;
-
-  return 0;
+    return 0;
 }
+
+
 
 int ImageStreamIO_openIm(IMAGE *image, const char *name) {
   return ImageStreamIO_read_sharedmem_image_toIMAGE(name, image);
@@ -687,6 +789,23 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
 
     long snb = 0;
     int sOK = 1;
+
+
+	// Get shm directory name (only on first call to this function)
+	static char shmdirname[200];
+	static int initSHAREDMEMDIR = 0;
+	if(initSHAREDMEMDIR == 0)
+	{
+		int stri;
+		
+		ImageStreamIO_shmdirname(shmdirname);
+		for(stri=0; stri<strlen(shmdirname); stri++)
+			if(shmdirname[stri] == '/') // replace leading '/' by '.'
+				shmdirname[stri] = '.';
+		initSHAREDMEMDIR = 1;
+	}
+
+
 
     fstat(SM_fd, &file_stat);
     
@@ -780,7 +899,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     // looking for semaphores
     //printf("Looking for semaphores\n"); fflush(stdout); //TEST
     while (sOK == 1) {
-        snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md->name, snb);
+        snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name, snb);
         sem_t *stest;
         if ((stest = sem_open(sname, 0, 0644, 0)) == SEM_FAILED)
             sOK = 0;
@@ -795,7 +914,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     //        image->md->sem = snb;
     image->semptr = (sem_t **)malloc(sizeof(sem_t *) * image->md->sem);
     for (s = 0; s < image->md->sem; s++) {
-        snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md->name, s);
+        snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name, s);
         if ((image->semptr[s] = sem_open(sname, 0, 0644, 0)) == SEM_FAILED) {
             printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
                    sname);
@@ -811,7 +930,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
         }
     }
 
-    snprintf(sname, sizeof(sname), "%s_semlog", image->md->name);
+    snprintf(sname, sizeof(sname), "%s.%s_semlog", shmdirname, image->md->name);
     if ((image->semlog = sem_open(sname, 0, 0644, 0)) == SEM_FAILED) {
         printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
                sname);
@@ -869,11 +988,26 @@ int ImageStreamIO_closeIm(IMAGE *image) {
  * 			pointer to shmim
  */
 
-int ImageStreamIO_destroysem(IMAGE *image) {
+errno_t ImageStreamIO_destroysem(IMAGE *image) {
   long s;
   int r;
   char command[200];
   int semfile[100];
+
+
+	// Get shm directory name (only on first call to this function)
+	static char shmdirname[200];
+	static int initSHAREDMEMDIR = 0;
+	if(initSHAREDMEMDIR == 0)
+	{
+		int stri;
+		
+		ImageStreamIO_shmdirname(shmdirname);
+		for(stri=0; stri<strlen(shmdirname); stri++)
+			if(shmdirname[stri] == '/') // replace leading '/' by '.'
+				shmdirname[stri] = '.';
+		initSHAREDMEMDIR = 1;
+	}
 
   // Remove semaphores if any
   if (image->md->sem > 0) {
@@ -885,7 +1019,7 @@ int ImageStreamIO_destroysem(IMAGE *image) {
 
       // ... and remove associated files
       char fname[200];
-      snprintf(fname, sizeof(fname), "/dev/shm/sem.%s_sem%02ld",
+      snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_sem%02ld", shmdirname,
                image->md->name, s);
       sem_unlink(fname);
       remove(fname);
@@ -897,8 +1031,9 @@ int ImageStreamIO_destroysem(IMAGE *image) {
       image->semptr = NULL;
     }
   }
-  return EXIT_SUCCESS;
+  return(RETURN_SUCCESS);
 }
+
 
 /*
  * ## Purpose
@@ -923,6 +1058,22 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem) {
 
   // printf("Creating %ld semaphores\n", NBsem);
 
+	// Get shm directory name (only on first call to this function)
+	static char shmdirname[200];
+	static int initSHAREDMEMDIR = 0;
+	
+	if(initSHAREDMEMDIR == 0)
+	{
+		int stri;
+		
+		ImageStreamIO_shmdirname(shmdirname);
+		for(stri=0; stri<strlen(shmdirname); stri++)
+			if(shmdirname[stri] == '/') // replace leading '/' by '.'
+				shmdirname[stri] = '.';
+		initSHAREDMEMDIR = 1;
+	}
+
+
   // Remove pre-existing semaphores if any
   // ImageStreamIO_destroysem(image);
 
@@ -931,7 +1082,7 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem) {
 
   for (s = 0; s < NBsem; s++) {
     char sname[200];
-    snprintf(sname, sizeof(sname), "%s_sem%02ld", image->md->name, s);
+    snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name, s);
 
     if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 0)) == SEM_FAILED) {
       perror("semaphore initilization");

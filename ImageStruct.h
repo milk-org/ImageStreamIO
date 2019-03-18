@@ -66,7 +66,7 @@ extern "C" {
 // packing data should be use with extreme care, so it is recommended to disable this feature
 //#define DATA_PACKED
 
-#define SHAREDMEMDIR    "/tmp"            /**< location of file mapped semaphores */
+#define SHAREDMEMDIR    "/milk/shm"          /**< default location of file mapped semaphores, can be over-ridden by env variable MILK_SHM_DIR */
 
 #define SEMAPHORE_MAXVAL    10            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 #define SEMAPHORE_INITVAL    0            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */

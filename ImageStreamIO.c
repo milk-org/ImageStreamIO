@@ -170,19 +170,42 @@ void *ImageStreamIO_readLastWroteBuffer(const IMAGE *image) {
   return (void*)ImageStreamIO_readBufferAt(image, read_index);
 }
 
-int ImageStreamIO_filename(char *file_name, size_t ssz, const char *im_name) {
-  int rv = snprintf(file_name, ssz, "%s/%s.im.shm", SHAREDMEMDIR, im_name);
 
-  if (rv > 0 && rv < ssz)
-    return 0;
-  else if (rv < 0) {
-    ImageStreamIO_printERROR(strerror(errno));
-    return EXIT_FAILURE;
-  } else {
-    ImageStreamIO_printERROR("string not large enough for file name");
-    return EXIT_FAILURE;
-  }
+
+int ImageStreamIO_filename(char *file_name, size_t ssz, const char *im_name) {
+
+	static int initSHAREDMEMDIR = 0;
+	static char tmpdirname[200];
+	
+	if ( initSHAREDMEMDIR == 0 ) // look for env variable CLI_TMP_DIR
+	{
+		char* CLI_TMP_DIR = getenv("MILK_SHM_DIR");
+		if(CLI_TMP_DIR != NULL){
+			printf(" [ MILK_SHM_DIR ] '%s'\n", CLI_TMP_DIR);
+			sprintf(tmpdirname, "%s", CLI_TMP_DIR);
+		}
+		else
+			sprintf(tmpdirname, "%s", SHAREDMEMDIR); // default	
+		
+		initSHAREDMEMDIR = 1;
+	}		
+
+    int rv = snprintf(file_name, ssz, "%s/%s.im.shm", tmpdirname, im_name);
+
+    if (rv > 0 && rv < ssz)
+        return 0;
+    else if (rv < 0) {
+        ImageStreamIO_printERROR(strerror(errno));
+        return EXIT_FAILURE;
+    } else {
+        ImageStreamIO_printERROR("string not large enough for file name");
+        return EXIT_FAILURE;
+    }
 }
+
+
+
+
 
 int ImageStreamIO_typesize(uint8_t datatype) {
   switch (datatype) {

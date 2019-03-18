@@ -118,7 +118,7 @@ int ImageStreamIO_bitpix( uint8_t atype /**< [in] the type code (see ImageStruct
 
 /** @brief Create shared memory image stream (legacy API) */
 int ImageStreamIO_createIm( IMAGE *image,      ///< [out] IMAGE structure which will have its members allocated and initialized.
-                            const char *name,  ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
+                            const char *name,  ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
                             long naxis,        ///< [in] number of axes in the image.
                             uint32_t *size,    ///< [in] the size of the image along each axis.  Must have naxis elements.
                             uint8_t atype,     ///< [in] data type code
@@ -148,11 +148,11 @@ int ImageStreamIO_destroyIm( IMAGE *image /**< [in] The IMAGE structure to deall
   * Wrapper for  \ref ImageStreamIO_read_sharedmem_image_toIMAGE
   */
 int ImageStreamIO_openIm( IMAGE *image,    ///< [out] IMAGE structure which will be attached to the existing IMAGE
-                          const char *name ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
+                          const char *name ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
                         );
 /** @brief Create shared memory image stream */
 int ImageStreamIO_createIm_gpu( IMAGE *image,      ///< [out] IMAGE structure which will have its members allocated and initialized.
-                            const char *name,  ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
+                            const char *name,  ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
                             long naxis,        ///< [in] number of axes in the image.
                             uint32_t *size,    ///< [in] the size of the image along each axis.  Must have naxis elements.
                             uint8_t atype,     ///< [in] data type code
@@ -166,7 +166,7 @@ int ImageStreamIO_createIm_gpu( IMAGE *image,      ///< [out] IMAGE structure wh
 void* ImageStreamIO_get_image_d_ptr(IMAGE *image);
 
 /** @brief Read / connect to existing shared memory image stream */
-int ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, ///< [in] the name of the shared memory file to access, as in SHAREDMEMDIR/<name>_im.shm
+int ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, ///< [in] the name of the shared memory file to access, as in data.tmpfsdir/<name>_im.shm
                                                 IMAGE *image      ///< [out] the IMAGE structure to connect to the stream
                                               );
 

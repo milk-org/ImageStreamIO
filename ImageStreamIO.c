@@ -683,9 +683,9 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     image->md->shared = 1;
 
     if (strcmp(image->md->version, IMAGESTRUCT_VERSION)) {
-        ImageStreamIO_printERROR(
-            "Error calling ImageStreamIO_read_sharedmem_image_toIMAGE, "
-            "incompatible version");
+		char errmsg[200];
+		sprintf(errmsg, "Stream %s imcompatible version. Should be %s", name, IMAGESTRUCT_VERSION);
+        ImageStreamIO_printERROR(errmsg);
         exit(EXIT_FAILURE);
     }
 

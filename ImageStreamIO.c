@@ -476,7 +476,7 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
 		
 		ImageStreamIO_shmdirname(shmdirname);
 		for(stri=0; stri<strlen(shmdirname); stri++)
-			if(shmdirname[stri] == '/') // replace leading '/' by '.'
+			if(shmdirname[stri] == '/') // replace '/' by '.'
 				shmdirname[stri] = '.';
 		initSHAREDMEMDIR = 1;
 	}

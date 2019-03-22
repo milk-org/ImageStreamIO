@@ -64,12 +64,12 @@ uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
   * 			slice_index of the slice to read
   * 
   * @param[out]
-  * buffer	void*
+  * buffer	void**
   * 			pointer to the beginning of the slice
   * 
   * \return the error code
   */
-errno_t ImageStreamIO_readBufferAt(const IMAGE *image, const int slice_index, void *buffer);
+errno_t ImageStreamIO_readBufferAt(const IMAGE *image, const int slice_index, void **buffer);
 
 /** @brief Get the raw pointer where the producer should write.
   * 
@@ -85,13 +85,13 @@ errno_t ImageStreamIO_readBufferAt(const IMAGE *image, const int slice_index, vo
   * 			pointer to shmim
   * 
   * @param[out]
-  * buffer	void*
+  * buffer	void**
   * 			raw pointer where the producer should write
   * 
   * \return the error code
   */
 errno_t ImageStreamIO_writeBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
-                                  void * buffer ///< [out] raw pointer where the producer should write
+                                  void **buffer ///< [out] raw pointer where the producer should write
                                   ) {
   const uint64_t write_index = ImageStreamIO_writeIndex(image);
   return ImageStreamIO_readBufferAt(image, write_index, buffer);
@@ -112,13 +112,13 @@ errno_t ImageStreamIO_writeBuffer(const IMAGE *image, ///< [in] the name of the 
   * 			pointer to shmim
   * 
   * @param[out]
-  * buffer	void*
+  * buffer	void**
   * 			raw pointer where the consumer will find the last frame wrote
   * 
   * \return the error code
   */
 errno_t ImageStreamIO_readLastWroteBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
-                                          void * buffer ///< [out] raw pointer where the consumer will find the last frame wrote
+                                          void **buffer ///< [out] raw pointer where the consumer will find the last frame wrote
                                           ) {
   const int64_t read_index = ImageStreamIO_readLastWroteIndex(image);
   return ImageStreamIO_readBufferAt(image, read_index, buffer);

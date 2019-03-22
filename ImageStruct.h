@@ -37,6 +37,8 @@
 typedef char cudaIpcMemHandle_t[64];
 #endif
 
+#include "ImageError.h"
+
 #ifdef __MACH__
 #include <mach/mach_time.h>
 #define CLOCK_REALTIME 0

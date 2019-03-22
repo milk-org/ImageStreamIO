@@ -64,20 +64,7 @@ void check(cudaError_t result, char const *const func, const char *const file,
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
 #endif
 
-#ifndef RETURN_SUCCESS
-#define RETURN_SUCCESS        0 
-#define RETURN_FAILURE       1   // generic error code
-#endif
-
-
-#ifndef __STDC_LIB_EXT1__
-typedef int errno_t;
-#endif
-
-
-
 static int INITSTATUS_ImageStreamIO = 0;
-
 
 
 void __attribute__((constructor)) libinit_ImageStreamIO() {
@@ -147,44 +134,25 @@ int ImageStreamIO_printERROR_(const char *file, const char *func, int line,
   return EXIT_SUCCESS;
 }
 
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
-/* @name 0. Utilities
- *
- */
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+/* ============================================================================================================================================================================================== */
+/* @name 0. Utilities */
+/* ============================================================================================================================================================================================== */
 
-inline int ImageStreamIO_writeIndex(const IMAGE *image) {
-  const int write_index = image->md->cnt1 + 1;
-  return write_index % image->md->size[0];
-}
-
-inline int ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
-  return image->md->cnt1;
-}
-
-uint8_t *ImageStreamIO_readBufferAt(const IMAGE *image, const int read_index) {
+errno_t ImageStreamIO_readBufferAt(const IMAGE *image, const int slice_index, void *buffer) {
   if((image->md->imagetype & 0xF) != CIRCULAR_BUFFER) {
-    return image->array.UI8;
+    buffer = (void*)image->array.UI8;
+    return IMAGESTREAMIO_SUCCESS;
+  }
+  
+  if(slice_index>=image->md->size[0]){
+    buffer = NULL;
+    return IMAGESTREAMIO_FAILURE;
   }
   const uint64_t frame_size = image->md->size[1] * image->md->size[2];
   const int size_element = ImageStreamIO_typesize(image->md->datatype);
-  return image->array.UI8 + read_index * frame_size * size_element;
-}
+  buffer = (void*) (image->array.UI8 + slice_index * frame_size * size_element);
 
-void *ImageStreamIO_writeBuffer(const IMAGE *image) {
-  const int write_index = ImageStreamIO_writeIndex(image);
-  return (void*)ImageStreamIO_readBufferAt(image, write_index);
-}
-
-void *ImageStreamIO_readLastWroteBuffer(const IMAGE *image) {
-  const int64_t read_index = ImageStreamIO_readLastWroteIndex(image);
-  return (void*)ImageStreamIO_readBufferAt(image, read_index);
+  return IMAGESTREAMIO_SUCCESS;
 }
 
 
@@ -233,7 +201,7 @@ errno_t ImageStreamIO_shmdirname(char *shmdname)
         }
     }
 
-    return RETURN_SUCCESS;
+    return IMAGESTREAMIO_SUCCESS;
 }
 
 
@@ -485,7 +453,7 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
     nelement = 1;
     for (i = 0; i < naxis; i++) nelement *= size[i];
 
-    if (((imagetype & 0xF000F) == (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) &&
+    if (((imagetype & 0xF000F) == CIRCULAR_BUFFER) &&
             (naxis != 3)) {
         ImageStreamIO_printERROR(
             "Error calling ImageStreamIO_createIm_gpu, "
@@ -1031,7 +999,7 @@ errno_t ImageStreamIO_destroysem(IMAGE *image) {
       image->semptr = NULL;
     }
   }
-  return(RETURN_SUCCESS);
+  return(IMAGESTREAMIO_SUCCESS);
 }
 
 

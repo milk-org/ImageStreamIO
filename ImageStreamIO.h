@@ -13,8 +13,6 @@
 #ifndef _IMAGESTREAMIO_H
 #define _IMAGESTREAMIO_H
  
-#include "ImageStruct.h"
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -28,7 +26,6 @@ int_fast8_t init_ImageStreamIO();
 
 
 
-
 /* =============================================================================================== */
 /* =============================================================================================== */
 /** @name ImageStreamIO - 0. Utilities                                                             */                           
@@ -36,9 +33,43 @@ int_fast8_t init_ImageStreamIO();
 /* =============================================================================================== */
 /* =============================================================================================== */
 
-int ImageStreamIO_writeIndex(const IMAGE *image);
-int ImageStreamIO_readLastWroteIndex(const IMAGE *image);
-uint8_t *ImageStreamIO_readBufferAt(const IMAGE *image, const int read_index);
+uint64_t ImageStreamIO_nbSlices(const IMAGE *image) {
+  return (image->md->naxis == 3 ? image->md->size[0] : 1);
+}
+
+uint64_t ImageStreamIO_writeIndex(const IMAGE *image) {
+  return (image->md->naxis == 3 ? (image->md->cnt1 + 1) % ImageStreamIO_nbSlices(image)
+                                : 0);
+}
+
+uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
+  return (image->md->naxis == 3 ? image->md->cnt1 : 0);
+}
+
+/** @brief Get the raw pointer to the beginning of the slice slice_index.
+  * 
+  *
+  * ## Purpose
+  *
+  * Return the raw pointer to the beginning of the slice slice_index
+  *
+  * ## Arguments
+  *
+  * @param[in]
+  * image	IMAGE*
+  * 			pointer to shmim
+  * 
+  * @param[in]
+  * indec	const int
+  * 			slice_index of the slice to read
+  * 
+  * @param[out]
+  * buffer	void*
+  * 			pointer to the beginning of the slice
+  * 
+  * \return the error code
+  */
+errno_t ImageStreamIO_readBufferAt(const IMAGE *image, const int slice_index, void *buffer);
 
 /** @brief Get the raw pointer where the producer should write.
   * 
@@ -53,10 +84,19 @@ uint8_t *ImageStreamIO_readBufferAt(const IMAGE *image, const int read_index);
   * image	IMAGE*
   * 			pointer to shmim
   * 
-  * \return the raw pointer where the producer should write
+  * @param[out]
+  * buffer	void*
+  * 			raw pointer where the producer should write
+  * 
+  * \return the error code
   */
-void *ImageStreamIO_writeBuffer(const IMAGE *image ///< [in] the name of the shared memory file
-                               );
+errno_t ImageStreamIO_writeBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
+                                  void * buffer ///< [out] raw pointer where the producer should write
+                                  ) {
+  const uint64_t write_index = ImageStreamIO_writeIndex(image);
+  return ImageStreamIO_readBufferAt(image, write_index, buffer);
+}
+
 
 /** @brief Get the raw pointer where the consumer will find the last frame wrote.
   * 
@@ -71,10 +111,18 @@ void *ImageStreamIO_writeBuffer(const IMAGE *image ///< [in] the name of the sha
   * image	IMAGE*
   * 			pointer to shmim
   * 
-  * \return the raw pointer where the consumer will find the last frame wrote
+  * @param[out]
+  * buffer	void*
+  * 			raw pointer where the consumer will find the last frame wrote
+  * 
+  * \return the error code
   */
-void *ImageStreamIO_readLastWroteBuffer(const IMAGE *image ///< [in] the name of the shared memory file
-                                       );
+errno_t ImageStreamIO_readLastWroteBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
+                                          void * buffer ///< [out] raw pointer where the consumer will find the last frame wrote
+                                          ) {
+  const int64_t read_index = ImageStreamIO_readLastWroteIndex(image);
+  return ImageStreamIO_readBufferAt(image, read_index, buffer);
+}
 
 /** @brief Get the standard stream filename.
   * 

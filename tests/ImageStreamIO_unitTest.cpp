@@ -22,6 +22,7 @@ TEST(ImageStreamIOTestCreation, ImageCPUSharedCreation) {
                                                      1, 10, 10, MATH_DATA));
 }
 
+#ifdef HAVE_CUDA
 TEST(ImageStreamIOTestCreation, ImageGPUSharedCreation) {
   IMAGE imageTest;
   uint32_t dims[2] = {512, 512};
@@ -30,6 +31,7 @@ TEST(ImageStreamIOTestCreation, ImageGPUSharedCreation) {
                                                      dims, _DATATYPE_FLOAT, 0,
                                                      1, 10, 10, MATH_DATA));
 }
+#endif
 
 TEST(ImageStreamIOTestCreation, CubeCPUSharedCreationFailureDimension) {
   IMAGE circularbufferTest;

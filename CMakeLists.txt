@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 
 option(python_build "Compile Python Wrappers" OFF)
+option(gtest_build_tests "Build Unit Tests" OFF)
 
 if(python_build)
   include("cmake/HunterGate.cmake")
@@ -43,6 +44,22 @@ endif(USE_CUDA)
 if(python_build)
   add_subdirectory(python_module)
 endif()
+
+########################################################################
+#
+# Google Test.
+#
+# The tests are not built by default.  To build them, set the
+# gtest_build_tests option to ON.  You can do it by running ccmake
+# or specifying the -Dgtest_build_tests=ON flag when running cmake.
+
+if (gtest_build_tests)
+  # This must be set in the root directory for the tests to be run by
+  # 'make test' or ctest.
+  enable_testing()
+  add_subdirectory(tests)
+endif()
+
 
 install(TARGETS ImageStreamIO DESTINATION lib)
 install(FILES ImageStreamIO.h DESTINATION include)

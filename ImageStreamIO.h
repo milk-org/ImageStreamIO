@@ -33,16 +33,16 @@ int_fast8_t init_ImageStreamIO();
 /* =============================================================================================== */
 /* =============================================================================================== */
 
-uint64_t ImageStreamIO_nbSlices(const IMAGE *image) {
+inline uint64_t ImageStreamIO_nbSlices(const IMAGE *image) {
   return (image->md->naxis == 3 ? image->md->size[0] : 1);
 }
 
-uint64_t ImageStreamIO_writeIndex(const IMAGE *image) {
+inline uint64_t ImageStreamIO_writeIndex(const IMAGE *image) {
   return (image->md->naxis == 3 ? (image->md->cnt1 + 1) % ImageStreamIO_nbSlices(image)
                                 : 0);
 }
 
-uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
+inline uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
   return (image->md->naxis == 3 ? image->md->cnt1 : 0);
 }
 
@@ -90,7 +90,7 @@ errno_t ImageStreamIO_readBufferAt(const IMAGE *image, const int slice_index, vo
   * 
   * \return the error code
   */
-errno_t ImageStreamIO_writeBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
+inline errno_t ImageStreamIO_writeBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
                                   void **buffer ///< [out] raw pointer where the producer should write
                                   ) {
   const uint64_t write_index = ImageStreamIO_writeIndex(image);
@@ -117,7 +117,7 @@ errno_t ImageStreamIO_writeBuffer(const IMAGE *image, ///< [in] the name of the 
   * 
   * \return the error code
   */
-errno_t ImageStreamIO_readLastWroteBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
+inline errno_t ImageStreamIO_readLastWroteBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
                                           void **buffer ///< [out] raw pointer where the consumer will find the last frame wrote
                                           ) {
   const int64_t read_index = ImageStreamIO_readLastWroteIndex(image);

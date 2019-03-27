@@ -63,4 +63,4 @@ endif()
 
 install(TARGETS ImageStreamIO DESTINATION lib)
 install(FILES ImageStreamIO.h DESTINATION include)
-install(FILES ImageStruct.h DESTINATION include)
+install(FILES ImageStruct.h ImageError.h DESTINATION include)

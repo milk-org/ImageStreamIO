@@ -38,7 +38,9 @@
 #include <semaphore.h>
 #include <unistd.h>  // for close
 
-#include <fitsio.h>
+#ifdef USE_CFITSIO
+  #include <fitsio.h>
+#endif
 
 // Handle old fitsios
 #ifndef ULONGLONG_IMG
@@ -253,6 +255,8 @@ int ImageStreamIO_typesize(uint8_t datatype) {
       return SIZEOF_DATATYPE_UINT64;
     case _DATATYPE_INT64:
       return SIZEOF_DATATYPE_INT64;
+    case _DATATYPE_HALF:
+      return SIZEOF_DATATYPE_HALF;
     case _DATATYPE_FLOAT:
       return SIZEOF_DATATYPE_FLOAT;
     case _DATATYPE_DOUBLE:
@@ -270,6 +274,7 @@ int ImageStreamIO_typesize(uint8_t datatype) {
 
 int ImageStreamIO_bitpix(uint8_t datatype) {
   switch (datatype) {
+#ifdef USE_CFITSIO
     case _DATATYPE_UINT8:
       return BYTE_IMG;
     case _DATATYPE_INT8:
@@ -290,6 +295,7 @@ int ImageStreamIO_bitpix(uint8_t datatype) {
       return FLOAT_IMG;
     case _DATATYPE_DOUBLE:
       return DOUBLE_IMG;
+#endif
     default:
       ImageStreamIO_printERROR("bitpix not implemented for type");
       return EXIT_FAILURE;

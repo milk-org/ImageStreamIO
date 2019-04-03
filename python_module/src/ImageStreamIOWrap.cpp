@@ -23,8 +23,7 @@ struct ImageStreamIOType {
 
   Type type;
 
-  ImageStreamIOType()
-      : type(MATH_DATA_TYPE){};
+  ImageStreamIOType() : type(MATH_DATA_TYPE){};
 
   ImageStreamIOType(uint64_t type)
       : type(static_cast<ImageStreamIOType::Type>(type)){};
@@ -47,6 +46,7 @@ struct ImageStreamIODataType {
     INT32 = _DATATYPE_INT32,
     UINT64 = _DATATYPE_UINT64,
     INT64 = _DATATYPE_INT64,
+    HALF = _DATATYPE_HALF,
     FLOAT = _DATATYPE_FLOAT,
     DOUBLE = _DATATYPE_DOUBLE,
     COMPLEX_FLOAT = _DATATYPE_COMPLEX_FLOAT,
@@ -58,9 +58,7 @@ struct ImageStreamIODataType {
   DataType datatype;
   uint8_t asize;
 
-  ImageStreamIODataType()
-      : datatype(FLOAT),
-        asize(Size[FLOAT]){};
+  ImageStreamIODataType() : datatype(FLOAT), asize(Size[FLOAT]){};
 
   ImageStreamIODataType(uint8_t datatype)
       : datatype(static_cast<ImageStreamIODataType::DataType>(datatype)),
@@ -70,9 +68,10 @@ struct ImageStreamIODataType {
 const std::vector<uint8_t> ImageStreamIODataType::Size(
     {0, SIZEOF_DATATYPE_UINT8, SIZEOF_DATATYPE_INT8, SIZEOF_DATATYPE_UINT16,
      SIZEOF_DATATYPE_INT16, SIZEOF_DATATYPE_UINT32, SIZEOF_DATATYPE_INT32,
-     SIZEOF_DATATYPE_UINT64, SIZEOF_DATATYPE_INT64, SIZEOF_DATATYPE_FLOAT,
-     SIZEOF_DATATYPE_DOUBLE, SIZEOF_DATATYPE_COMPLEX_FLOAT,
-     SIZEOF_DATATYPE_COMPLEX_DOUBLE, SIZEOF_DATATYPE_EVENT_UI8_UI8_UI16_UI8});
+     SIZEOF_DATATYPE_UINT64, SIZEOF_DATATYPE_INT64, SIZEOF_DATATYPE_HALF,
+     SIZEOF_DATATYPE_FLOAT, SIZEOF_DATATYPE_DOUBLE,
+     SIZEOF_DATATYPE_COMPLEX_FLOAT, SIZEOF_DATATYPE_COMPLEX_DOUBLE,
+     SIZEOF_DATATYPE_EVENT_UI8_UI8_UI16_UI8});
 
 std::string ImageStreamIODataTypeToPyFormat(ImageStreamIODataType dt) {
   switch (dt.datatype) {
@@ -176,6 +175,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .value("INT32", ImageStreamIODataType::DataType::INT32)
       .value("UINT64", ImageStreamIODataType::DataType::UINT64)
       .value("INT64", ImageStreamIODataType::DataType::INT64)
+      .value("HALF", ImageStreamIODataType::DataType::HALF)
       .value("FLOAT", ImageStreamIODataType::DataType::FLOAT)
       .value("DOUBLE", ImageStreamIODataType::DataType::DOUBLE)
       .value("COMPLEX_FLOAT", ImageStreamIODataType::DataType::COMPLEX_FLOAT)

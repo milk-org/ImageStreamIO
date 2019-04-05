@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.8)
 
 option(python_build "Compile Python Wrappers" OFF)
+option(use_hunter "Use hunter package manager" OFF)
 option(gtest_build_tests "Build Unit Tests" OFF)
 
-if(python_build)
+if(use_hunter)
   include("cmake/HunterGate.cmake")
   huntergate(URL
              "https://github.com/ruslo/hunter/archive/v0.23.126.tar.gz"

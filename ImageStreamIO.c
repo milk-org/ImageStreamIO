@@ -807,7 +807,8 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
 
     //printf("image size = "); fflush(stdout); //TEST
     uint64_t size = 1;
-    for (uint8_t axis = 0; axis < image->md->naxis; ++axis) {
+    uint8_t axis;
+    for (axis = 0; axis < image->md->naxis; ++axis) {
         //printf("%ld ", (long)image->md->size[axis]); fflush(stdout); //TEST
         size *= image->md->size[axis];
     }
@@ -819,7 +820,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
         printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name); fflush(stdout);
         return EXIT_FAILURE;
     }
-    for (uint8_t axis = 0; axis < image->md->naxis; ++axis) {
+    for (axis = 0; axis < image->md->naxis; ++axis) {
         if (image->md->size[axis] < 1) {
             printf("IMAGE \"%s\" AXIS %d SIZE < 1... NOT LOADING\n", name, axis); fflush(stdout);
             return EXIT_FAILURE;
@@ -927,15 +928,16 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
 
 
 int ImageStreamIO_closeIm(IMAGE *image) {
-  for (long s = 0; s < image->md->sem; s++) {
-    sem_close(image->semptr[s]);
-  }
+    long s;
+    for(s = 0; s < image->md->sem; s++) {
+        sem_close(image->semptr[s]);
+    }
 
-  free(image->semptr);
+    free(image->semptr);
 
-  sem_close(image->semlog);
+    sem_close(image->semlog);
 
-  return munmap(image->md, image->memsize);
+    return munmap(image->md, image->memsize);
 }
 
 /* ===============================================================================================

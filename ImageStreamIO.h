@@ -2,9 +2,6 @@
  * @file    ImageCreate.h
  * @brief   Function prototypes for ImageCreate
  * 
- *  
- * @author  O. Guyon
- * @date    12 Jul 2017
  *
  * 
  * @bug No known bugs.
@@ -16,17 +13,16 @@
 #ifndef _IMAGESTREAMIO_H
 #define _IMAGESTREAMIO_H
  
-#include "ImageStruct.h"
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
    
+#include "ImageStruct.h"
+
 
 void __attribute__ ((constructor)) libinit_ImageStreamIO();
 int_fast8_t init_ImageStreamIO();
-
 
 
 
@@ -36,6 +32,97 @@ int_fast8_t init_ImageStreamIO();
 /**@{                                                                                              */
 /* =============================================================================================== */
 /* =============================================================================================== */
+
+inline uint64_t ImageStreamIO_nbSlices(const IMAGE *image) {
+  return (image->md->naxis == 3 ? image->md->size[0] : 1);
+}
+
+inline uint64_t ImageStreamIO_writeIndex(const IMAGE *image) {
+  return (image->md->naxis == 3 ? (image->md->cnt1 + 1) % ImageStreamIO_nbSlices(image)
+                                : 0);
+}
+
+inline uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
+  return (image->md->naxis == 3 ? image->md->cnt1 : 0);
+}
+
+/** @brief Get the raw pointer to the beginning of the slice slice_index.
+  * 
+  *
+  * ## Purpose
+  *
+  * Return the raw pointer to the beginning of the slice slice_index
+  *
+  * ## Arguments
+  *
+  * @param[in]
+  * image	IMAGE*
+  * 			pointer to shmim
+  * 
+  * @param[in]
+  * indec	const int
+  * 			slice_index of the slice to read
+  * 
+  * @param[out]
+  * buffer	void**
+  * 			pointer to the beginning of the slice
+  * 
+  * \return the error code
+  */
+errno_t ImageStreamIO_readBufferAt(const IMAGE *image, const int slice_index, void **buffer);
+
+/** @brief Get the raw pointer where the producer should write.
+  * 
+  *
+  * ## Purpose
+  *
+  * Return the raw pointer where the producer should write
+  *
+  * ## Arguments
+  *
+  * @param[in]
+  * image	IMAGE*
+  * 			pointer to shmim
+  * 
+  * @param[out]
+  * buffer	void**
+  * 			raw pointer where the producer should write
+  * 
+  * \return the error code
+  */
+inline errno_t ImageStreamIO_writeBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
+                                  void **buffer ///< [out] raw pointer where the producer should write
+                                  ) {
+  const uint64_t write_index = ImageStreamIO_writeIndex(image);
+  return ImageStreamIO_readBufferAt(image, write_index, buffer);
+}
+
+
+/** @brief Get the raw pointer where the consumer will find the last frame wrote.
+  * 
+  *
+  * ## Purpose
+  *
+  * Return the raw pointer where the consumer will find the last frame wrote
+  *
+  * ## Arguments
+  *
+  * @param[in]
+  * image	IMAGE*
+  * 			pointer to shmim
+  * 
+  * @param[out]
+  * buffer	void**
+  * 			raw pointer where the consumer will find the last frame wrote
+  * 
+  * \return the error code
+  */
+inline errno_t ImageStreamIO_readLastWroteBuffer(const IMAGE *image, ///< [in] the name of the shared memory file
+                                          void **buffer ///< [out] raw pointer where the consumer will find the last frame wrote
+                                          ) {
+  const int64_t read_index = ImageStreamIO_readLastWroteIndex(image);
+  return ImageStreamIO_readBufferAt(image, read_index, buffer);
+}
 
 /** @brief Get the standard stream filename.
   * 
@@ -60,11 +147,13 @@ int ImageStreamIO_filename( char * file_name,    ///< [out] the file name string
                             
 /** @brief Get the size in bytes from the data type code. 
   */
-int ImageStreamIO_typesize( uint8_t atype /**< [in] the type code (see ImageStruct.h*/);
+int ImageStreamIO_typesize( uint8_t atype /**< [in] the type code (see ImageStruct.h*/
+                          );
 
 /** @brief Get the FITSIO BITPIX from the data type code. 
   */
-int ImageStreamIO_bitpix( uint8_t atype /**< [in] the type code (see ImageStruct.h*/);
+int ImageStreamIO_bitpix( uint8_t atype /**< [in] the type code (see ImageStruct.h*/
+                        );
 
 ///@}
 
@@ -75,9 +164,9 @@ int ImageStreamIO_bitpix( uint8_t atype /**< [in] the type code (see ImageStruct
 /* =============================================================================================== */
 /* =============================================================================================== */
 
-/** @brief Create shared memory image stream */
+/** @brief Create shared memory image stream (legacy API) */
 int ImageStreamIO_createIm( IMAGE *image,      ///< [out] IMAGE structure which will have its members allocated and initialized.
-                            const char *name,  ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
+                            const char *name,  ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
                             long naxis,        ///< [in] number of axes in the image.
                             uint32_t *size,    ///< [in] the size of the image along each axis.  Must have naxis elements.
                             uint8_t atype,     ///< [in] data type code
@@ -108,12 +197,26 @@ int ImageStreamIO_destroyIm( IMAGE *image /**< [in] The IMAGE structure to deall
   * Wrapper for  \ref ImageStreamIO_read_sharedmem_image_toIMAGE
   */
 int ImageStreamIO_openIm( IMAGE *image,    ///< [out] IMAGE structure which will be attached to the existing IMAGE
-                          const char *name ///< [in] the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
+                          const char *name ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
                         );
+/** @brief Create shared memory image stream */
+int ImageStreamIO_createIm_gpu( IMAGE *image,      ///< [out] IMAGE structure which will have its members allocated and initialized.
+                            const char *name,  ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
+                            long naxis,        ///< [in] number of axes in the image.
+                            uint32_t *size,    ///< [in] the size of the image along each axis.  Must have naxis elements.
+                            uint8_t atype,     ///< [in] data type code
+                            int8_t location,   ///< [in] if -1 then a CPU memory buffer is allocated. If >=0, GPU memory buffer is allocated on devive `location`.
+                            int shared,        ///< [in] if true then a shared memory buffer is allocated.  If false, only local storage is used.
+                            int NBsem,         ///< [in] the number of semaphores to allocate.
+                            int NBkw,          ///< [in] the number of keywords to allocate.
+                            uint64_t imagetype ///< [in] type of the stream
+                          );
+
+void* ImageStreamIO_get_image_d_ptr(IMAGE *image);
 
 
 /** @brief Read / connect to existing shared memory image stream */
-int ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, ///< [in] the name of the shared memory file to access, as in SHAREDMEMDIR/<name>_im.shm
+int ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, ///< [in] the name of the shared memory file to access, as in data.tmpfsdir/<name>_im.shm
                                                 IMAGE *image      ///< [out] the IMAGE structure to connect to the stream
                                               );
 
@@ -137,6 +240,24 @@ int ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structure wh
 /* =============================================================================================== */
 /* =============================================================================================== */
 
+<<<<<<< HEAD
+=======
+/** @brief Destroy shmim semaphores 
+ *
+ * ## Purpose
+ *
+ * Destroy semaphore of a shmim
+ *
+ * ## Arguments
+ *
+ * @param[in]
+ * image	IMAGE*
+ * 			pointer to shmim
+ */
+
+int ImageStreamIO_destroysem(IMAGE *image  ///< [in] the name of the shared memory file
+                            );
+>>>>>>> dev
 
 /** @brief Create shmim semaphores 
  *
@@ -153,7 +274,9 @@ int ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structure wh
  * @param[in]
  * NBsem    number of semaphores to be created
  */
-int ImageStreamIO_createsem(IMAGE *image, long NBsem);
+int ImageStreamIO_createsem(IMAGE *image,  ///< [in] the name of the shared memory file
+                            long NBsem     ///< [in] number of semaphores to be created
+                           );
 
 
 
@@ -175,7 +298,9 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem);
  * 			index of semaphore to be posted
  *          if index=-1, post all semaphores
  */
-long ImageStreamIO_sempost(IMAGE *image, long index);
+long ImageStreamIO_sempost(IMAGE *image,  ///< [in] the name of the shared memory file
+                           long index     ///< [in] semaphore index
+                          );
 
 
 
@@ -195,7 +320,9 @@ long ImageStreamIO_sempost(IMAGE *image, long index);
  * index    semaphore index
  * 			index of semaphore to be excluded
  */
-long ImageStreamIO_sempost_excl(IMAGE *image, long index);
+long ImageStreamIO_sempost_excl(IMAGE *image,  ///< [in] the name of the shared memory file
+                                long index     ///< [in] semaphore index
+                               );
 
 
 
@@ -219,17 +346,17 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index);
  * dtus     time interval [us]
  * 
  */
-long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus);
-
-
-
+long ImageStreamIO_sempost_loop(IMAGE *image,  ///< [in] the name of the shared memory file
+                                long index,    ///< [in] semaphore index
+                                long dtus);
 
 /** @brief Get available semaphore index
  * 
  * 
  * 
  */
-int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault);
+int ImageStreamIO_getsemwaitindex(IMAGE *image,  ///< [in] the name of the shared memory file
+                                  int semindexdefault);
 
 
 /** @brief Wait for semaphore 
@@ -248,10 +375,15 @@ int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault);
  * index    semaphore index
  * 
  */
-int ImageStreamIO_semwait(IMAGE *image, int index);
-int ImageStreamIO_semtrywait(IMAGE *image, int index);
-int ImageStreamIO_semtimedwait(IMAGE *image, int index, const struct timespec *semwts);
-
+int ImageStreamIO_semwait(IMAGE *image,  ///< [in] the name of the shared memory file
+                          int index      ///< [in] semaphore index
+                          );
+int ImageStreamIO_semtrywait(IMAGE *image,  ///< [in] the name of the shared memory file
+                             int index      ///< [in] semaphore index
+                            );
+int ImageStreamIO_semtimedwait(IMAGE *image,  ///< [in] the name of the shared memory file
+                               int index,     ///< [in] semaphore index
+                               const struct timespec *semwts);
 
 
 /** @brief Flush all semaphores of a shmim 
@@ -271,7 +403,8 @@ int ImageStreamIO_semtimedwait(IMAGE *image, int index, const struct timespec *s
  * 			flush all semaphores if index<0
  * 
  */
-long ImageStreamIO_semflush(IMAGE *image, long index);
+long ImageStreamIO_semflush(IMAGE *image,  ///< [in] the name of the shared memory file
+                            long index);
 
 ///@}
 

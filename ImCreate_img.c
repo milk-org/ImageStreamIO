@@ -2,19 +2,20 @@
  * Example code to write image in shared memory
  * 
  * compile with:
- * gcc ImCreate_test.c ImageStreamIO.c -lm -lpthread 
+ * gcc ImCreate_cube.c ImageStreamIO.c -o ImCreate_cube -lm -lpthread 
+ * gcc ImCreate_cube.c ImageStreamIO.c -DHAVE_CUDA -o ImCreate_test -lm -lpthread -I/opt/cuda/include -L/opt/cuda/lib64 -lcudart
  * 
  * Required files in compilation directory :
- * ImCreate_test.c   : source code (this file)
+ * ImCreate_cube.c   : source code (this file)
  * ImageStreamIO.c   : ImageStreamIO source code
  * ImageStreamIO.h   : ImageCreate function prototypes
  * ImageStruct.h     : Image structure definition
  * 
  * EXECUTION:
- * ./a.out  
+ * ./ImCreate_cube  
  * (no argument)
  * 
- * Creates an image imtest00 in shared memory
+ * Creates a circular buffer imtest00 in shared memory
  * Updates the image every ~ 10ms, forever...
  * A square is rotating around the center of the image
  * 
@@ -34,22 +35,13 @@
 
 int main()
 {
-	IMAGE *imarray;    // pointer to array of images
-	int NBIMAGES = 1;  // can hold 1 image
+	IMAGE imarray;    // pointer to array of images
 	long naxis;        // number of axis
 	uint8_t atype;     // data type
 	uint32_t *imsize;  // image size 
 	int shared;        // 1 if image in shared memory
 	int NBkw;          // number of keywords supported
 
-
-
-	
-
-	// allocate memory for array of images
-	imarray = (IMAGE*) malloc(sizeof(IMAGE)*NBIMAGES);
-
-	
 	// image will be 2D
 	naxis = 2;
 	
@@ -68,11 +60,11 @@ int main()
 	// allocate space for 10 keywords
 	NBkw = 10;
 
-
 	
 	// create an image in shared memory
-	ImageStreamIO_createIm(&imarray[0], "imtest00", naxis, imsize, atype, shared, NBkw);
+	ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, IMAGE_NB_SEMAPHORE, NBkw, MATH_DATA);
 
+	free(imsize);
 
 
 	float angle; 
@@ -81,18 +73,19 @@ int main()
 	long ii, jj;
 	float x, y, x0, y0, xc, yc;
 	// float squarerad=20;
-	long dtus = 1000; // update every 1ms
+	long dtus = 100000; // update every 1ms
 	float dangle = 0.02;
 	
 	int s;
 	int semval;
+	float *current_image;
 
 	// writes a square in image
 	// square location rotates around center
 	angle = 0.0;
 	r = 100.0;
-	x0 = 0.5*imarray[0].md[0].size[0];
-	y0 = 0.5*imarray[0].md[0].size[1];
+	x0 = 0.5*imarray.md->size[0];
+	y0 = 0.5*imarray.md->size[1];
 	while (1)
 	{
 		// disk location
@@ -100,32 +93,29 @@ int main()
 		yc = y0 + r*sin(angle);
 		
 		
-		imarray[0].md[0].write = 1; // set this flag to 1 when writing data
-		
-		for(ii=0; ii<imarray[0].md[0].size[0]; ii++)
-			for(jj=0; jj<imarray[0].md[0].size[1]; jj++)
+		imarray.md->write = 1; // set this flag to 1 when writing data
+
+		for(ii=0; ii<imarray.md->size[0]; ii++)
+			for(jj=0; jj<imarray.md->size[1]; jj++)
 			{
 				x = 1.0*ii;
 				y = 1.0*jj;
 				float dx = x-xc;
 				float dy = y-yc;
-				
-				imarray[0].array.F[jj*imarray[0].md[0].size[0]+ii] = cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
+				imarray.array.F[ii*imarray.md->size[1]+jj] = cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
 				
 				//if( (x-xc<squarerad) && (x-xc>-squarerad) && (y-yc<squarerad) && (y-yc>-squarerad))
-				//	imarray[0].array.F[jj*imarray[0].md[0].size[0]+ii] = 1.0;
+				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0;
 				//else
-				//	imarray[0].array.F[jj*imarray[0].md[0].size[0]+ii] = 0.0;
+				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0;
 			}
-		
+		imarray.md->cnt1 = 0;
+		imarray.md->cnt0++;
 		// POST ALL SEMAPHORES
-		ImageStreamIO_sempost(&imarray[0], -1);
+		ImageStreamIO_sempost(&imarray, -1);
 		
-		imarray[0].md[0].write = 0; // Done writing data
-		imarray[0].md[0].cnt0++;
-		imarray[0].md[0].cnt1++;
-		
-		
+		imarray.md->write = 0; // Done writing data
+				
 		usleep(dtus);
 		angle += dangle;
 		if(angle > 2.0*3.141592)
@@ -133,11 +123,6 @@ int main()
 		//printf("Wrote square at position xc = %16f  yc = %16f\n", xc, yc);
 		//fflush(stdout);
 	}
-	
-
-
-	free(imsize);
-	free(imarray);
 	
 	return 0;
 }

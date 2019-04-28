@@ -1,3 +1,4 @@
+_build/
 .deps/
 .libs/
 *.lo
@@ -5,3 +6,10 @@
 Makefile
 Makefile.in
 *.la
+
+build
+.vscode
+ImCreate_test
+ImCreate_cube
+ImageStreamIOWrap.egg-info
+setup.cfg

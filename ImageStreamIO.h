@@ -240,8 +240,7 @@ int ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structure wh
 /* =============================================================================================== */
 /* =============================================================================================== */
 
-<<<<<<< HEAD
-=======
+
 /** @brief Destroy shmim semaphores 
  *
  * ## Purpose
@@ -257,7 +256,6 @@ int ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structure wh
 
 int ImageStreamIO_destroysem(IMAGE *image  ///< [in] the name of the shared memory file
                             );
->>>>>>> dev
 
 /** @brief Create shmim semaphores 
  *

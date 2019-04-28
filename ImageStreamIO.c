@@ -272,45 +272,8 @@ int ImageStreamIO_typesize(uint8_t datatype) {
   }
 }
 
-<<<<<<< HEAD
 
 
-int ImageStreamIO_typesize( uint8_t atype )
-{
-   switch(atype)
-   {
-      case _DATATYPE_UINT8:
-         return SIZEOF_DATATYPE_UINT8;
-      case _DATATYPE_INT8:
-         return SIZEOF_DATATYPE_INT8;
-      case _DATATYPE_UINT16:
-         return SIZEOF_DATATYPE_UINT16;
-      case _DATATYPE_INT16:
-         return SIZEOF_DATATYPE_INT16;
-      case _DATATYPE_UINT32:
-         return SIZEOF_DATATYPE_UINT32;
-      case _DATATYPE_INT32:
-         return SIZEOF_DATATYPE_INT32;
-      case _DATATYPE_UINT64:
-         return SIZEOF_DATATYPE_UINT64;
-      case _DATATYPE_INT64:
-         return SIZEOF_DATATYPE_INT64;
-      case _DATATYPE_FLOAT:
-         return SIZEOF_DATATYPE_FLOAT;
-      case _DATATYPE_DOUBLE:
-         return SIZEOF_DATATYPE_DOUBLE;
-      case _DATATYPE_COMPLEX_FLOAT:
-         return SIZEOF_DATATYPE_COMPLEX_FLOAT;
-      case _DATATYPE_COMPLEX_DOUBLE:
-         return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
-      case _DATATYPE_EVENT_UI8_UI8_UI16_UI8:
-         return SIZEOF_DATATYPE_EVENT_UI8_UI8_UI16_UI8;   
-         
-      default:
-         ImageStreamIO_printERROR(__FILE__, __func__, __LINE__, "invalid type code");
-         return -1;
-   }
-=======
 int ImageStreamIO_bitpix(uint8_t datatype) {
   switch (datatype) {
 #ifdef USE_CFITSIO
@@ -339,7 +302,6 @@ int ImageStreamIO_bitpix(uint8_t datatype) {
       ImageStreamIO_printERROR("bitpix not implemented for type");
       return EXIT_FAILURE;
   }
->>>>>>> dev
 }
 
 uint64_t ImageStreamIO_offset_data(IMAGE *image, void *map) {
@@ -800,160 +762,6 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     uint8_t *map;
     long s;
     struct stat file_stat;
-<<<<<<< HEAD
-
-    long snb = 0;
-    int sOK = 1;
-
-
-    rval = 0; // we assume by default success
-
-    fstat(SM_fd, &file_stat);
-//    printf("File %s size: %zd\n", SM_fname, file_stat.st_size);
-
-
-
-
-    map = (IMAGE_METADATA*) mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, SM_fd, 0);
-    if (map == MAP_FAILED) {
-        close(SM_fd);
-        perror("Error mmapping the file");
-        rval = -1;
-        exit(0);
-    }
-
-
-
-    image->memsize = file_stat.st_size;
-
-    image->shmfd = SM_fd;
-
-
-
-    image->md = map;
-
-    uint8_t atype;
-    atype = image->md[0].atype;
-    image->md[0].shared = 1;
-
-
- //   printf("image size = %ld %ld\n", (long) image->md[0].size[0], (long) image->md[0].size[1]);
- //   fflush(stdout);
-    // some verification
-    if(image->md[0].size[0]*image->md[0].size[1]>10000000000)
-    {
-        printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name);
-        rval = -1;
-        return(rval);
-    }
-    if(image->md[0].size[0]<1)
-    {
-        printf("IMAGE \"%s\" AXIS SIZE < 1... NOT LOADING\n", name);
-        rval = -1;
-        return(rval);
-    }
-    if(image->md[0].size[1]<1)
-    {
-        printf("IMAGE \"%s\" AXIS SIZE < 1... NOT LOADING\n", name);
-        rval = -1;
-        return(rval);
-    }
-
-
-    char *mapv;
-    mapv = (char*) map;
-    mapv += sizeof(IMAGE_METADATA);
-
-
-
-   // printf("atype = %d\n", (int) atype);
-   // fflush(stdout);
-
-    if(atype == _DATATYPE_UINT8)
-    {
-//        printf("atype = UINT8\n");
-        image->array.UI8 = (uint8_t*) mapv;
-        mapv += SIZEOF_DATATYPE_UINT8 * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_INT8)
-    {
- //       printf("atype = INT8\n");
-        image->array.SI8 = (int8_t*) mapv;
-        mapv += SIZEOF_DATATYPE_INT8 * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_UINT16)
-    {
-  //      printf("atype = UINT16\n");
-        image->array.UI16 = (uint16_t*) mapv;
-        mapv += SIZEOF_DATATYPE_UINT16 * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_INT16)
-    {
-  //      printf("atype = INT16\n");
-        image->array.SI16 = (int16_t*) mapv;
-        mapv += SIZEOF_DATATYPE_INT16 * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_UINT32)
-    {
-  //      printf("atype = UINT32\n");
-        image->array.UI32 = (uint32_t*) mapv;
-        mapv += SIZEOF_DATATYPE_UINT32 * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_INT32)
-    {
-   //     printf("atype = INT32\n");
-        image->array.SI32 = (int32_t*) mapv;
-        mapv += SIZEOF_DATATYPE_INT32 * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_UINT64)
-    {
-   //     printf("atype = UINT64\n");
-        image->array.UI64 = (uint64_t*) mapv;
-        mapv += SIZEOF_DATATYPE_UINT64 * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_INT64)
-    {
-   //     printf("atype = INT64\n");
-        image->array.SI64 = (int64_t*) mapv;
-        mapv += SIZEOF_DATATYPE_INT64 * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_FLOAT)
-    {
-   //     printf("atype = FLOAT\n");
-        image->array.F = (float*) mapv;
-        mapv += SIZEOF_DATATYPE_FLOAT * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_DOUBLE)
-    {
-   //     printf("atype = DOUBLE\n");
-        image->array.D = (double*) mapv;
-        mapv += SIZEOF_DATATYPE_DOUBLE * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_COMPLEX_FLOAT)
-    {
-   //     printf("atype = COMPLEX_FLOAT\n");
-        image->array.CF = (complex_float*) mapv;
-        mapv += SIZEOF_DATATYPE_COMPLEX_FLOAT * image->md[0].nelement;
-    }
-
-    if(atype == _DATATYPE_COMPLEX_DOUBLE)
-    {
-   //     printf("atype = COMPLEX_DOUBLE\n");
-        image->array.CD = (complex_double*) mapv;
-        mapv += SIZEOF_DATATYPE_COMPLEX_DOUBLE * image->md[0].nelement;
-    }
-=======
->>>>>>> dev
 
     long snb = 0;
     int sOK = 1;

@@ -376,7 +376,8 @@ int ImageStreamIO_initialize_buffer(IMAGE *image) {
                 fprintf(stderr, "Image name = %s\n", image->name);
                 fprintf(stderr, "Image size = ");
                 fprintf(stderr, "%ld", (long)image->md->size[0]);
-                for (int i = 1; i < image->md->naxis; i++)
+                int i;
+                for (i = 1; i < image->md->naxis; i++)
                     fprintf(stderr, "x%ld", (long)image->md->size[i]);
                 fprintf(stderr, "\n");
                 fprintf(stderr, "Requested memory size = %ld elements = %f Mb\n",

@@ -348,8 +348,7 @@ uint64_t ImageStreamIO_offset_data(IMAGE *image, void *map) {
   }
 
   if (image->md->location >= 0) {
-    // printf("datatype = GPUIPC\n");
-    image->array.raw = NULL;
+    image->array.raw = ImageStreamIO_get_image_d_ptr(image);
     offset = 0;
   } else {
     image->array.raw = map;
@@ -829,6 +828,10 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
     }
 
     map += sizeof(IMAGE_METADATA);
+
+    if (image->md->location >= 0) {
+      image->array.raw = NULL;
+    }
     map += ImageStreamIO_offset_data(image, map);
 
     //printf("%ld keywords\n", (long)image->md->NBkw); fflush(stdout); //TEST

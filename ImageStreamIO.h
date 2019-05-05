@@ -38,8 +38,7 @@ inline uint64_t ImageStreamIO_nbSlices(const IMAGE *image) {
 }
 
 inline uint64_t ImageStreamIO_writeIndex(const IMAGE *image) {
-  return (image->md->naxis == 3 ? (image->md->cnt1 + 1) % ImageStreamIO_nbSlices(image)
-                                : 0);
+  return (image->md->cnt1 + 1) % ImageStreamIO_nbSlices(image);
 }
 
 inline uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image) {

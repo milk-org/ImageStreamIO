@@ -238,124 +238,129 @@ int ImageStreamIO_filename(char *file_name, size_t ssz, const char *im_name) {
 
 
 int ImageStreamIO_typesize(uint8_t datatype) {
-  switch (datatype) {
+    switch (datatype) {
     case _DATATYPE_UINT8:
-      return SIZEOF_DATATYPE_UINT8;
+        return SIZEOF_DATATYPE_UINT8;
     case _DATATYPE_INT8:
-      return SIZEOF_DATATYPE_INT8;
+        return SIZEOF_DATATYPE_INT8;
     case _DATATYPE_UINT16:
-      return SIZEOF_DATATYPE_UINT16;
+        return SIZEOF_DATATYPE_UINT16;
     case _DATATYPE_INT16:
-      return SIZEOF_DATATYPE_INT16;
+        return SIZEOF_DATATYPE_INT16;
     case _DATATYPE_UINT32:
-      return SIZEOF_DATATYPE_UINT32;
+        return SIZEOF_DATATYPE_UINT32;
     case _DATATYPE_INT32:
-      return SIZEOF_DATATYPE_INT32;
+        return SIZEOF_DATATYPE_INT32;
     case _DATATYPE_UINT64:
-      return SIZEOF_DATATYPE_UINT64;
+        return SIZEOF_DATATYPE_UINT64;
     case _DATATYPE_INT64:
-      return SIZEOF_DATATYPE_INT64;
+        return SIZEOF_DATATYPE_INT64;
     case _DATATYPE_HALF:
-      return SIZEOF_DATATYPE_HALF;
+        return SIZEOF_DATATYPE_HALF;
     case _DATATYPE_FLOAT:
-      return SIZEOF_DATATYPE_FLOAT;
+        return SIZEOF_DATATYPE_FLOAT;
     case _DATATYPE_DOUBLE:
-      return SIZEOF_DATATYPE_DOUBLE;
+        return SIZEOF_DATATYPE_DOUBLE;
     case _DATATYPE_COMPLEX_FLOAT:
-      return SIZEOF_DATATYPE_COMPLEX_FLOAT;
+        return SIZEOF_DATATYPE_COMPLEX_FLOAT;
     case _DATATYPE_COMPLEX_DOUBLE:
-      return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
+        return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
 
     default:
-      ImageStreamIO_printERROR("invalid type code");
-      return EXIT_FAILURE;
-  }
+        ImageStreamIO_printERROR("invalid type code");
+        return EXIT_FAILURE;
+    }
 }
+
+
 
 int ImageStreamIO_bitpix(uint8_t datatype) {
-  switch (datatype) {
+    switch (datatype) {
 #ifdef USE_CFITSIO
     case _DATATYPE_UINT8:
-      return BYTE_IMG;
+        return BYTE_IMG;
     case _DATATYPE_INT8:
-      return SBYTE_IMG;
+        return SBYTE_IMG;
     case _DATATYPE_UINT16:
-      return USHORT_IMG;
+        return USHORT_IMG;
     case _DATATYPE_INT16:
-      return SHORT_IMG;
+        return SHORT_IMG;
     case _DATATYPE_UINT32:
-      return ULONG_IMG;
+        return ULONG_IMG;
     case _DATATYPE_INT32:
-      return LONG_IMG;
+        return LONG_IMG;
     case _DATATYPE_UINT64:
-      return ULONGLONG_IMG;
+        return ULONGLONG_IMG;
     case _DATATYPE_INT64:
-      return LONGLONG_IMG;
+        return LONGLONG_IMG;
     case _DATATYPE_FLOAT:
-      return FLOAT_IMG;
+        return FLOAT_IMG;
     case _DATATYPE_DOUBLE:
-      return DOUBLE_IMG;
+        return DOUBLE_IMG;
 #endif
     default:
-      ImageStreamIO_printERROR("bitpix not implemented for type");
-      return EXIT_FAILURE;
-  }
+        ImageStreamIO_printERROR("bitpix not implemented for type");
+        return EXIT_FAILURE;
+    }
 }
 
+
+
+
 uint64_t ImageStreamIO_offset_data(IMAGE *image, void *map) {
-  uint8_t datatype = image->md->datatype;
-  u_int64_t offset = 0;
+    uint8_t datatype = image->md->datatype;
+    u_int64_t offset = 0;
 
-  // printf("datatype = %d\n", (int)datatype);
-  // fflush(stdout);
+    // printf("datatype = %d\n", (int)datatype);
+    // fflush(stdout);
 
-  if (datatype == _DATATYPE_UINT8) {
-    // printf("datatype = UINT8\n");
-    image->array.UI8 = (uint8_t *)map;
-  } else if (datatype == _DATATYPE_INT8) {
-    // printf("datatype = INT8\n");
-    image->array.SI8 = (int8_t *)map;
-  } else if (datatype == _DATATYPE_UINT16) {
-    // printf("datatype = UINT16\n");
-    image->array.UI16 = (uint16_t *)map;
-  } else if (datatype == _DATATYPE_INT16) {
-    // printf("datatype = INT16\n");
-    image->array.SI16 = (int16_t *)map;
-  } else if (datatype == _DATATYPE_UINT32) {
-    // printf("datatype = UINT32\n");
-    image->array.UI32 = (uint32_t *)map;
-  } else if (datatype == _DATATYPE_INT32) {
-    // printf("datatype = INT32\n");
-    image->array.SI32 = (int32_t *)map;
-  } else if (datatype == _DATATYPE_UINT64) {
-    // printf("datatype = UINT64\n");
-    image->array.UI64 = (uint64_t *)map;
-  } else if (datatype == _DATATYPE_INT64) {
-    // printf("datatype = INT64\n");
-    image->array.SI64 = (int64_t *)map;
-  } else if (datatype == _DATATYPE_FLOAT) {
-    // printf("datatype = FLOAT\n");
-    image->array.F = (float *)map;
-  } else if (datatype == _DATATYPE_DOUBLE) {
-    // printf("datatype = DOUBLE\n");
-    image->array.D = (double *)map;
-  } else if (datatype == _DATATYPE_COMPLEX_FLOAT) {
-    // printf("datatype = COMPLEX_FLOAT\n");
-    image->array.CF = (complex_float *)map;
-  } else if (datatype == _DATATYPE_COMPLEX_DOUBLE) {
-    // printf("datatype = COMPLEX_DOUBLE\n");
-    image->array.CD = (complex_double *)map;
-  }
+    if (datatype == _DATATYPE_UINT8) {
+        // printf("datatype = UINT8\n");
+        image->array.UI8 = (uint8_t *)map;
+    } else if (datatype == _DATATYPE_INT8) {
+        // printf("datatype = INT8\n");
+        image->array.SI8 = (int8_t *)map;
+    } else if (datatype == _DATATYPE_UINT16) {
+        // printf("datatype = UINT16\n");
+        image->array.UI16 = (uint16_t *)map;
+    } else if (datatype == _DATATYPE_INT16) {
+        // printf("datatype = INT16\n");
+        image->array.SI16 = (int16_t *)map;
+    } else if (datatype == _DATATYPE_UINT32) {
+        // printf("datatype = UINT32\n");
+        image->array.UI32 = (uint32_t *)map;
+    } else if (datatype == _DATATYPE_INT32) {
+        // printf("datatype = INT32\n");
+        image->array.SI32 = (int32_t *)map;
+    } else if (datatype == _DATATYPE_UINT64) {
+        // printf("datatype = UINT64\n");
+        image->array.UI64 = (uint64_t *)map;
+    } else if (datatype == _DATATYPE_INT64) {
+        // printf("datatype = INT64\n");
+        image->array.SI64 = (int64_t *)map;
+    } else if (datatype == _DATATYPE_FLOAT) {
+        // printf("datatype = FLOAT\n");
+        image->array.F = (float *)map;
+    } else if (datatype == _DATATYPE_DOUBLE) {
+        // printf("datatype = DOUBLE\n");
+        image->array.D = (double *)map;
+    } else if (datatype == _DATATYPE_COMPLEX_FLOAT) {
+        // printf("datatype = COMPLEX_FLOAT\n");
+        image->array.CF = (complex_float *)map;
+    } else if (datatype == _DATATYPE_COMPLEX_DOUBLE) {
+        // printf("datatype = COMPLEX_DOUBLE\n");
+        image->array.CD = (complex_double *)map;
+    }
 
-  if (image->md->location >= 0) {
-    image->array.raw = ImageStreamIO_get_image_d_ptr(image);
-    offset = 0;
-  } else {
-    image->array.raw = map;
-    offset = ImageStreamIO_typesize(datatype) * image->md->nelement;
-  }
+    if (image->md->location >= 0) {
+        image->array.raw = ImageStreamIO_get_image_d_ptr(image);
+        offset = 0;
+    } else {
+        image->array.raw = map;
+        offset = ImageStreamIO_typesize(datatype) * image->md->nelement;
+    }
 
-  return offset;
+    return offset;
 }
 
 

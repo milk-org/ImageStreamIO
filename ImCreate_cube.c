@@ -50,9 +50,9 @@ int main()
 	
 	// image size will be 512 x 512
 	imsize = (uint32_t *) malloc(sizeof(uint32_t)*naxis);
-	imsize[0] = 10;
+	imsize[0] = 512;
 	imsize[1] = 512;
-	imsize[2] = 512;
+	imsize[2] = 10;
 	
 	// image will be float type
 	// see file ImageStruct.h for list of supported types
@@ -99,14 +99,13 @@ int main()
 	int semval;
 	unsigned int index;
 	float *current_image;
-	struct timespec timenow;
 
 	// writes a square in image
 	// square location rotates around center
 	angle = 0.0;
 	r = 100.0;
-	x0 = 0.5*imarray.md->size[1];
-	y0 = 0.5*imarray.md->size[2];
+	x0 = 0.5*imarray.md->size[0];
+	y0 = 0.5*imarray.md->size[1];
 	while (1)
 	{
 		// disk location
@@ -117,21 +116,21 @@ int main()
 		imarray.md->write = 1; // set this flag to 1 when writing data
 
 		index = imarray.md->cnt1 +1;
-		if(index == imarray.md->size[0])
+		if(index == imarray.md->size[2])
 			index=0;
 
-		current_image = imarray.array.F + index * imarray.md->size[1] * imarray.md->size[2];
+		current_image = imarray.array.F + index * imarray.md->size[0] * imarray.md->size[1];
        // printf("%lu %lu %lu %x\r", imarray.md->cnt0, imarray.md->cnt1, index, 
 		// 				current_image);
-       // printf("%d, %x \n", index * imarray.md->size[1] * imarray.md->size[2], current_image);
-		for(ii=0; ii<imarray.md->size[1]; ii++)
-			for(jj=0; jj<imarray.md->size[2]; jj++)
+       // printf("%d, %x \n", index * imarray.md->size[0] * imarray.md->size[1], current_image);
+		for(ii=0; ii<imarray.md->size[0]; ii++)
+			for(jj=0; jj<imarray.md->size[1]; jj++)
 			{
 				x = 1.0*ii;
 				y = 1.0*jj;
 				float dx = x-xc;
 				float dy = y-yc;
-				current_image[ii*imarray.md->size[2]+jj] = cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
+				current_image[ii*imarray.md->size[1]+jj] = cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
 				
 				//if( (x-xc<squarerad) && (x-xc>-squarerad) && (y-yc<squarerad) && (y-yc>-squarerad))
 				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0;
@@ -140,9 +139,8 @@ int main()
 			}
 		imarray.md->cnt1 = index;
 		imarray.md->cnt0++;
-		clock_gettime(CLOCK_REALTIME, &timenow);
-		imarray.md[0].lastaccesstime =
-			1.0 * timenow.tv_sec + 0.000000001 * timenow.tv_nsec;
+		clock_gettime(CLOCK_REALTIME, &imarray.md[0].lastaccesstime);
+
 		// POST ALL SEMAPHORES
 		ImageStreamIO_sempost(&imarray, -1);
 		

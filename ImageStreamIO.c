@@ -146,11 +146,11 @@ errno_t ImageStreamIO_readBufferAt(const IMAGE *image, const int slice_index, vo
     return IMAGESTREAMIO_SUCCESS;
   }
   
-  if(slice_index>=image->md->size[0]){
+  if(slice_index>=image->md->size[2]){
     *buffer = NULL;
     return IMAGESTREAMIO_FAILURE;
   }
-  const uint64_t frame_size = image->md->size[1] * image->md->size[2];
+  const uint64_t frame_size = image->md->size[0] * image->md->size[1];
   const int size_element = ImageStreamIO_typesize(image->md->datatype);
   *buffer = (void*) (image->array.UI8 + slice_index * frame_size * size_element);
 
@@ -514,7 +514,7 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
         if ((imagetype & 0xF000F) ==
                 (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  // Circular buffer
             // room for atimearray, writetimearray and cntarray
-            sharedsize += size[0] * (2 * sizeof(struct timespec) + sizeof(uint64_t));
+            sharedsize += size[2] * (2 * sizeof(struct timespec) + sizeof(uint64_t));
         }
 
         char SM_fname[200];
@@ -578,13 +578,13 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
         if ((imagetype & 0xF000F) ==
                 (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  // Circular buffer
             image->md->atimearray = (struct timespec *)(map);
-            map += sizeof(struct timespec) * size[0];
+            map += sizeof(struct timespec) * size[2];
 
             image->md->writetimearray = (struct timespec *)(map);
-            map += sizeof(struct timespec) * size[0];
+            map += sizeof(struct timespec) * size[2];
 
             image->md->cntarray = (uint64_t *)(map);
-            map += sizeof(uint64_t) * size[0];
+            map += sizeof(uint64_t) * size[2];
         }
 
     } else {
@@ -865,13 +865,13 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
 				
 				// Circular buffer
         image->md->atimearray = (struct timespec *)(map);
-        map += sizeof(struct timespec) * image->md->size[0];
+        map += sizeof(struct timespec) * image->md->size[2];
 
         image->md->writetimearray = (struct timespec *)(map);
-        map += sizeof(struct timespec) * image->md->size[0];
+        map += sizeof(struct timespec) * image->md->size[2];
 
         image->md->cntarray = (uint64_t *)(map);
-        // map += sizeof(uint64_t) * image->md->size[0];
+        // map += sizeof(uint64_t) * image->md->size[2];
     }
 
     strncpy(image->name, name, 80);

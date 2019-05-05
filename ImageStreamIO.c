@@ -667,22 +667,18 @@ int ImageStreamIO_destroyIm(IMAGE *image) {
 
         // close and remove semlog
         sem_close(image->semlog);
-
         snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_semlog", shmdirname, image->md->name);
         sem_unlink(fname);
-
         image->semlog = NULL;
+        remove(fname);
 
         // close and remove all semaphores
         ImageStreamIO_destroysem(image);
-
         close(image->shmfd);
 
         // Get this before unmapping.
         ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
-
         munmap(image->md, image->memsize);
-
         // Remove the file
         remove(fname);
     } else {

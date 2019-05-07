@@ -314,44 +314,6 @@ uint64_t ImageStreamIO_offset_data(IMAGE *image, void *map) {
     // printf("datatype = %d\n", (int)datatype);
     // fflush(stdout);
 
-    if (datatype == _DATATYPE_UINT8) {
-        // printf("datatype = UINT8\n");
-        image->array.UI8 = (uint8_t *)map;
-    } else if (datatype == _DATATYPE_INT8) {
-        // printf("datatype = INT8\n");
-        image->array.SI8 = (int8_t *)map;
-    } else if (datatype == _DATATYPE_UINT16) {
-        // printf("datatype = UINT16\n");
-        image->array.UI16 = (uint16_t *)map;
-    } else if (datatype == _DATATYPE_INT16) {
-        // printf("datatype = INT16\n");
-        image->array.SI16 = (int16_t *)map;
-    } else if (datatype == _DATATYPE_UINT32) {
-        // printf("datatype = UINT32\n");
-        image->array.UI32 = (uint32_t *)map;
-    } else if (datatype == _DATATYPE_INT32) {
-        // printf("datatype = INT32\n");
-        image->array.SI32 = (int32_t *)map;
-    } else if (datatype == _DATATYPE_UINT64) {
-        // printf("datatype = UINT64\n");
-        image->array.UI64 = (uint64_t *)map;
-    } else if (datatype == _DATATYPE_INT64) {
-        // printf("datatype = INT64\n");
-        image->array.SI64 = (int64_t *)map;
-    } else if (datatype == _DATATYPE_FLOAT) {
-        // printf("datatype = FLOAT\n");
-        image->array.F = (float *)map;
-    } else if (datatype == _DATATYPE_DOUBLE) {
-        // printf("datatype = DOUBLE\n");
-        image->array.D = (double *)map;
-    } else if (datatype == _DATATYPE_COMPLEX_FLOAT) {
-        // printf("datatype = COMPLEX_FLOAT\n");
-        image->array.CF = (complex_float *)map;
-    } else if (datatype == _DATATYPE_COMPLEX_DOUBLE) {
-        // printf("datatype = COMPLEX_DOUBLE\n");
-        image->array.CD = (complex_double *)map;
-    }
-
     if (image->md->location >= 0) {
         image->array.raw = ImageStreamIO_get_image_d_ptr(image);
         offset = 0;

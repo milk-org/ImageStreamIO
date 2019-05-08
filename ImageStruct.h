@@ -282,19 +282,16 @@ typedef struct
     struct timespec lastaccesstime;
 
     struct timespec atime;             /**< time at which data was acquires/created. This time CAN be copied from input to output */
-    struct timespec *atimearray;       /**< same as above with slice index          */
+    
 
     struct timespec writetime;         /**< last write time into data array         */
-    struct timespec *writetimearray;   /**< same as above with slice index          */
-
-
-
+   
 
     uint8_t  shared;                   /**< 1 if in shared memory                                                        */
     int8_t   location;                 /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
     uint8_t  status;                   /**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
     uint64_t flag;                     /**< bitmask, encodes read/write permissions.... NOTE: enum instead of defines */
-    uint64_t *flagarray;               /**<  flag for each slice if needed (depends on imagetype) */
+    
 
     uint8_t  logflag;                  /**< set to 1 to start logging         */
     uint16_t sem;                      /**< number of semaphores in use, specified at image creation      */
@@ -305,7 +302,7 @@ typedef struct
     uint64_t cnt0;               	/**< counter (incremented if image is updated)                                    */
     uint64_t cnt1;               	/**< in 3D rolling buffer image, this is the last slice written                   */
     uint64_t cnt2;                  /**< in event mode, this is the # of events                                       */
-    uint64_t *cntarray;             /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
+    
 
     uint8_t  write;               	/**< 1 if image is being written                                                  */
 
@@ -354,6 +351,15 @@ typedef struct /**< structure used to store data arrays                      */
 
     IMAGE_METADATA *md;
 
+    struct timespec *atimearray;       /**< same as above with slice index          */
+    
+    struct timespec *writetimearray;   /**< same as above with slice index          */
+
+    
+    uint64_t *flagarray;               /**<  flag for each slice if needed (depends on imagetype) */
+    
+    uint64_t *cntarray;             /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
+    
     uint64_t : 0; // align array to 8-byte boundary for speed
 
     /** @brief data storage array

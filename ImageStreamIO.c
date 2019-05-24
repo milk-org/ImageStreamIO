@@ -863,7 +863,7 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
 
             if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) ==
                     SEM_FAILED) {
-                perror("semaphore initilization");
+                perror("semaphore initialization");
             } else {
                 sem_init(
                     image->semptr[s], 1,
@@ -1170,14 +1170,18 @@ long ImageStreamIO_sempost_excl(IMAGE *image, long index) {
  *
  */
 long ImageStreamIO_sempost_loop(IMAGE *image, long index, long dtus) {
+
+	printf("semphore loop post, dtus = %ld\n", dtus);
+	
   while (1) {
     ImageStreamIO_sempost(image, index);
-
-    sleep(dtus);
+    usleep(dtus);
   }
 
   return EXIT_SUCCESS;
 }
+
+
 
 /**
  * ## Purpose
@@ -1221,6 +1225,8 @@ int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault) {
   return -1;
 }
 
+
+
 /*
  * ## Purpose
  *
@@ -1237,31 +1243,31 @@ int ImageStreamIO_getsemwaitindex(IMAGE *image, int semindexdefault) {
  *
  */
 int ImageStreamIO_semwait(IMAGE *image, int index) {
-  if (index > image->md->sem - 1) {
-    printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
-           index);
-    return EXIT_FAILURE;
-  }
-  return sem_wait(image->semptr[index]);
+    if(index > image->md->sem - 1) {
+        printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
+               index);
+        return EXIT_FAILURE;
+    }
+    return sem_wait(image->semptr[index]);
 }
 
 int ImageStreamIO_semtrywait(IMAGE *image, int index) {
-  if (index > image->md->sem - 1) {
-    printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
-           index);
-    return EXIT_FAILURE;
-  }
-  return sem_trywait(image->semptr[index]);
+    if(index > image->md->sem - 1) {
+        printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
+               index);
+        return EXIT_FAILURE;
+    }
+    return sem_trywait(image->semptr[index]);
 }
 
 int ImageStreamIO_semtimedwait(IMAGE *image, int index,
                                const struct timespec *semwts) {
-  if (index > image->md->sem - 1) {
-    printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
-           index);
-    return EXIT_FAILURE;
-  }
-  return sem_timedwait(image->semptr[index], semwts);
+    if(index > image->md->sem - 1) {
+        printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
+               index);
+        return EXIT_FAILURE;
+    }
+    return sem_timedwait(image->semptr[index], semwts);
 }
 
 /*

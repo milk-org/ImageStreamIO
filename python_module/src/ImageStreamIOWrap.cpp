@@ -322,43 +322,12 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             return tp;
           })
       .def_property_readonly(
-          "acqtimearray",
-          [](const IMAGE_METADATA &md) {
-            if (md.atimearray == NULL)
-              throw std::runtime_error("acqtimearray not initialized");
-            std::vector<std::chrono::system_clock::time_point> acqtimearray(
-                md.size[2]);
-            for (int i = 0; i < md.sem; ++i) {
-              auto acqtime = std::chrono::seconds{md.atimearray[i].tv_sec} +
-                             std::chrono::nanoseconds{md.atimearray[i].tv_nsec};
-              std::chrono::system_clock::time_point tp{acqtime};
-              acqtimearray[i] = tp;
-            }
-            return acqtimearray;
-          })
-      .def_property_readonly(
           "writetime",
           [](const IMAGE_METADATA &md) {
             auto writetime = std::chrono::seconds{md.writetime.tv_sec} +
                              std::chrono::nanoseconds{md.writetime.tv_nsec};
             std::chrono::system_clock::time_point tp{writetime};
             return tp;
-          })
-      .def_property_readonly(
-          "writetimearray",
-          [](const IMAGE_METADATA &md) {
-            if (md.writetimearray == NULL)
-              throw std::runtime_error("writetimearray not initialized");
-            std::vector<std::chrono::system_clock::time_point> writetimearray(
-                md.size[2]);
-            for (int i = 0; i < md.sem; ++i) {
-              auto writetime =
-                  std::chrono::seconds{md.writetimearray[i].tv_sec} +
-                  std::chrono::nanoseconds{md.writetimearray[i].tv_nsec};
-              std::chrono::system_clock::time_point tp{writetime};
-              writetimearray[i] = tp;
-            }
-            return writetimearray;
           })
       .def_readonly("shared", &IMAGE_METADATA::shared)
       .def_readonly("location", &IMAGE_METADATA::location)
@@ -368,30 +337,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_readonly("cnt0", &IMAGE_METADATA::cnt0)
       .def_readonly("cnt1", &IMAGE_METADATA::cnt1)
       .def_readonly("cnt2", &IMAGE_METADATA::cnt2)
-      .def_property_readonly(
-          "cntarray",
-          [](const IMAGE_METADATA &md) {
-            if (md.cntarray == NULL)
-              throw std::runtime_error("cntarray not initialized");
-            std::vector<uint64_t> cntarray(md.size[2]);
-            for (int i = 0; i < md.sem; ++i) {
-              cntarray[i] = md.cntarray[i];
-            }
-            return cntarray;
-          })
       .def_readonly("write", &IMAGE_METADATA::write)
       .def_readonly("flag", &IMAGE_METADATA::flag)
-      .def_property_readonly(
-          "flagarray",
-          [](const IMAGE_METADATA &md) {
-            if (md.flagarray == NULL)
-              throw std::runtime_error("flagarray not initialized");
-            std::vector<uint64_t> flagarray(md.size[2]);
-            for (int i = 0; i < md.sem; ++i) {
-              flagarray[i] = md.flagarray[i];
-            }
-            return flagarray;
-          })
       .def_readonly("NBkw", &IMAGE_METADATA::NBkw);
 
   // IMAGE interface
@@ -408,6 +355,59 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                                }
                                return semReadPID;
                              })
+      .def_property_readonly(
+          "acqtimearray",
+          [](const IMAGE &img) {
+            if (img.atimearray == NULL)
+              throw std::runtime_error("acqtimearray not initialized");
+            std::vector<std::chrono::system_clock::time_point> acqtimearray(
+                img.md->size[2]);
+            for (int i = 0; i < img.md->sem; ++i) {
+              auto acqtime = std::chrono::seconds{img.atimearray[i].tv_sec} +
+                             std::chrono::nanoseconds{img.atimearray[i].tv_nsec};
+              std::chrono::system_clock::time_point tp{acqtime};
+              acqtimearray[i] = tp;
+            }
+            return acqtimearray;
+          })
+      .def_property_readonly(
+          "writetimearray",
+          [](const IMAGE &img) {
+            if (img.writetimearray == NULL)
+              throw std::runtime_error("writetimearray not initialized");
+            std::vector<std::chrono::system_clock::time_point> writetimearray(
+                img.md->size[2]);
+            for (int i = 0; i < img.md->sem; ++i) {
+              auto writetime =
+                  std::chrono::seconds{img.writetimearray[i].tv_sec} +
+                  std::chrono::nanoseconds{img.writetimearray[i].tv_nsec};
+              std::chrono::system_clock::time_point tp{writetime};
+              writetimearray[i] = tp;
+            }
+            return writetimearray;
+          })
+      .def_property_readonly(
+          "cntarray",
+          [](const IMAGE &img) {
+            if (img.cntarray == NULL)
+              throw std::runtime_error("cntarray not initialized");
+            std::vector<uint64_t> cntarray(img.md->size[2]);
+            for (int i = 0; i < img.md->sem; ++i) {
+              cntarray[i] = img.cntarray[i];
+            }
+            return cntarray;
+          })
+      .def_property_readonly(
+          "flagarray",
+          [](const IMAGE &img) {
+            if (img.flagarray == NULL)
+              throw std::runtime_error("flagarray not initialized");
+            std::vector<uint64_t> flagarray(img.md->size[2]);
+            for (int i = 0; i < img.md->sem; ++i) {
+              flagarray[i] = img.flagarray[i];
+            }
+            return flagarray;
+          })
       .def_property_readonly("semWritePID",
                              [](const IMAGE &img) {
                                std::vector<pid_t> semWritePID(img.md->sem);

@@ -539,13 +539,13 @@ int ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
 
         if ((imagetype & 0xF000F) ==
                 (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) {  // Circular buffer
-            image->md->atimearray = (struct timespec *)(map);
+            image->atimearray = (struct timespec *)(map);
             map += sizeof(struct timespec) * size[2];
 
-            image->md->writetimearray = (struct timespec *)(map);
+            image->writetimearray = (struct timespec *)(map);
             map += sizeof(struct timespec) * size[2];
 
-            image->md->cntarray = (uint64_t *)(map);
+            image->cntarray = (uint64_t *)(map);
             map += sizeof(uint64_t) * size[2];
         }
 
@@ -826,13 +826,13 @@ int ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image) {
 				//printf("circuar buffer\n"); fflush(stdout); //TEST
 				
 				// Circular buffer
-        image->md->atimearray = (struct timespec *)(map);
+        image->atimearray = (struct timespec *)(map);
         map += sizeof(struct timespec) * image->md->size[2];
 
-        image->md->writetimearray = (struct timespec *)(map);
+        image->writetimearray = (struct timespec *)(map);
         map += sizeof(struct timespec) * image->md->size[2];
 
-        image->md->cntarray = (uint64_t *)(map);
+        image->cntarray = (uint64_t *)(map);
         // map += sizeof(uint64_t) * image->md->size[2];
     }
 

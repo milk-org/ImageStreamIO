@@ -371,7 +371,7 @@ uint64_t ImageStreamIO_initialize_buffer(IMAGE *image) {
                 cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
         }
 #else
-        ImageStreamIO_printERROR(NOTIMPL, "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON"); ///\todo should this return an error?
+        ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL, "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON"); ///\todo should this return an error?
 #endif
     }
 

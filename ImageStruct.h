@@ -37,7 +37,7 @@
 typedef char cudaIpcMemHandle_t[64];
 #endif
 
-#include "ImageError.h"
+#include "ImageStreamIOError.h"
 
 #ifdef __MACH__
 #include <mach/mach_time.h>

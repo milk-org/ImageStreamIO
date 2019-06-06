@@ -605,6 +605,23 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 ret    [out]: error code
             )pbdoc",
           py::arg("name"))
+      
+      .def(         
+          "destroy",
+          [](IMAGE &img) {
+            return ImageStreamIO_destroyIm(&img);
+          },
+          R"pbdoc(
+            For a shared image:
+            Closes all semaphores, deallcoates sem pointers,
+            and removes associated files. Unmaps the shared memory
+            segment, and finally removes the file. Sets the metadata and
+            keyword pointers to NULL.
+
+            For a non-shred image:
+            Deallocates all arrays and sets pointers to NULL.
+            )pbdoc")
+
 
       .def(
           "getsemwaitindex",

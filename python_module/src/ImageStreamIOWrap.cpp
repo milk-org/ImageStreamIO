@@ -647,9 +647,23 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
           R"pbdoc(
                 Read / connect to existing shared memory image stream
                 Parameters:
-                    index  [in]:  semaphore index
+                    index  [in]:  index of semaphore to wait
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          py::arg("index"));
+          py::arg("index"))
+
+      .def(
+          "sempost",
+          [](IMAGE &img, long index) {
+            return ImageStreamIO_sempost(&img, index);
+          },
+          R"pbdoc(
+                Read / connect to existing shared memory image stream
+                Parameters:
+                    index  [in]:  index of semaphore to be posted (-1 for all)
+                Return:
+                    ret    [out]: error code
+                )pbdoc",
+          py::arg("index")=-1);
 }

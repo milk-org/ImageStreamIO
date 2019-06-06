@@ -455,7 +455,7 @@ errno_t ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
 
         if ((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED) {
             fprintf(stderr, "Semaphore %s :", sname);
-            perror("semaphore creation / initialization");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT,"semaphore creation / initialization");
         } else {
             sem_init(
                 image->semlog, 1,
@@ -473,7 +473,7 @@ errno_t ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
             // printf("shared memory space in GPU%d RAM= %ud bytes\n", location,
             // sharedsize); //TEST
         } else {
-            perror("Error location unknown");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,"Error location unknown");
         }
 
         sharedsize += NBkw * sizeof(IMAGE_KEYWORD);
@@ -489,10 +489,18 @@ errno_t ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
         char SM_fname[200];
         ImageStreamIO_filename(SM_fname, 200, name);
 
+        struct stat buffer;
+        if((stat(SM_fname,&buffer) == 0) && (location>-1)){
+          ImageStreamIO_printERROR(IMAGESTREAMIO_FILEEXISTS,
+            "Error creating GPU SHM buffer on an existing file");
+          return IMAGESTREAMIO_FILEEXISTS;
+        }
+
         int SM_fd;  // shared memory file descriptor
         SM_fd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
         if (SM_fd == -1) {
-            perror("Error opening file for writing");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,
+              "Error opening file for writing");
             return IMAGESTREAMIO_FILEOPEN;
         }
 
@@ -754,7 +762,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *imag
                           MAP_SHARED, SM_fd, 0);
     if (map == MAP_FAILED) {
         close(SM_fd);
-        perror("Error mmapping the file");
+        ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
         return IMAGESTREAMIO_MMAP;
     }
 
@@ -1033,7 +1041,7 @@ int ImageStreamIO_createsem(IMAGE *image, long NBsem) {
     snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name, s);
 
     if ((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 0)) == SEM_FAILED) {
-      perror("semaphore initilization");
+      ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT,"semaphore initilization");
     } else {
       sem_init(
           image->semptr[s], 1,

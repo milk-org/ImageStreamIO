@@ -12,6 +12,7 @@
 #define IMAGESTREAMIO_FILEOPEN      (40)  //Error opening file
 #define IMAGESTREAMIO_FILESEEK      (42)  //error seeking on file
 #define IMAGESTREAMIO_FILEWRITE     (44)  //error writing to file
+#define IMAGESTREAMIO_FILEEXISTS    (46)  //error existing file
 #define IMAGESTREAMIO_MMAP          (50)  //mmap or munmap error
 #define IMAGESTREAMIO_SEMINIT       (60)  //semaphore initialization error
 #define IMAGESTREAMIO_VERSION      (100)  //For when the wrong ImageStreamIO version is found

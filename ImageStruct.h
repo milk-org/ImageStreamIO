@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <time.h> // TEST
 
 #ifdef HAVE_CUDA
 // CUDA runtime includes

@@ -46,12 +46,11 @@ struct ImageStreamIODataType {
     INT32 = _DATATYPE_INT32,
     UINT64 = _DATATYPE_UINT64,
     INT64 = _DATATYPE_INT64,
-    HALF = _DATATYPE_HALF,
     FLOAT = _DATATYPE_FLOAT,
     DOUBLE = _DATATYPE_DOUBLE,
     COMPLEX_FLOAT = _DATATYPE_COMPLEX_FLOAT,
     COMPLEX_DOUBLE = _DATATYPE_COMPLEX_DOUBLE,
-    EVENT_UI8_UI8_UI16_UI8 = _DATATYPE_EVENT_UI8_UI8_UI16_UI8
+    HALF = _DATATYPE_HALF
   };
   static const std::vector<uint8_t> Size;
 
@@ -68,10 +67,9 @@ struct ImageStreamIODataType {
 const std::vector<uint8_t> ImageStreamIODataType::Size(
     {0, SIZEOF_DATATYPE_UINT8, SIZEOF_DATATYPE_INT8, SIZEOF_DATATYPE_UINT16,
      SIZEOF_DATATYPE_INT16, SIZEOF_DATATYPE_UINT32, SIZEOF_DATATYPE_INT32,
-     SIZEOF_DATATYPE_UINT64, SIZEOF_DATATYPE_INT64, SIZEOF_DATATYPE_HALF,
-     SIZEOF_DATATYPE_FLOAT, SIZEOF_DATATYPE_DOUBLE,
-     SIZEOF_DATATYPE_COMPLEX_FLOAT, SIZEOF_DATATYPE_COMPLEX_DOUBLE,
-     SIZEOF_DATATYPE_EVENT_UI8_UI8_UI16_UI8});
+     SIZEOF_DATATYPE_UINT64, SIZEOF_DATATYPE_INT64, SIZEOF_DATATYPE_FLOAT,
+     SIZEOF_DATATYPE_DOUBLE, SIZEOF_DATATYPE_COMPLEX_FLOAT,
+     SIZEOF_DATATYPE_COMPLEX_DOUBLE, SIZEOF_DATATYPE_HALF});
 
 std::string ImageStreamIODataTypeToPyFormat(ImageStreamIODataType dt) {
   switch (dt.datatype) {
@@ -139,10 +137,19 @@ py::array_t<T> convert_img(const IMAGE &img) {
   }
 
   std::vector<ssize_t> shape(img.md->naxis);
-  for (int8_t axis(img.md->naxis - 1); axis >= 0; --axis) {
+  std::vector<ssize_t> strides(img.md->naxis);
+  ssize_t stride = sizeof(T);
+
+  // Row Major representation
+  // for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
+  // Col Major representation
+  for (int8_t axis(0); axis < img.md->naxis; ++axis) {
     shape[axis] = img.md->size[axis];
+    strides[axis] = stride;
+    stride *= shape[axis];
   }
-  auto ret_buffer = py::array_t<T>(shape);
+
+  auto ret_buffer = py::array_t<T>(shape, strides);
   void *current_image = img.array.raw;
   if (img.md->location == -1) {
     memcpy(ret_buffer.mutable_data(), current_image,
@@ -180,8 +187,6 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .value("DOUBLE", ImageStreamIODataType::DataType::DOUBLE)
       .value("COMPLEX_FLOAT", ImageStreamIODataType::DataType::COMPLEX_FLOAT)
       .value("COMPLEX_DOUBLE", ImageStreamIODataType::DataType::COMPLEX_DOUBLE)
-      .value("EVENT_UI8_UI8_UI16_UI8",
-             ImageStreamIODataType::DataType::EVENT_UI8_UI8_UI16_UI8)
       .export_values();
 
   // IMAGE_KEYWORD interface
@@ -317,43 +322,12 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             return tp;
           })
       .def_property_readonly(
-          "acqtimearray",
-          [](const IMAGE_METADATA &md) {
-            if (md.atimearray == NULL)
-              throw std::runtime_error("acqtimearray not initialized");
-            std::vector<std::chrono::system_clock::time_point> acqtimearray(
-                md.size[0]);
-            for (int i = 0; i < md.sem; ++i) {
-              auto acqtime = std::chrono::seconds{md.atimearray[i].tv_sec} +
-                             std::chrono::nanoseconds{md.atimearray[i].tv_nsec};
-              std::chrono::system_clock::time_point tp{acqtime};
-              acqtimearray[i] = tp;
-            }
-            return acqtimearray;
-          })
-      .def_property_readonly(
           "writetime",
           [](const IMAGE_METADATA &md) {
             auto writetime = std::chrono::seconds{md.writetime.tv_sec} +
                              std::chrono::nanoseconds{md.writetime.tv_nsec};
             std::chrono::system_clock::time_point tp{writetime};
             return tp;
-          })
-      .def_property_readonly(
-          "writetimearray",
-          [](const IMAGE_METADATA &md) {
-            if (md.writetimearray == NULL)
-              throw std::runtime_error("writetimearray not initialized");
-            std::vector<std::chrono::system_clock::time_point> writetimearray(
-                md.size[0]);
-            for (int i = 0; i < md.sem; ++i) {
-              auto writetime =
-                  std::chrono::seconds{md.writetimearray[i].tv_sec} +
-                  std::chrono::nanoseconds{md.writetimearray[i].tv_nsec};
-              std::chrono::system_clock::time_point tp{writetime};
-              writetimearray[i] = tp;
-            }
-            return writetimearray;
           })
       .def_readonly("shared", &IMAGE_METADATA::shared)
       .def_readonly("location", &IMAGE_METADATA::location)
@@ -363,30 +337,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_readonly("cnt0", &IMAGE_METADATA::cnt0)
       .def_readonly("cnt1", &IMAGE_METADATA::cnt1)
       .def_readonly("cnt2", &IMAGE_METADATA::cnt2)
-      .def_property_readonly(
-          "cntarray",
-          [](const IMAGE_METADATA &md) {
-            if (md.cntarray == NULL)
-              throw std::runtime_error("cntarray not initialized");
-            std::vector<uint64_t> cntarray(md.size[0]);
-            for (int i = 0; i < md.sem; ++i) {
-              cntarray[i] = md.cntarray[i];
-            }
-            return cntarray;
-          })
       .def_readonly("write", &IMAGE_METADATA::write)
       .def_readonly("flag", &IMAGE_METADATA::flag)
-      .def_property_readonly(
-          "flagarray",
-          [](const IMAGE_METADATA &md) {
-            if (md.flagarray == NULL)
-              throw std::runtime_error("flagarray not initialized");
-            std::vector<uint64_t> flagarray(md.size[0]);
-            for (int i = 0; i < md.sem; ++i) {
-              flagarray[i] = md.flagarray[i];
-            }
-            return flagarray;
-          })
       .def_readonly("NBkw", &IMAGE_METADATA::NBkw);
 
   // IMAGE interface
@@ -403,6 +355,59 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                                }
                                return semReadPID;
                              })
+      .def_property_readonly(
+          "acqtimearray",
+          [](const IMAGE &img) {
+            if (img.atimearray == NULL)
+              throw std::runtime_error("acqtimearray not initialized");
+            std::vector<std::chrono::system_clock::time_point> acqtimearray(
+                img.md->size[2]);
+            for (int i = 0; i < img.md->sem; ++i) {
+              auto acqtime = std::chrono::seconds{img.atimearray[i].tv_sec} +
+                             std::chrono::nanoseconds{img.atimearray[i].tv_nsec};
+              std::chrono::system_clock::time_point tp{acqtime};
+              acqtimearray[i] = tp;
+            }
+            return acqtimearray;
+          })
+      .def_property_readonly(
+          "writetimearray",
+          [](const IMAGE &img) {
+            if (img.writetimearray == NULL)
+              throw std::runtime_error("writetimearray not initialized");
+            std::vector<std::chrono::system_clock::time_point> writetimearray(
+                img.md->size[2]);
+            for (int i = 0; i < img.md->sem; ++i) {
+              auto writetime =
+                  std::chrono::seconds{img.writetimearray[i].tv_sec} +
+                  std::chrono::nanoseconds{img.writetimearray[i].tv_nsec};
+              std::chrono::system_clock::time_point tp{writetime};
+              writetimearray[i] = tp;
+            }
+            return writetimearray;
+          })
+      .def_property_readonly(
+          "cntarray",
+          [](const IMAGE &img) {
+            if (img.cntarray == NULL)
+              throw std::runtime_error("cntarray not initialized");
+            std::vector<uint64_t> cntarray(img.md->size[2]);
+            for (int i = 0; i < img.md->sem; ++i) {
+              cntarray[i] = img.cntarray[i];
+            }
+            return cntarray;
+          })
+      .def_property_readonly(
+          "flagarray",
+          [](const IMAGE &img) {
+            if (img.flagarray == NULL)
+              throw std::runtime_error("flagarray not initialized");
+            std::vector<uint64_t> flagarray(img.md->size[2]);
+            for (int i = 0; i < img.md->sem; ++i) {
+              flagarray[i] = img.flagarray[i];
+            }
+            return flagarray;
+          })
       .def_property_readonly("semWritePID",
                              [](const IMAGE &img) {
                                std::vector<pid_t> semWritePID(img.md->sem);
@@ -430,7 +435,11 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
         std::vector<ssize_t> shape(img.md->naxis);
         std::vector<ssize_t> strides(img.md->naxis);
         ssize_t stride = dt.asize;
-        for (int8_t axis(img.md->naxis - 1); axis >= 0; --axis) {
+
+        // Row Major representation
+        // for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
+        // Col Major representation
+        for (int8_t axis(0); axis < img.md->naxis; ++axis) {
           shape[axis] = img.md->size[axis];
           strides[axis] = stride;
           stride *= shape[axis];
@@ -476,61 +485,63 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
              }
            })
 
-      .def("write",
-           [](IMAGE &img, py::buffer b) {
-             /* Request a buffer descriptor from Python */
-             py::buffer_info info = b.request();
+      .def(
+          "write",
+          [](IMAGE &img, py::buffer b) {
+            /* Request a buffer descriptor from Python */
+            py::buffer_info info = b.request();
 
-             if (img.md->datatype !=
-                 PyFormatToImageStreamIODataType(info.format).datatype)
-               throw std::invalid_argument("incompatible type");
-             if (info.ndim != img.md->naxis)
-               throw std::invalid_argument("incompatible number of axis");
-             const uint32_t *size_ptr = img.md->size;
-             for (auto &dim : info.shape) {
-               if (*size_ptr != dim)
-                 throw std::invalid_argument("incompatible shape");
-               ++size_ptr;
-             }
+            if (img.md->datatype !=
+                PyFormatToImageStreamIODataType(info.format).datatype)
+              throw std::invalid_argument("incompatible type");
+            if (info.ndim != img.md->naxis)
+              throw std::invalid_argument("incompatible number of axis");
+            const uint32_t *size_ptr = img.md->size;
+            for (auto &dim : info.shape) {
+              if (*size_ptr != dim)
+                throw std::invalid_argument("incompatible shape");
+              ++size_ptr;
+            }
 
-             ImageStreamIODataType dt(img.md->datatype);
-             uint8_t *buffer_ptr = (uint8_t *)info.ptr;
-             uint64_t size = img.md->nelement * dt.asize;
+            ImageStreamIODataType dt(img.md->datatype);
+            uint8_t *buffer_ptr = (uint8_t *)info.ptr;
+            uint64_t size = img.md->nelement * dt.asize;
 
-             img.md->write = 1;  // set this flag to 1 when writing data
-             std::copy(buffer_ptr, buffer_ptr + size, img.array.UI8);
+            img.md->write = 1;  // set this flag to 1 when writing data
+            std::copy(buffer_ptr, buffer_ptr + size, img.array.UI8);
 
-             std::vector<uint32_t> ushape(info.ndim);
-             std::copy(info.shape.begin(), info.shape.end(), ushape.begin());
-             ImageStreamIO_sempost(&img, -1);
-             clock_gettime(CLOCK_REALTIME, &img.md->lastaccesstime);
-             img.md->write = 0;  // Done writing data
-             img.md->cnt0++;
-             img.md->cnt1++;
-           },
-           R"pbdoc(
+            std::vector<uint32_t> ushape(info.ndim);
+            std::copy(info.shape.begin(), info.shape.end(), ushape.begin());
+            ImageStreamIO_sempost(&img, -1);
+            clock_gettime(CLOCK_REALTIME, &img.md->lastaccesstime);
+            img.md->write = 0;  // Done writing data
+            img.md->cnt0++;
+            img.md->cnt1++;
+          },
+          R"pbdoc(
           Write into memory image stream
           Parameters:
             buffer [in]:  buffer to put into memory image stream
           )pbdoc",
-           py::arg("buffer"))
+          py::arg("buffer"))
 
-      .def("create",
-           [](IMAGE &img, std::string name, py::array_t<uint32_t> dims,
-              uint8_t datatype, uint8_t shared, uint16_t NBkw) {
-             /* Request a buffer descriptor from Python */
-             py::buffer_info info = dims.request();
+      .def(
+          "create",
+          [](IMAGE &img, std::string name, py::array_t<uint32_t> dims,
+             uint8_t datatype, uint8_t shared, uint16_t NBkw) {
+            /* Request a buffer descriptor from Python */
+            py::buffer_info info = dims.request();
 
-             // uint8_t datatype =
-             // PyFormatToImageStreamIODataType(info.format).datatype;
-             // std::vector<uint32_t> ushape(info.ndim);
-             // std::copy(info.shape.begin(), info.shape.end(), ushape.begin());
+            // uint8_t datatype =
+            // PyFormatToImageStreamIODataType(info.format).datatype;
+            // std::vector<uint32_t> ushape(info.ndim);
+            // std::copy(info.shape.begin(), info.shape.end(), ushape.begin());
 
-             return ImageStreamIO_createIm(&img, name.c_str(), info.size,
-                                           (uint32_t *)info.ptr, datatype,
-                                           shared, NBkw);
-           },
-           R"pbdoc(
+            return ImageStreamIO_createIm(&img, name.c_str(), info.size,
+                                          (uint32_t *)info.ptr, datatype,
+                                          shared, NBkw);
+          },
+          R"pbdoc(
             Create shared memory image stream
             Parameters:
                 name     [in]:  the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
@@ -541,27 +552,28 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             Return:
                 ret      [out]: error code
             )pbdoc",
-           py::arg("name"), py::arg("dims"),
-           py::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
-           py::arg("shared") = 1, py::arg("NBkw") = 1)
+          py::arg("name"), py::arg("dims"),
+          py::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
+          py::arg("shared") = 1, py::arg("NBkw") = 1)
 
-      .def("create",
-           [](IMAGE &img, std::string name, py::array_t<uint32_t> dims,
-              uint8_t datatype, int8_t location, uint8_t shared, int NBsem,
-              int NBkw, uint64_t imagetype) {
-             /* Request a buffer descriptor from Python */
-             py::buffer_info info = dims.request();
+      .def(
+          "create",
+          [](IMAGE &img, std::string name, py::array_t<uint32_t> dims,
+             uint8_t datatype, int8_t location, uint8_t shared, int NBsem,
+             int NBkw, uint64_t imagetype) {
+            /* Request a buffer descriptor from Python */
+            py::buffer_info info = dims.request();
 
-             // uint8_t datatype =
-             // PyFormatToImageStreamIODataType(info.format).datatype;
-             // std::vector<uint32_t> ushape(info.ndim);
-             // std::copy(info.shape.begin(), info.shape.end(), ushape.begin());
+            // uint8_t datatype =
+            // PyFormatToImageStreamIODataType(info.format).datatype;
+            // std::vector<uint32_t> ushape(info.ndim);
+            // std::copy(info.shape.begin(), info.shape.end(), ushape.begin());
 
-             return ImageStreamIO_createIm_gpu(
-                 &img, name.c_str(), info.size, (uint32_t *)info.ptr, datatype,
-                 location, shared, NBsem, NBkw, imagetype);
-           },
-           R"pbdoc(
+            return ImageStreamIO_createIm_gpu(
+                &img, name.c_str(), info.size, (uint32_t *)info.ptr, datatype,
+                location, shared, NBsem, NBkw, imagetype);
+          },
+          R"pbdoc(
             Create shared memory image stream
             Parameters:
                 name      [in]:  the name of the shared memory file will be SHAREDMEMDIR/<name>_im.shm
@@ -574,30 +586,49 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             Return:
                 ret       [out]: error code
             )pbdoc",
-           py::arg("name"), py::arg("dims"),
-           py::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
-           py::arg("location") = -1, py::arg("shared") = 1,
-           py::arg("NBsem") = IMAGE_NB_SEMAPHORE, py::arg("NBkw") = 1,
-           py::arg("imagetype") = MATH_DATA)
+          py::arg("name"), py::arg("dims"),
+          py::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
+          py::arg("location") = -1, py::arg("shared") = 1,
+          py::arg("NBsem") = IMAGE_NB_SEMAPHORE, py::arg("NBkw") = 1,
+          py::arg("imagetype") = MATH_DATA)
 
-      .def("open",
-           [](IMAGE &img, std::string name) {
-             return ImageStreamIO_openIm(&img, name.c_str());
-           },
-           R"pbdoc(
+      .def(
+          "open",
+          [](IMAGE &img, std::string name) {
+            return ImageStreamIO_openIm(&img, name.c_str());
+          },
+          R"pbdoc(
             Open / connect to existing shared memory image stream
             Parameters:
                 name   [in]:  the name of the shared memory file to connect
             Return:
                 ret    [out]: error code
             )pbdoc",
-           py::arg("name"))
+          py::arg("name"))
+      
+      .def(         
+          "destroy",
+          [](IMAGE &img) {
+            return ImageStreamIO_destroyIm(&img);
+          },
+          R"pbdoc(
+            For a shared image:
+            Closes all semaphores, deallcoates sem pointers,
+            and removes associated files. Unmaps the shared memory
+            segment, and finally removes the file. Sets the metadata and
+            keyword pointers to NULL.
 
-      .def("getsemwaitindex",
-           [](IMAGE &img, long index) {
-             return ImageStreamIO_getsemwaitindex(&img, index);
-           },
-           R"pbdoc(
+            For a non-shred image:
+            Deallocates all arrays and sets pointers to NULL.
+            )pbdoc")
+
+
+      .def(
+          "getsemwaitindex",
+          [](IMAGE &img, long index) {
+            return ImageStreamIO_getsemwaitindex(&img, index);
+          },
+          R"pbdoc(
             Get available shmim semaphore index
 
             Parameters:
@@ -606,18 +637,33 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             Return:
                 ret    [out]: semaphore index available
             )pbdoc",
-           py::arg("index"))
+          py::arg("index"))
 
-      .def("semwait",
-           [](IMAGE &img, long index) {
-             return ImageStreamIO_semwait(&img, index);
-           },
-           R"pbdoc(
+      .def(
+          "semwait",
+          [](IMAGE &img, long index) {
+            return ImageStreamIO_semwait(&img, index);
+          },
+          R"pbdoc(
                 Read / connect to existing shared memory image stream
                 Parameters:
-                    index  [in]:  semaphore index
+                    index  [in]:  index of semaphore to wait
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-           py::arg("index"));
+          py::arg("index"))
+
+      .def(
+          "sempost",
+          [](IMAGE &img, long index) {
+            return ImageStreamIO_sempost(&img, index);
+          },
+          R"pbdoc(
+                Read / connect to existing shared memory image stream
+                Parameters:
+                    index  [in]:  index of semaphore to be posted (-1 for all)
+                Return:
+                    ret    [out]: error code
+                )pbdoc",
+          py::arg("index")=-1);
 }

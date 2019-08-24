@@ -28,6 +28,8 @@ target_include_directories(ImageStreamIOWrap PRIVATE inc)
 
 target_link_libraries(ImageStreamIOWrap PRIVATE pybind11::module ImageStreamIO)
 
+target_compile_features(ImageStreamIOWrap PRIVATE cxx_std_14)
+
 set_target_properties(ImageStreamIOWrap
                       PROPERTIES PREFIX
                                  "${PYTHON_MODULE_PREFIX}"

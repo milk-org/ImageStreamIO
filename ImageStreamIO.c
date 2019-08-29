@@ -623,6 +623,8 @@ errno_t ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
     return IMAGESTREAMIO_SUCCESS;
 }
 
+
+
 errno_t ImageStreamIO_destroyIm(IMAGE *image) {
     if (image->memsize > 0) {
         char fname[200];
@@ -640,7 +642,6 @@ errno_t ImageStreamIO_destroyIm(IMAGE *image) {
                     shmdirname[stri] = '.';
             initSHAREDMEMDIR = 1;
         }
-
 
 
         // close and remove semlog
@@ -676,6 +677,8 @@ errno_t ImageStreamIO_destroyIm(IMAGE *image) {
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
 
 errno_t ImageStreamIO_openIm(IMAGE *image, const char *name) {
   return ImageStreamIO_read_sharedmem_image_toIMAGE(name, image);

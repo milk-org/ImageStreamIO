@@ -49,6 +49,8 @@
 
 #include "ImageStreamIO.h"
 
+static void *d_ptr_static = NULL;
+
 #ifdef HAVE_CUDA
 void check(cudaError_t result, char const *const func, const char *const file,
            int const line) {
@@ -365,11 +367,12 @@ uint64_t ImageStreamIO_initialize_buffer(IMAGE *image) {
 #ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
         checkCudaErrors(
-            cudaMalloc(&image->array.raw, size_element * image->md->nelement));
+            cudaMalloc(&d_ptr_static, size_element * image->md->nelement));
         if (image->md->shared == 1) {
             checkCudaErrors(
-                cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
+                cudaIpcGetMemHandle(&image->md->cudaMemHandle, d_ptr_static));
         }
+        image->array.raw = d_ptr_static;
 #else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL, "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON"); ///\todo should this return an error?
 #endif
@@ -540,6 +543,7 @@ errno_t ImageStreamIO_createIm_gpu(IMAGE *image, const char *name, long naxis,
             image->array.raw = map;
             map += datasharedsize;
         } else if (location >= 0) {
+            image->array.raw = NULL;
         } else {
             ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,"Error location unknown");
             return IMAGESTREAMIO_NOTIMPL;
@@ -685,13 +689,12 @@ errno_t ImageStreamIO_openIm(IMAGE *image, const char *name) {
 }
 
 void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
-  if (image->array.raw != NULL) return image->array.raw;
+  if (d_ptr_static != NULL) return d_ptr_static;
 
-  void *d_ptr = NULL;
   if (image->md->location >= 0) {
 #ifdef HAVE_CUDA
     checkCudaErrors(cudaSetDevice(image->md->location));
-    checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr, image->md->cudaMemHandle,
+    checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr_static, image->md->cudaMemHandle,
                                          cudaIpcMemLazyEnablePeerAccess));
 #else
     ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
@@ -702,7 +705,7 @@ void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
     ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
         "Error calling ImageStreamIO_get_image_d_ptr(), wrong location"); ///\todo should this return a NULL?
   }
-  return d_ptr;
+  return d_ptr_static;
 }
 
 
@@ -805,9 +808,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *imag
 
     map += sizeof(IMAGE_METADATA);
 
-    if (image->md->location >= 0) {
-      image->array.raw = NULL;
-    }
     map += ImageStreamIO_offset_data(image, map);
 
     //printf("%ld keywords\n", (long)image->md->NBkw); fflush(stdout); //TEST

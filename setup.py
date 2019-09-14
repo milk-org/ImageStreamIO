@@ -69,6 +69,8 @@ class CMakeBuildExt(build_ext):
                         os.environ["CUDA_ROOT"])
                 ]
             cmake_args += ['-DUSE_CUDA=ON']
+        else:
+            cmake_args += ['-DUSE_CUDA=OFF']
 
         cmake_args += ['-Dpython_build=ON', '-Duse_hunter=ON']
 

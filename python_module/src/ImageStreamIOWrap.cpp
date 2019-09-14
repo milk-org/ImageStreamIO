@@ -151,13 +151,17 @@ py::array_t<T> convert_img(const IMAGE &img) {
 
   auto ret_buffer = py::array_t<T>(shape, strides);
   void *current_image = img.array.raw;
+  #ifdef HAVE_CUDA
   if (img.md->location == -1) {
+  #endif
     memcpy(ret_buffer.mutable_data(), current_image,
            img.md->nelement * sizeof(T));
+  #ifdef HAVE_CUDA
   } else {
     cudaMemcpy(ret_buffer.mutable_data(), current_image,
                img.md->nelement * sizeof(T), cudaMemcpyDeviceToHost);
   }
+  #endif
   return ret_buffer;
 }
 

@@ -13,7 +13,6 @@
 
 #define _GNU_SOURCE
 
-#include <malloc.h>
 #include <math.h>
 #include <pthread.h>
 #include <signal.h>

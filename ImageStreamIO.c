@@ -48,8 +48,6 @@
 
 #include "ImageStreamIO.h"
 
-static void *d_ptr_static = NULL;
-
 #ifdef HAVE_CUDA
 void check(cudaError_t result, char const *const func, const char *const file,
            int const line) {
@@ -366,12 +364,11 @@ uint64_t ImageStreamIO_initialize_buffer(IMAGE *image) {
 #ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
         checkCudaErrors(
-            cudaMalloc(&d_ptr_static, size_element * image->md->nelement));
+            cudaMalloc(&image->array.raw, size_element * image->md->nelement));
         if (image->md->shared == 1) {
             checkCudaErrors(
-                cudaIpcGetMemHandle(&image->md->cudaMemHandle, d_ptr_static));
+                cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
         }
-        image->array.raw = d_ptr_static;
 #else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL, "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON"); ///\todo should this return an error?
 #endif
@@ -688,12 +685,12 @@ errno_t ImageStreamIO_openIm(IMAGE *image, const char *name) {
 }
 
 void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
-  if (d_ptr_static != NULL) return d_ptr_static;
+  if (image->array.raw != NULL) return image->array.raw;
 
   if (image->md->location >= 0) {
 #ifdef HAVE_CUDA
     checkCudaErrors(cudaSetDevice(image->md->location));
-    checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr_static, image->md->cudaMemHandle,
+    checkCudaErrors(cudaIpcOpenMemHandle(&image->array.raw, image->md->cudaMemHandle,
                                          cudaIpcMemLazyEnablePeerAccess));
 #else
     ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
@@ -704,7 +701,7 @@ void *ImageStreamIO_get_image_d_ptr(IMAGE *image) {
     ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
         "Error calling ImageStreamIO_get_image_d_ptr(), wrong location"); ///\todo should this return a NULL?
   }
-  return d_ptr_static;
+  return image->array.raw;
 }
 
 

@@ -669,5 +669,19 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          py::arg("index")=-1);
+          py::arg("index")=-1)
+
+      .def(
+          "semflush",
+          [](IMAGE &img, long index) {
+            return ImageStreamIO_semflush(&img, index);
+          },
+          R"pbdoc(
+                Flush shmim semaphore
+                Parameters:
+                    index  [in]:  index of semaphore to flush; flush all semaphores if index<0
+                Return:
+                    ret    [out]: error code
+                )pbdoc",
+          py::arg("index"));
 }

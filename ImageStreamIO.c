@@ -48,23 +48,6 @@
 
 #include "ImageStreamIO.h"
 
-#ifdef HAVE_CUDA
-void check(cudaError_t result, char const *const func, const char *const file,
-           int const line) {
-  if (result) {
-    fprintf(stderr, "CUDA error at %s:%d code=%u \"%s\" \n", file, line,
-            (unsigned int)(result), func);
-    cudaDeviceReset();
-    // Make sure we call CUDA Device Reset before exiting
-    exit(EXIT_FAILURE);
-  }
-}
-
-// This will output the proper CUDA error strings in the event
-// that a CUDA host call returns an error
-#define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
-#endif
-
 static int INITSTATUS_ImageStreamIO = 0;
 
 
@@ -101,6 +84,21 @@ errno_t ImageStreamIO_set_printError( errno_t (*new_printError)( const char *, c
 #define ImageStreamIO_printERROR(code, msg) \
    if(internal_printError) internal_printError(__FILE__, __func__, __LINE__, code, msg);
 
+
+#ifdef HAVE_CUDA
+void check(cudaError_t result, char const *const func, const char *const file,
+           int const line) {
+  if (result) {
+    cudaDeviceReset();
+    // Make sure we call CUDA Device Reset
+    ImageStreamIO_printERROR_(file, func, line, result, "CUDA error");
+  }
+}
+
+// This will output the proper CUDA error strings in the event
+// that a CUDA host call returns an error
+#define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
+#endif
 
 /**
  * Print error to stderr
@@ -809,6 +807,10 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *imag
       image->array.raw = NULL;
     }
     map += ImageStreamIO_offset_data(image, map);
+    if (image->array.raw == NULL) {
+      printf("Fail to retrieve data pointer\n"); fflush(stdout);
+      return IMAGESTREAMIO_FAILURE;
+    }
 
     //printf("%ld keywords\n", (long)image->md->NBkw); fflush(stdout); //TEST
 

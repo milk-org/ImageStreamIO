@@ -186,6 +186,11 @@ errno_t ImageStreamIO_shmdirname(char *shmdname)
             shmdirOK = 1;
             closedir(tmpdir);
         }
+        else
+        {
+          printf(" [ WARNING ] '%s' does not exist\n", MILK_SHM_DIR);
+        }
+        
     }
 
     // second, we try SHAREDMEMDIR default

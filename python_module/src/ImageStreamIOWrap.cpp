@@ -609,7 +609,20 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 ret    [out]: error code
             )pbdoc",
           py::arg("name"))
-      
+
+      .def(
+          "close",
+          [](IMAGE &img) {
+            return ImageStreamIO_closeIm(&img);
+          },
+          R"pbdoc(
+            Close a shared memory image stream
+            Parameters:
+                image  [in]:  pointer to shmim (IMAGE)
+            Return:
+                ret    [out]: error code
+            )pbdoc")
+
       .def(         
           "destroy",
           [](IMAGE &img) {
@@ -625,7 +638,6 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             For a non-shred image:
             Deallocates all arrays and sets pointers to NULL.
             )pbdoc")
-
 
       .def(
           "getsemwaitindex",

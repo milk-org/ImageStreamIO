@@ -226,6 +226,7 @@ errno_t ImageStreamIO_createIm_gpu( IMAGE *image,      ///< [out] IMAGE structur
   */
 errno_t ImageStreamIO_destroyIm( IMAGE *image /**< [in] The IMAGE structure to deallocate and remove from the system.*/);
 
+
 /** @brief Connect to an existing shared memory image stream 
   * 
   * Wrapper for  \ref ImageStreamIO_read_sharedmem_image_toIMAGE
@@ -237,6 +238,7 @@ errno_t ImageStreamIO_openIm( IMAGE *image,    ///< [out] IMAGE structure which 
 
 
 void* ImageStreamIO_get_image_d_ptr(IMAGE *image);
+
 
 /** @brief Read / connect to existing shared memory image stream */
 errno_t ImageStreamIO_read_sharedmem_image_toIMAGE( const char *name, ///< [in] the name of the shared memory file to access, as in data.tmpfsdir/<name>_im.shm
@@ -262,6 +264,7 @@ errno_t ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structur
 /**@{                                                                                              */
 /* =============================================================================================== */
 /* =============================================================================================== */
+
 
 /** @brief Destroy shmim semaphores 
  *
@@ -298,6 +301,8 @@ int ImageStreamIO_createsem(IMAGE *image,  ///< [in] the name of the shared memo
                             long NBsem     ///< [in] number of semaphores to be created
                            );
 
+
+
 /** @brief Post all shmim semaphores 
  *
  * ## Purpose
@@ -319,6 +324,8 @@ int ImageStreamIO_createsem(IMAGE *image,  ///< [in] the name of the shared memo
 long ImageStreamIO_sempost(IMAGE *image,  ///< [in] the name of the shared memory file
                            long index     ///< [in] semaphore index
                           );
+
+
 
 /** @brief Post all shmim semaphores except one 
  *

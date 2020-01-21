@@ -417,27 +417,36 @@ uint64_t ImageStreamIO_initialize_buffer(
 /* ===============================================================================================
  */
 
-errno_t ImageStreamIO_createIm(IMAGE *image, const char *name, long naxis,
-                           uint32_t *size, uint8_t datatype, int shared,
-                           int NBkw) {
-  return ImageStreamIO_createIm_gpu(image, name, naxis, size, datatype, -1,
-                                    shared, IMAGE_NB_SEMAPHORE, NBkw,
-                                    MATH_DATA);
+errno_t ImageStreamIO_createIm(
+    IMAGE      *image,
+    const char *name,
+    long        naxis,
+    uint32_t   *size,
+    uint8_t     datatype,
+    int         shared,
+    int         NBkw
+)
+{
+    return ImageStreamIO_createIm_gpu(image, name, naxis, size, datatype, -1,
+                                      shared, IMAGE_NB_SEMAPHORE, NBkw,
+                                      MATH_DATA);
 }
 
 
 
 errno_t ImageStreamIO_createIm_gpu(
-    IMAGE *image,
+    IMAGE      *image,
     const char *name,
-    long naxis,
-    uint32_t *size,
-    uint8_t datatype,
-    int8_t location,
-    int shared,
-    int NBsem,
-    int NBkw,
-    uint64_t imagetype) {
+    long        naxis,
+    uint32_t   *size,
+    uint8_t     datatype,
+    int8_t      location,  // -1: CPU RAM, 0+ : GPU
+    int         shared,
+    int         NBsem,
+    int         NBkw,
+    uint64_t    imagetype
+)
+{
     long i, ii;
     time_t lt;
     long nelement;
@@ -604,10 +613,10 @@ errno_t ImageStreamIO_createIm_gpu(
         image->shmfd = 0;
         image->memsize = 0;
 
-        image->md = (IMAGE_METADATA *)malloc(sizeof(IMAGE_METADATA));
+        image->md = (IMAGE_METADATA *) malloc(sizeof(IMAGE_METADATA));
         image->md->shared = 0;
         if (NBkw > 0)
-            image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * NBkw);
+            image->kw = (IMAGE_KEYWORD *) malloc(sizeof(IMAGE_KEYWORD) * NBkw);
         else
             image->kw = NULL;
     }

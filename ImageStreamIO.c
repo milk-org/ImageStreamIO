@@ -38,6 +38,32 @@
   #include <fitsio.h>
 #endif
 
+
+
+
+
+
+
+#if defined NDEBUG 
+#define DEBUG_TRACEPOINTLOG(...)
+#else
+#define DEBUG_TRACEPOINTLOG(...) do { \
+char msg[1000]; \
+sprintf(msg, __VA_ARGS__); \
+ImageStreamIO_write_process_log(msg); \
+} while(0)
+#endif
+
+
+
+
+
+
+
+
+
+
+
 // Handle old fitsios
 #ifndef ULONGLONG_IMG
 #define ULONGLONG_IMG (80)
@@ -96,6 +122,58 @@ void check(cudaError_t result, char const *const func, const char *const file,
 // that a CUDA host call returns an error
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * @brief Write entry into debug log
+ * 
+ * 
+ */
+errno_t ImageStreamIO_write_process_log(
+char *msg
+)
+{
+	FILE *fplog;
+	char fname[200];
+	pid_t thisPID;
+	
+	thisPID = getpid();
+    sprintf(fname, "logreport.%05d.log", thisPID);
+    
+    struct tm *uttime;
+    time_t tvsec0;
+
+
+    fplog = fopen(fname, "a");
+    if(fplog != NULL) {
+        struct timespec tnow;
+        //        time_t now;
+        clock_gettime(CLOCK_REALTIME, &tnow);
+        tvsec0 = tnow.tv_sec;
+        uttime = gmtime(&tvsec0);
+        fprintf(fplog, "%04d%02d%02dT%02d%02d%02d.%09ld %s\n",
+                       1900+uttime->tm_year, 1+uttime->tm_mon, uttime->tm_mday, uttime->tm_hour, uttime->tm_min,  uttime->tm_sec, tnow.tv_nsec,
+                       msg);
+
+        fclose(fplog);
+    }    
+    
+    return 0;
+}
+
+
+
+
 
 
 
@@ -194,7 +272,7 @@ errno_t ImageStreamIO_shmdirname(
     // first, we try the env variable if it exists
     char* MILK_SHM_DIR = getenv("MILK_SHM_DIR");
     if(MILK_SHM_DIR != NULL) {
-        printf(" [ MILK_SHM_DIR ] '%s'\n", MILK_SHM_DIR);
+        //printf(" [ MILK_SHM_DIR ] '%s'\n", MILK_SHM_DIR);
         sprintf(shmdname, "%s", MILK_SHM_DIR);
 
         // does this direcory exist ?
@@ -664,6 +742,7 @@ errno_t ImageStreamIO_createIm_gpu(
     image->md->cnt1 = 0;
 
     if (shared == 1) {
+		//DEBUG_TRACEPOINTLOG("%s %d NBsem = %d", __FILE__, __LINE__, NBsem);
         ImageStreamIO_createsem(image, NBsem);  // IMAGE_NB_SEMAPHORE
         // defined in ImageStruct.h
 
@@ -680,64 +759,75 @@ errno_t ImageStreamIO_createIm_gpu(
     // initialize keywords
     for (kw = 0; kw < image->md->NBkw; kw++) image->kw[kw].type = 'N';
 
+	//DEBUG_TRACEPOINTLOG("%s %d NBsem = %d", __FILE__, __LINE__, image->md->sem);
+
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
+
 
 
 
 errno_t ImageStreamIO_destroyIm(
     IMAGE *image
 ) {
+
+    // Get shm directory name (only on first call to this function)
+    static char shmdirname[200];
+    static int initSHAREDMEMDIR = 0;
+    if(initSHAREDMEMDIR == 0)
+    {
+        unsigned int stri;
+
+        ImageStreamIO_shmdirname(shmdirname);
+        for(stri=0; stri<strlen(shmdirname); stri++)
+            if(shmdirname[stri] == '/') // replace leading '/' by '.'
+                shmdirname[stri] = '.';
+        initSHAREDMEMDIR = 1;
+    }
+
+
+    char fname[200];
+
+    // close and remove semlog
+    sem_close(image->semlog);
+    snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_semlog", shmdirname, image->md->name);
+    sem_unlink(fname);
+    image->semlog = NULL;
+    remove(fname);
+
+    // close and remove all semaphores
+    ImageStreamIO_destroysem(image);
+	image->semptr = NULL;
+
+
     if (image->memsize > 0) {
-        char fname[200];
-
-        // Get shm directory name (only on first call to this function)
-        static char shmdirname[200];
-        static int initSHAREDMEMDIR = 0;
-        if(initSHAREDMEMDIR == 0)
-        {
-            unsigned int stri;
-
-            ImageStreamIO_shmdirname(shmdirname);
-            for(stri=0; stri<strlen(shmdirname); stri++)
-                if(shmdirname[stri] == '/') // replace leading '/' by '.'
-                    shmdirname[stri] = '.';
-            initSHAREDMEMDIR = 1;
-        }
-
-
-        // close and remove semlog
-        sem_close(image->semlog);
-        snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_semlog", shmdirname, image->md->name);
-        sem_unlink(fname);
-        image->semlog = NULL;
-        remove(fname);
-
-        // close and remove all semaphores
-        ImageStreamIO_destroysem(image);
         close(image->shmfd);
-
         // Get this before unmapping.
         ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
         munmap(image->md, image->memsize);
+        image->md = NULL;
+        image->kw = NULL;
         // Remove the file
         remove(fname);
     }
-     else {
-        free(image->array.UI8);
-
-        free(image->md);
-        if (image->kw) free(image->kw);
+    else {
+        free(image->array.UI8);       
     }
+	image->array.UI8 = NULL;
 
-	image->used = 0;
-    image->semlog = NULL;
-    image->md = NULL;
 
-    image->array.UI8 = NULL;
 
-    image->semptr = NULL;
-    image->kw = NULL;
+
+	if(image->md != NULL) {
+		free(image->md);
+		image->md = NULL;
+	}
+
+	image->kw = NULL;
+
+    image->used = 0;
 
     return IMAGESTREAMIO_SUCCESS;
 }
@@ -848,6 +938,9 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     image->md = (IMAGE_METADATA *)map;
     image->md->shared = 1;
 
+	//DEBUG_TRACEPOINTLOG("%4d md->sem  = %d", __LINE__, (int) (image->md->sem) );
+	//DEBUG_TRACEPOINTLOG("%4d md->cnt0 = %d", __LINE__, (int) (image->md->cnt0) );
+
     if (strcmp(image->md->version, IMAGESTRUCT_VERSION)) {
         char errmsg[200];
         sprintf(errmsg, "Stream %s corrupted, or incompatible version. Should be %s", name, IMAGESTRUCT_VERSION);
@@ -855,15 +948,13 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         return IMAGESTREAMIO_VERSION;
     }
 
-    //printf("image size = "); fflush(stdout); //TEST
+  
     uint64_t size = 1;
     uint8_t axis;
-    for (axis = 0; axis < image->md->naxis; ++axis) {
-        //printf("%ld ", (long)image->md->size[axis]); fflush(stdout); //TEST
+    for (axis = 0; axis < image->md->naxis; ++axis) {       
         size *= image->md->size[axis];
     }
-    // printf("\n");
-    //fflush(stdout);
+
 
     // some verification
     if (size > 10000000000) {
@@ -935,18 +1026,20 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     // looking for semaphores
     //printf("Looking for semaphores\n"); fflush(stdout); //TEST
-    while (sOK == 1) {
+    while (sOK == 1) {		
         snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name, snb);
+        //DEBUG_TRACEPOINTLOG("%4d looking for %s", __LINE__, sname);
         sem_t *stest;
-        if ((stest = sem_open(sname, 0, 0644, 0)) == SEM_FAILED)
+        if ((stest = sem_open(sname, 0, 0644, 0)) == SEM_FAILED) {
             sOK = 0; //not an error here
+		}
         else {
+			//DEBUG_TRACEPOINTLOG("%4d found %s", __LINE__, sname);
             sem_close(stest);
             snb++;
         }
+        //DEBUG_TRACEPOINTLOG("%4d NBsem = %ld", __LINE__, snb);
     }
-    //printf("%ld semaphores detected  (image->md->sem = %d)\n", snb, (int)image->md->sem);
-    //fflush(stdout); //TEST
 
     //        image->md->sem = snb;
     image->semptr = (sem_t **)malloc(sizeof(sem_t *) * image->md->sem);
@@ -1025,7 +1118,7 @@ errno_t ImageStreamIO_closeIm(
 /* ===============================================================================================
  */
 
-/*
+/**
  * ## Purpose
  *
  * Destroy semaphore of a shmim
@@ -1035,13 +1128,11 @@ errno_t ImageStreamIO_closeIm(
  * @param[in]
  * image	IMAGE*
  * 			pointer to shmim
- */
+ **/
 
 errno_t ImageStreamIO_destroysem(
     IMAGE *image
 ) {
-    long s;
-
     // Get shm directory name (only on first call to this function)
     static char shmdirname[200];
     static int initSHAREDMEMDIR = 0;
@@ -1056,28 +1147,31 @@ errno_t ImageStreamIO_destroysem(
         initSHAREDMEMDIR = 1;
     }
 
+	//DEBUG_TRACEPOINTLOG("image->md->sem = %d", image->md->sem);
+
     // Remove semaphores if any
     if (image->md->sem > 0) {
         // Close existing semaphores ...
-        for (s = 0; s < image->md->sem; s++) {
+        for (int s = 0; s < image->md->sem; s++) {
             if ((image->semptr != NULL) && (image->semptr[s] != NULL)) {
                 sem_close(image->semptr[s]);
             }
 
             // ... and remove associated files
             char fname[200];
-            snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_sem%02ld", shmdirname,
+            snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_sem%02d", shmdirname,
                      image->md->name, s);
             sem_unlink(fname);
             remove(fname);
         }
         image->md->sem = 0;
-
-        if (image->semptr != NULL) {
-            free(image->semptr);
-            image->semptr = NULL;
-        }
     }
+
+    if (image->semptr != NULL) {
+        free(image->semptr);
+        image->semptr = NULL;
+    }
+
     return(IMAGESTREAMIO_SUCCESS);
 }
 
@@ -1085,7 +1179,7 @@ errno_t ImageStreamIO_destroysem(
 
 
 
-/*
+/**
  * ## Purpose
  *
  * Create semaphore of a shmim
@@ -1098,7 +1192,7 @@ errno_t ImageStreamIO_destroysem(
  *
  * @param[in]
  * NBsem    number of semaphores to be created
- */
+ **/
 
 int ImageStreamIO_createsem(
     IMAGE *image,
@@ -1153,7 +1247,7 @@ int ImageStreamIO_createsem(
 
 
 
-/*
+/**
  * ## Purpose
  *
  * Posts semaphore of a shmim
@@ -1169,7 +1263,7 @@ int ImageStreamIO_createsem(
  * index    semaphore index
  * 			index of semaphore to be posted
  *          if index=-1, post all semaphores
- */
+ **/
 long ImageStreamIO_sempost(
     IMAGE *image,
     long index
@@ -1217,7 +1311,7 @@ long ImageStreamIO_sempost(
 
 
 
-/*
+/**
  * ## Purpose
  *
  * Posts all semaphores of a shmim except one
@@ -1231,7 +1325,7 @@ long ImageStreamIO_sempost(
  * @param[in]
  * index    semaphore index
  * 			index of semaphore to be excluded
- */
+ **/
 long ImageStreamIO_sempost_excl(
     IMAGE *image,
     long index
@@ -1355,7 +1449,7 @@ int ImageStreamIO_getsemwaitindex(
 
 
 
-/*
+/**
  * ## Purpose
  *
  * Wait on a shmim semaphore
@@ -1369,7 +1463,7 @@ int ImageStreamIO_getsemwaitindex(
  * @param[in]
  * index    semaphore index
  *
- */
+ **/
 int ImageStreamIO_semwait(
     IMAGE *image,
     int index
@@ -1411,7 +1505,7 @@ int ImageStreamIO_semtimedwait(
 
 
 
-/*
+/**
  * ## Purpose
  *
  * Flush shmim semaphore
@@ -1426,7 +1520,7 @@ int ImageStreamIO_semtimedwait(
  * index    semaphore index
  * 			flush all semaphores if index<0
  *
- */
+ **/
 long ImageStreamIO_semflush(
     IMAGE *image,
     long index

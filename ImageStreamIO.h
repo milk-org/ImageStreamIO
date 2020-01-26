@@ -87,7 +87,7 @@ inline uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
   */
 errno_t ImageStreamIO_readBufferAt(
     const IMAGE *image,
-    const int slice_index,
+    const unsigned int slice_index,
     void **buffer
 );
 

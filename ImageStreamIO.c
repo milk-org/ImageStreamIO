@@ -6,9 +6,6 @@
  *
  *
  *
- *
- * @bug No known bugs.
- *
  */
 
 #define _GNU_SOURCE
@@ -100,51 +97,62 @@ void check(cudaError_t result, char const *const func, const char *const file,
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
 #endif
 
+
+
+
+
 /**
  * Print error to stderr
- * 
- * 
+ *
+ *
  */
-errno_t ImageStreamIO_printERROR_(const char *file, const char *func, int line, errno_t code, char *errmessage) {
-  fprintf(stderr,
-          "%c[%d;%dmERROR [ FILE: %s   FUNCTION: %s   LINE: %d ]  %c[%d;m\n",
-          (char)27, 1, 31, file, func, line, (char)27, 0);
-  if (errno != 0) {
-    char buff[256];
+errno_t ImageStreamIO_printERROR_(
+    const char *file,
+    const char *func,
+    int         line,
+    __attribute__((unused)) errno_t     code,
+    char       *errmessage
+) {
+    fprintf(stderr,
+            "%c[%d;%dmERROR [ FILE: %s   FUNCTION: %s   LINE: %d ]  %c[%d;m\n",
+            (char)27, 1, 31, file, func, line, (char)27, 0);
+    if (errno != 0) {
+        char buff[256];
 
-// Test for which version of strerror_r we're using (XSI or GNU)
+        // Test for which version of strerror_r we're using (XSI or GNU)
 #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && \
      !defined(_GNU_SOURCE))
-    if (strerror_r(errno, buff, sizeof(buff)) == 0) {
-      fprintf(stderr, "C Error: %s\n", buff);
-    } else
-      fprintf(stderr, "Unknown C Error\n");
+        if (strerror_r(errno, buff, sizeof(buff)) == 0) {
+            fprintf(stderr, "C Error: %s\n", buff);
+        } else
+            fprintf(stderr, "Unknown C Error\n");
 #else
-    // GNU strerror_r does not necessarily use buff, and uses errno to report
-    // errors.
-    int _errno = errno;
-    errno = 0;
-    char *estr = strerror_r(_errno, buff, sizeof(buff));
+        // GNU strerror_r does not necessarily use buff, and uses errno to report
+        // errors.
+        int _errno = errno;
+        errno = 0;
+        char *estr = strerror_r(_errno, buff, sizeof(buff));
 
-    if (errno == 0)
-      fprintf(stderr, "%c[%d;%dmC Error: %s%c[%d;m\n", (char)27, 1, 31, estr,
-              27, 0);
-    else
-      fprintf(stderr, "%c[%d;%dmUnknown C Error%c[%d;m\n", (char)27, 1, 31, 27,
-              0);
+        if (errno == 0)
+            fprintf(stderr, "%c[%d;%dmC Error: %s%c[%d;m\n", (char)27, 1, 31, estr,
+                    27, 0);
+        else
+            fprintf(stderr, "%c[%d;%dmUnknown C Error%c[%d;m\n", (char)27, 1, 31, 27,
+                    0);
 
-    errno = _errno;  // restore it in case it's used later.
+        errno = _errno;  // restore it in case it's used later.
 #endif
 
-  } else
-    fprintf(stderr, "%c[%d;%dmNo C error (errno = 0)%c[%d;m\n", (char)27, 1, 31,
-            27, 0);
+    } else
+        fprintf(stderr, "%c[%d;%dmNo C error (errno = 0)%c[%d;m\n", (char)27, 1, 31,
+                27, 0);
 
-  fprintf(stderr, "%c[%d;%dm %s  %c[%d;m\n", (char)27, 1, 31, errmessage,
-          (char)27, 0);
+    fprintf(stderr, "%c[%d;%dm %s  %c[%d;m\n", (char)27, 1, 31, errmessage,
+            (char)27, 0);
 
-  return IMAGESTREAMIO_SUCCESS;
+    return IMAGESTREAMIO_SUCCESS;
 }
+
 
 
 
@@ -155,15 +163,16 @@ errno_t ImageStreamIO_printERROR_(const char *file, const char *func, int line, 
 
 errno_t ImageStreamIO_readBufferAt(
     const IMAGE *image,
-    const int slice_index,
-    void **buffer
+    const unsigned int    slice_index,
+    void       **buffer
 ) {
-    if((image->md->imagetype & 0xF) != CIRCULAR_BUFFER) {
+	
+    if( (image->md->imagetype & 0xF) != CIRCULAR_BUFFER ) {
         *buffer = (void*)image->array.UI8;
         return IMAGESTREAMIO_SUCCESS;
     }
 
-    if(slice_index>=image->md->size[2]) {
+    if(slice_index >= image->md->size[2]) {
         *buffer = NULL;
         return IMAGESTREAMIO_FAILURE;
     }
@@ -250,7 +259,7 @@ errno_t ImageStreamIO_filename(
 
     int rv = snprintf(file_name, ssz, "%s/%s.im.shm", shmdirname, im_name);
 
-    if (rv > 0 && rv < ssz)
+    if ((rv > 0) && (rv < (int) ssz) )
         return IMAGESTREAMIO_SUCCESS;
     else if (rv < 0) {
         ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, strerror(errno));
@@ -363,7 +372,7 @@ uint64_t ImageStreamIO_offset_data(
 uint64_t ImageStreamIO_initialize_buffer(
     IMAGE *image
 ) {
-    void *map;  // pointed cast in bytes
+    //void *map;  // pointed cast in bytes
     const size_t size_element = ImageStreamIO_typesize(image->md->datatype);
 
     if (image->md->location == -1) {
@@ -405,6 +414,7 @@ uint64_t ImageStreamIO_initialize_buffer(
     return ImageStreamIO_offset_data(image, image->array.raw);
 }
 
+
 /* ===============================================================================================
  */
 /* ===============================================================================================
@@ -434,6 +444,7 @@ errno_t ImageStreamIO_createIm(
 
 
 
+
 errno_t ImageStreamIO_createIm_gpu(
     IMAGE      *image,
     const char *name,
@@ -447,23 +458,24 @@ errno_t ImageStreamIO_createIm_gpu(
     uint64_t    imagetype
 )
 {
-    long i, ii;
-    time_t lt;
-    long nelement;
-    struct timespec timenow;
+    long        i;
+    //long        ii;
+    //time_t      lt;
+    long        nelement;
+    //struct timespec timenow;
 
     uint8_t *map;
 
     int kw;
-    char comment[80];
-    char kname[16];
+    //char comment[80];
+    //char kname[16];
 
     // Get shm directory name (only on first call to this function)
     static char shmdirname[200];
     static int initSHAREDMEMDIR = 0;
     if(initSHAREDMEMDIR == 0)
     {
-        int stri;
+        unsigned int stri;
 
         ImageStreamIO_shmdirname(shmdirname);
         for(stri=0; stri<strlen(shmdirname); stri++)
@@ -471,6 +483,7 @@ errno_t ImageStreamIO_createIm_gpu(
                 shmdirname[stri] = '.';
         initSHAREDMEMDIR = 1;
     }
+
 
 
     nelement = 1;
@@ -621,6 +634,7 @@ errno_t ImageStreamIO_createIm_gpu(
             image->kw = NULL;
     }
 
+
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
     image->md->imagetype = imagetype;  // Image is mathematical vector or matrix
     image->md->location = location;
@@ -635,7 +649,9 @@ errno_t ImageStreamIO_createIm_gpu(
     }
     image->md->NBkw = NBkw;
 
+
     ImageStreamIO_initialize_buffer(image);
+
 
     clock_gettime(CLOCK_REALTIME, &image->md->lastaccesstime);
     clock_gettime(CLOCK_REALTIME, &image->md->creationtime);
@@ -680,7 +696,7 @@ errno_t ImageStreamIO_destroyIm(
         static int initSHAREDMEMDIR = 0;
         if(initSHAREDMEMDIR == 0)
         {
-            int stri;
+            unsigned int stri;
 
             ImageStreamIO_shmdirname(shmdirname);
             for(stri=0; stri<strlen(shmdirname); stri++)
@@ -706,7 +722,8 @@ errno_t ImageStreamIO_destroyIm(
         munmap(image->md, image->memsize);
         // Remove the file
         remove(fname);
-    } else {
+    }
+     else {
         free(image->array.UI8);
 
         free(image->md);
@@ -802,7 +819,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     static int initSHAREDMEMDIR = 0;
     if(initSHAREDMEMDIR == 0)
     {
-        int stri;
+        unsigned int stri;
 
         ImageStreamIO_shmdirname(shmdirname);
         for(stri=0; stri<strlen(shmdirname); stri++)
@@ -1022,17 +1039,13 @@ errno_t ImageStreamIO_destroysem(
     IMAGE *image
 ) {
     long s;
-    int r;
-    char command[200];
-    int semfile[100];
-
 
     // Get shm directory name (only on first call to this function)
     static char shmdirname[200];
     static int initSHAREDMEMDIR = 0;
     if(initSHAREDMEMDIR == 0)
     {
-        int stri;
+        unsigned int stri;
 
         ImageStreamIO_shmdirname(shmdirname);
         for(stri=0; stri<strlen(shmdirname); stri++)
@@ -1090,9 +1103,6 @@ int ImageStreamIO_createsem(
     long NBsem
 ) {
     long s;
-    int r;
-    char command[200];
-    int semfile[100];
 
     // printf("Creating %ld semaphores\n", NBsem);
 
@@ -1102,7 +1112,7 @@ int ImageStreamIO_createsem(
 
     if(initSHAREDMEMDIR == 0)
     {
-        int stri;
+        unsigned int stri;
 
         ImageStreamIO_shmdirname(shmdirname);
         for(stri=0; stri<strlen(shmdirname); stri++)

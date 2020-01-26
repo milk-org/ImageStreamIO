@@ -730,6 +730,7 @@ errno_t ImageStreamIO_destroyIm(
         if (image->kw) free(image->kw);
     }
 
+	image->used = 0;
     image->semlog = NULL;
     image->md = NULL;
 
@@ -992,6 +993,7 @@ errno_t ImageStreamIO_closeIm(
     IMAGE *image
 ) {
     long s;
+    
     for(s = 0; s < image->md->sem; s++) {
         sem_close(image->semptr[s]);
     }

@@ -90,6 +90,7 @@ errno_t init_ImageStreamIO() {
 
 //Forward dec'l
 errno_t ImageStreamIO_printERROR_(const char *file, const char *func, int line, errno_t code, char *errmessage);
+errno_t ImageStreamIO_printWARNING(char *warnmessage);
 
 errno_t (*internal_printError)( const char *, const char *, int, errno_t, char * ) = &ImageStreamIO_printERROR_;
 
@@ -230,6 +231,26 @@ errno_t ImageStreamIO_printERROR_(
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
+
+/**
+ * Print warning to stderr
+ *
+ *
+ */
+errno_t ImageStreamIO_printWARNING(
+    char       *warnmessage
+) {
+    fprintf(stderr,
+            "%c[%d;%dmWARNING   %c[%d;m\n",
+            (char)27, 1, 35, (char)27, 0);
+    fprintf(stderr, "%c[%d;%dm %s  %c[%d;m\n", (char)27, 1, 35, warnmessage,
+            (char)27, 0);
+
+    return IMAGESTREAMIO_SUCCESS;
+}
+
 
 
 
@@ -892,7 +913,9 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     SM_fd = open(SM_fname, O_RDWR);
     if (SM_fd == -1) {
         image->used = 0;
-        ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,SM_fname);
+        char wmsg[200];
+        sprintf(wmsg, "Cannot open file \"%s\"\n", SM_fname);
+        ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
 

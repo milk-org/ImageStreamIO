@@ -2,17 +2,17 @@
  * Example code to write image in shared memory
  * 
  * compile with:
- * gcc ImCreate_cube.c ImageStreamIO.c -o ImCreate_cube -lm -lpthread 
- * gcc ImCreate_cube.c ImageStreamIO.c -DHAVE_CUDA -o ImCreate_test -lm -lpthread -I/opt/cuda/include -L/opt/cuda/lib64 -lcudart
+ * gcc ImCreate_img.c ImageStreamIO.c -o ImCreate_img -lm -lpthread 
+ * gcc ImCreate_img.c ImageStreamIO.c -DHAVE_CUDA -o ImCreate_test -lm -lpthread -I/opt/cuda/include -L/opt/cuda/lib64 -lcudart
  * 
  * Required files in compilation directory :
- * ImCreate_cube.c   : source code (this file)
+ * ImCreate_img.c   : source code (this file)
  * ImageStreamIO.c   : ImageStreamIO source code
  * ImageStreamIO.h   : ImageCreate function prototypes
  * ImageStruct.h     : Image structure definition
  * 
  * EXECUTION:
- * ./ImCreate_cube  
+ * ./ImCreate_img  
  * (no argument)
  * 
  * Creates a circular buffer imtest00 in shared memory
@@ -66,6 +66,17 @@ int main()
 
 	free(imsize);
 
+	strcpy(imarray.kw[0].name, "keyword_long");
+	imarray.kw[0].type = 'L';
+	imarray.kw[0].value.numl = 42;
+
+	strcpy(imarray.kw[1].name, "keyword_float");
+	imarray.kw[1].type = 'D';
+	imarray.kw[1].value.numf = 3.141592;
+
+	strcpy(imarray.kw[2].name, "keyword_string");
+	imarray.kw[2].type = 'S';
+	strcpy(imarray.kw[2].value.valstr, "Hello!");
 
 	float angle; 
 	float r;

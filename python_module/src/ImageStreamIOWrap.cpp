@@ -455,28 +455,36 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_readonly("used", &IMAGE::used)
       .def_readonly("memsize", &IMAGE::memsize)
       .def_readonly("md", &IMAGE::md)
-      .def_property_readonly("shape",
-                             [](const IMAGE &img) {
-                               py::tuple dims(img.md->naxis);
-                               const uint32_t *ptr = img.md->size;
-                               // std::copy(ptr, ptr + img.md->naxis, dims);
-                               for (int i{}; i < img.md->naxis; ++i) {
-                                 dims[i] = ptr[i];
-                               }
-                               return dims;
-                             })
+      .def_property_readonly(
+          "shape",
+          [](const IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
+            py::tuple dims(img.md->naxis);
+            const uint32_t *ptr = img.md->size;
+            // std::copy(ptr, ptr + img.md->naxis, dims);
+            for (int i{}; i < img.md->naxis; ++i) {
+              dims[i] = ptr[i];
+            }
+            return dims;
+          })
 
-      .def_property_readonly("semReadPID",
-                             [](const IMAGE &img) {
-                               std::vector<pid_t> semReadPID(img.md->sem);
-                               for (int i = 0; i < img.md->sem; ++i) {
-                                 semReadPID[i] = img.semReadPID[i];
-                               }
-                               return semReadPID;
-                             })
+      .def_property_readonly(
+          "semReadPID",
+          [](const IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
+            std::vector<pid_t> semReadPID(img.md->sem);
+            for (int i = 0; i < img.md->sem; ++i) {
+              semReadPID[i] = img.semReadPID[i];
+            }
+            return semReadPID;
+          })
       .def_property_readonly(
           "acqtimearray",
           [](const IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             if (img.atimearray == NULL)
               throw std::runtime_error("acqtimearray not initialized");
             std::vector<std::chrono::system_clock::time_point> acqtimearray(
@@ -493,6 +501,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_property_readonly(
           "writetimearray",
           [](const IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             if (img.writetimearray == NULL)
               throw std::runtime_error("writetimearray not initialized");
             std::vector<std::chrono::system_clock::time_point> writetimearray(
@@ -509,6 +519,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_property_readonly(
           "cntarray",
           [](const IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             if (img.cntarray == NULL)
               throw std::runtime_error("cntarray not initialized");
             std::vector<uint64_t> cntarray(img.md->size[2]);
@@ -520,6 +532,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_property_readonly(
           "flagarray",
           [](const IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             if (img.flagarray == NULL)
               throw std::runtime_error("flagarray not initialized");
             std::vector<uint64_t> flagarray(img.md->size[2]);
@@ -528,25 +542,34 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             }
             return flagarray;
           })
-      .def_property_readonly("semWritePID",
-                             [](const IMAGE &img) {
-                               std::vector<pid_t> semWritePID(img.md->sem);
-                               for (int i = 0; i < img.md->sem; ++i) {
-                                 semWritePID[i] = img.semWritePID[i];
-                               }
-                               return semWritePID;
-                             })
-      .def_property_readonly("kw",
-                             [](const IMAGE &img) {
-                               std::map<std::string, IMAGE_KEYWORD> keywords;
-                               for (int i = 0; i < img.md->NBkw; ++i) {
-                                 if(strcmp(img.kw[i].name, "")==0) break;
-                                 std::string key(img.kw[i].name);
-                                 keywords[key] = img.kw[i];
-                               }
-                               return keywords;
-                             })
+      .def_property_readonly(
+          "semWritePID",
+          [](const IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
+            std::vector<pid_t> semWritePID(img.md->sem);
+            for (int i = 0; i < img.md->sem; ++i) {
+              semWritePID[i] = img.semWritePID[i];
+            }
+            return semWritePID;
+          })
+      .def_property_readonly(
+          "kw",
+          [](const IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
+            std::map<std::string, IMAGE_KEYWORD> keywords;
+            for (int i = 0; i < img.md->NBkw; ++i) {
+              if (strcmp(img.kw[i].name, "") == 0) break;
+              std::string key(img.kw[i].name);
+              keywords[key] = img.kw[i];
+            }
+            return keywords;
+          })
       .def_buffer([](const IMAGE &img) -> py::buffer_info {
+        if (img.array.raw == nullptr)
+          py::print("image not initialized");
+          return py::buffer_info();
         if (img.md->location >= 0) {
           py::print("Can not use this with a GPU buffer");
           return py::buffer_info();
@@ -567,7 +590,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
           stride *= shape[axis];
         }
         return py::buffer_info(
-            img.array.UI8, /* Pointer to buffer */
+            img.array.raw, /* Pointer to buffer */
             dt.asize,      /* Size of one scalar */
             format,        /* Python struct-style format descriptor */
             img.md->naxis, /* Number of dimensions */
@@ -578,6 +601,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
 
       .def("copy",
            [](const IMAGE &img) -> py::object {
+             if (img.array.raw == nullptr)
+               throw std::runtime_error("image not initialized");
              ImageStreamIODataType dt(img.md->datatype);
              switch (dt.datatype) {
                case ImageStreamIODataType::DataType::UINT8:
@@ -610,6 +635,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def(
           "write",
           [](IMAGE &img, py::buffer b) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             /* Request a buffer descriptor from Python */
             py::buffer_info info = b.request();
 
@@ -739,7 +766,12 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
           py::arg("name"))
 
       .def(
-          "close", [](IMAGE &img) { return ImageStreamIO_closeIm(&img); },
+          "close",
+          [](IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
+            return ImageStreamIO_closeIm(&img);
+          },
           R"pbdoc(
             Close a shared memory image stream
             Parameters:
@@ -749,7 +781,12 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             )pbdoc")
 
       .def(
-          "destroy", [](IMAGE &img) { return ImageStreamIO_destroyIm(&img); },
+          "destroy",
+          [](IMAGE &img) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
+            return ImageStreamIO_destroyIm(&img);
+          },
           R"pbdoc(
             For a shared image:
             Closes all semaphores, deallcoates sem pointers,
@@ -764,6 +801,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def(
           "getsemwaitindex",
           [](IMAGE &img, long index) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             return ImageStreamIO_getsemwaitindex(&img, index);
           },
           R"pbdoc(
@@ -780,6 +819,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def(
           "semwait",
           [](IMAGE &img, long index) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             return ImageStreamIO_semwait(&img, index);
           },
           R"pbdoc(
@@ -794,6 +835,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def(
           "sempost",
           [](IMAGE &img, long index) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             return ImageStreamIO_sempost(&img, index);
           },
           R"pbdoc(
@@ -808,6 +851,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def(
           "semflush",
           [](IMAGE &img, long index) {
+            if (img.array.raw == nullptr)
+              throw std::runtime_error("image not initialized");
             return ImageStreamIO_semflush(&img, index);
           },
           R"pbdoc(

@@ -28,10 +28,10 @@ struct ImageStreamIOType {
   ImageStreamIOType(uint64_t type)
       : type(static_cast<ImageStreamIOType::Type>(type)){};
 
-  enum Type get_type() {
+  enum Type get_type() const {
     return static_cast<ImageStreamIOType::Type>(type & 0xF);
   }
-  enum Type get_axis() {
+  enum Type get_axis() const {
     return static_cast<ImageStreamIOType::Type>(type & 0xF0000);
   }
 };
@@ -151,17 +151,17 @@ py::array_t<T> convert_img(const IMAGE &img) {
 
   auto ret_buffer = py::array_t<T>(shape, strides);
   void *current_image = img.array.raw;
-  #ifdef HAVE_CUDA
+  size_t size_data = img.md->nelement * sizeof(T);
   if (img.md->location == -1) {
-  #endif
-    memcpy(ret_buffer.mutable_data(), current_image,
-           img.md->nelement * sizeof(T));
-  #ifdef HAVE_CUDA
+    memcpy(ret_buffer.mutable_data(), current_image, size_data);
   } else {
-    cudaMemcpy(ret_buffer.mutable_data(), current_image,
-               img.md->nelement * sizeof(T), cudaMemcpyDeviceToHost);
-  }
+  #ifdef HAVE_CUDA
+    cudaSetDevice(img.md->location);
+    cudaMemcpy(ret_buffer.mutable_data(), current_image, size_data, cudaMemcpyDeviceToHost);
+  #else
+    throw std::runtime_error("unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
   #endif
+  }
   return ret_buffer;
 }
 
@@ -175,7 +175,15 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 new ImageStreamIODataType(datatype));
           }))
           .def_readonly("size", &ImageStreamIODataType::asize)
-          .def_readonly("type", &ImageStreamIODataType::datatype);
+          .def_readonly("type", &ImageStreamIODataType::datatype)
+          .def("__repr__",
+              [](const ImageStreamIODataType &img_datatype) {
+                std::ostringstream tmp_str;
+                tmp_str << "datatype: " << img_datatype.datatype << std::endl;
+                tmp_str << "size: " << img_datatype.asize << std::endl;
+                return tmp_str.str();
+              });
+
 
   py::enum_<ImageStreamIODataType::DataType>(imageDatatype, "Type")
       .value("UINT8", ImageStreamIODataType::DataType::UINT8)
@@ -191,6 +199,34 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .value("DOUBLE", ImageStreamIODataType::DataType::DOUBLE)
       .value("COMPLEX_FLOAT", ImageStreamIODataType::DataType::COMPLEX_FLOAT)
       .value("COMPLEX_DOUBLE", ImageStreamIODataType::DataType::COMPLEX_DOUBLE)
+      .export_values();
+
+  auto imagetype =
+      py::class_<ImageStreamIOType>(m, "ImageStreamIOType")
+          .def(py::init([](uint8_t type) {
+            return std::unique_ptr<ImageStreamIOType>(
+                new ImageStreamIOType(type));
+          }))
+          .def_property_readonly("axis", &ImageStreamIOType::get_axis)
+          .def_property_readonly("type", &ImageStreamIOType::get_type)
+          .def("__repr__",
+              [](const ImageStreamIOType &image_type) {
+                std::ostringstream tmp_str;
+                tmp_str << "type: " << image_type.get_type() << std::endl;
+                tmp_str << "axis: " << image_type.get_axis() << std::endl;
+                return tmp_str.str();
+              });
+
+  py::enum_<ImageStreamIOType::Type>(imagetype, "Type")
+      .value("CIRCULAR_BUFFER_TYPE", ImageStreamIOType::Type::CIRCULAR_BUFFER_TYPE)
+      .value("MATH_DATA_TYPE", ImageStreamIOType::Type::MATH_DATA_TYPE)
+      .value("IMG_RECV_TYPE", ImageStreamIOType::Type::IMG_RECV_TYPE)
+      .value("IMG_SENT_TYPE", ImageStreamIOType::Type::IMG_SENT_TYPE)
+      .value("ZAXIS_UNDEF_TYPE", ImageStreamIOType::Type::ZAXIS_UNDEF_TYPE)
+      .value("ZAXIS_SPACIAL_TYPE", ImageStreamIOType::Type::ZAXIS_SPACIAL_TYPE)
+      .value("ZAXIS_TEMPORAL_TYPE", ImageStreamIOType::Type::ZAXIS_TEMPORAL_TYPE)
+      .value("ZAXIS_WAVELENGTH_TYPE", ImageStreamIOType::Type::ZAXIS_WAVELENGTH_TYPE)
+      .value("ZAXIS_MAPPING_TYPE", ImageStreamIOType::Type::ZAXIS_MAPPING_TYPE)
       .export_values();
 
   // IMAGE_KEYWORD interface
@@ -296,9 +332,12 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_readonly("nelement", &IMAGE_METADATA::nelement)
       .def_property_readonly("datatype",
                              [](const IMAGE_METADATA &md) {
-                               return ImageStreamIODataType(md.datatype);
+                               return ImageStreamIODataType(md.datatype).datatype;
                              })
-      .def_readonly("imagetype", &IMAGE_METADATA::imagetype)
+      .def_property_readonly("imagetype",
+                             [](const IMAGE_METADATA &md) {
+                               return ImageStreamIOType(md.imagetype).get_type();
+                             })
       .def_property_readonly(
           "creationtime",
           [](const IMAGE_METADATA &md) {
@@ -335,6 +374,15 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
           })
       .def_readonly("shared", &IMAGE_METADATA::shared)
       .def_readonly("location", &IMAGE_METADATA::location)
+      .def_property_readonly(
+          "location_str",
+          [](const IMAGE_METADATA &md) {
+            if(md.location<0) return std::string("CPU RAM");
+
+            std::ostringstream tmp_str;
+            tmp_str << "GPU" << int(md.location) << " RAM";
+            return tmp_str.str();
+          })
       .def_readonly("status", &IMAGE_METADATA::status)
       .def_readonly("logflag", &IMAGE_METADATA::logflag)
       .def_readonly("sem", &IMAGE_METADATA::sem)
@@ -351,6 +399,17 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_readonly("used", &IMAGE::used)
       .def_readonly("memsize", &IMAGE::memsize)
       .def_readonly("md", &IMAGE::md)
+      .def_property_readonly("shape",
+                        [](const IMAGE &img) {
+                          py::tuple dims(img.md->naxis);
+                          const uint32_t *ptr = img.md->size;
+                          // std::copy(ptr, ptr + img.md->naxis, dims);
+                          for (int i{}; i<img.md->naxis; ++i) {
+                            dims[i] = ptr[i];
+                          }
+                          return dims;
+                        })
+
       .def_property_readonly("semReadPID",
                              [](const IMAGE &img) {
                                std::vector<pid_t> semReadPID(img.md->sem);
@@ -431,7 +490,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                              })
       .def_buffer([](const IMAGE &img) -> py::buffer_info {
         if (img.md->location >= 0) {
-          throw std::runtime_error("Can not use this with a GPU buffer");
+          py::print("Can not use this with a GPU buffer");
+          return py::buffer_info();
         }
 
         ImageStreamIODataType dt(img.md->datatype);
@@ -512,10 +572,19 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             uint64_t size = img.md->nelement * dt.asize;
 
             img.md->write = 1;  // set this flag to 1 when writing data
-            std::copy(buffer_ptr, buffer_ptr + size, img.array.UI8);
 
-            std::vector<uint32_t> ushape(info.ndim);
-            std::copy(info.shape.begin(), info.shape.end(), ushape.begin());
+            void *current_image = img.array.raw;
+
+            if (img.md->location == -1) {
+              memcpy(current_image, buffer_ptr, size);
+            } else {
+            #ifdef HAVE_CUDA
+              cudaSetDevice(img.md->location);
+              cudaMemcpy(current_image, buffer_ptr, size, cudaMemcpyHostToDevice);
+            #else
+              throw std::runtime_error("unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
+            #endif
+            }
             ImageStreamIO_sempost(&img, -1);
             clock_gettime(CLOCK_REALTIME, &img.md->lastaccesstime);
             img.md->write = 0;  // Done writing data

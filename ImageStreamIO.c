@@ -256,6 +256,7 @@ errno_t ImageStreamIO_printWARNING(
 
 
 
+
 /* ============================================================================================================================================================================================== */
 /* @name 0. Utilities */
 /* ============================================================================================================================================================================================== */
@@ -264,20 +265,23 @@ errno_t ImageStreamIO_readBufferAt(
     const IMAGE *image,
     const unsigned int    slice_index,
     void       **buffer
-) {
-	
-    if( (image->md->imagetype & 0xF) != CIRCULAR_BUFFER ) {
-        *buffer = (void*)image->array.UI8;
-        return IMAGESTREAMIO_SUCCESS;
-    }
+)
+{
 
-    if(slice_index >= image->md->size[2]) {
-        *buffer = NULL;
-        return IMAGESTREAMIO_FAILURE;
-    }
+    if((image->md->imagetype & 0xF) != CIRCULAR_BUFFER)
+        {
+            *buffer = (void *)image->array.UI8;
+            return IMAGESTREAMIO_SUCCESS;
+        }
+
+    if(slice_index >= image->md->size[2])
+        {
+            *buffer = NULL;
+            return IMAGESTREAMIO_FAILURE;
+        }
     const uint64_t frame_size = image->md->size[0] * image->md->size[1];
     const int size_element = ImageStreamIO_typesize(image->md->datatype);
-    *buffer = (void*) (image->array.UI8 + slice_index * frame_size * size_element);
+    *buffer = (void *)(image->array.UI8 + slice_index * frame_size * size_element);
 
     return IMAGESTREAMIO_SUCCESS;
 }

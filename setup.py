@@ -72,7 +72,7 @@ class CMakeBuildExt(build_ext):
         else:
             cmake_args += ['-DUSE_CUDA=OFF']
 
-        cmake_args += ['-Dpython_build=ON', '-Duse_hunter=ON']
+        cmake_args += ['-Dpython_build=ON']
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
@@ -91,5 +91,7 @@ setup(
     description='A wrap project to use ImageStreamIO with python',
     long_description='A wrap project to use ImageStreamIO with python',
     ext_modules=[CMakeExtension('ImageStreamIOWrap')],
+    install_requires=['pybind11>=2.4'],
+    # setup_requires=['pybind11>=2.4'],
     cmdclass={'build_ext': CMakeBuildExt},
     zip_safe=False, )

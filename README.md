@@ -1,5 +1,7 @@
 # Module ImageStreamIO {#page_module_ImageStreamIO}
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/876f2964890741538270e91524f8b361)](https://app.codacy.com/gh/milk-org/ImageStreamIO?utm_source=github.com&utm_medium=referral&utm_content=milk-org/ImageStreamIO&utm_campaign=Badge_Grade_Settings)
+
 Image stream definitions and tools.
 
 ## Overview

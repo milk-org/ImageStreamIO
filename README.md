@@ -1,13 +1,6 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
-
-[**master** branch](https://github.com/milk-org/ImageStreamIO/tree/master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/dcfd9f03c69341f9bd71a5878c170881)](https://www.codacy.com/gh/milk-org/ImageStreamIO?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=milk-org/ImageStreamIO&amp;utm_campaign=Badge_Grade)
-
-[**dev** branch](https://github.com/milk-org/ImageStreamIO/tree/dev)
-
-
-
 
 
 # Module ImageStreamIO {#page_module_ImageStreamIO}

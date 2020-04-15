@@ -916,7 +916,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m)
 
     .def(
         "create",
-        [](IMAGE & img, std::string name, const py::buffer & buffer,
+        [](IMAGE & img, std::string name, py::buffer & buffer,
            int8_t location, uint8_t shared, int NBsem, int NBkw,
            uint64_t imagetype)
     {

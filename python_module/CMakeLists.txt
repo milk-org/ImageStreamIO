@@ -8,7 +8,7 @@ if(NOT TARGET pybind11)
   endif()
   if(IS_DIRECTORY ${WYRM_ROOT})
     add_subdirectory(${WYRM_ROOT}/pybind pybind11_dir)
-    pybind11_add_module(ImageStreamIOWrap src/ImageStreamIOWrap.cpp)
+    pybind11_add_module(ImageStreamIOWrap ImageStreamIOWrap.cpp)
   else()
     execute_process(COMMAND bash -c "python -m pybind11 --includes"
                     OUTPUT_VARIABLE pybind11_inc)
@@ -19,7 +19,7 @@ if(NOT TARGET pybind11)
     string(REGEX REPLACE "\n$" "" pybind11_inc "${pybind11_inc}")
     string(REGEX REPLACE "\n$" "" PYTHON_MODULE_EXTENSION "${PYTHON_MODULE_EXTENSION}")
 
-    add_library(ImageStreamIOWrap MODULE src/ImageStreamIOWrap.cpp)
+    add_library(ImageStreamIOWrap MODULE ImageStreamIOWrap.cpp)
 
     target_compile_features(ImageStreamIOWrap PRIVATE cxx_std_14)
     target_include_directories(ImageStreamIOWrap PRIVATE "${pybind11_inc}")
@@ -32,7 +32,7 @@ if(NOT TARGET pybind11)
   
     endif()
 else()
-  pybind11_add_module(ImageStreamIOWrap src/ImageStreamIOWrap.cpp)
+  pybind11_add_module(ImageStreamIOWrap ImageStreamIOWrap.cpp)
 endif()  
 
 target_link_libraries(ImageStreamIOWrap PRIVATE ImageStreamIO)

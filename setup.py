@@ -18,10 +18,11 @@ class CMakeExtension(Extension):
 class CMakeBuildExt(build_ext):
     def run(self):
         try:
+            import pybind11
             out = subprocess.check_output(['cmake', '--version'])
-        except OSError:
+        except:
             raise RuntimeError(
-                "CMake must be installed to build the following extensions: " +
+                "CMake and pybind11 must be installed to build the following extensions: " +
                 ", ".join(e.name for e in self.extensions))
 
         if platform.system() == "Windows":
@@ -32,8 +33,12 @@ class CMakeBuildExt(build_ext):
 
         for ext in self.extensions:
             self.build_extension(ext)
+        
+        # build_ext.run()
 
     def build_extension(self, ext):
+        self.announce("Preparing the build environment", level=3)
+        
         extdir = os.path.abspath(
             os.path.dirname(self.get_ext_fullpath(ext.name)))
 
@@ -74,9 +79,9 @@ class CMakeBuildExt(build_ext):
 
         cmake_args += ['-Dpython_build=ON']
 
-        if not os.path.exists(self.build_temp):
-            os.makedirs(self.build_temp)
+        os.makedirs(self.build_temp, exist_ok=True)
 
+        self.announce("Configuring cmake project", level=3)
         subprocess.check_call(
             ['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp)
         subprocess.check_call(
@@ -91,7 +96,8 @@ setup(
     description='A wrap project to use ImageStreamIO with python',
     long_description='A wrap project to use ImageStreamIO with python',
     ext_modules=[CMakeExtension('ImageStreamIOWrap')],
-    install_requires=['pybind11>=2.4'],
+    # install_requires=['pybind11>=2.4'],
     # setup_requires=['pybind11>=2.4'],
+    # python_requires='>=3',
     cmdclass={'build_ext': CMakeBuildExt},
     zip_safe=False, )

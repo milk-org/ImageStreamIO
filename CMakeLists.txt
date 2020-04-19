@@ -4,16 +4,7 @@ set(LIBNAME "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
 option(python_build "Compile Python Wrappers" OFF)
-option(use_hunter "Use hunter package manager" OFF)
 option(gtest_build_tests "Build Unit Tests" OFF)
-
-if(use_hunter)
-  include("cmake/HunterGate.cmake")
-  huntergate(URL
-             "https://github.com/ruslo/hunter/archive/v0.23.126.tar.gz"
-             SHA1
-             "ccaf37e820cb54d6a5c02993c7f389b9861fc38e")
-endif()
 
 project(${LIBNAME} LANGUAGES C)
 

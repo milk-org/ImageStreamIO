@@ -1176,6 +1176,30 @@ PYBIND11_MODULE(ImageStreamIOWrap, m)
     py::arg("index"))
 
     .def(
+        "semtimedwait",
+        [](IMAGE & img, long index, float timeoutsec)
+    {
+        if(img.array.raw == nullptr)
+        {
+            throw std::runtime_error("image not initialized");
+        }
+        struct timespec timeout;
+        clock_gettime(CLOCK_REALTIME, &timeout);
+        timeout.tv_nsec += (long)(timeoutsec * 1000000000L);
+        timeout.tv_sec += timeout.tv_nsec / 1000000000L;
+        timeout.tv_nsec = timeout.tv_nsec % 1000000000L;
+        return ImageStreamIO_semtimedwait(&img, index, &timeout);
+    },
+    R"pbdoc(
+                Read / connect to existing shared memory image stream
+                Parameters:
+                    index  [in]:  index of semaphore to wait
+                Return:
+                    ret    [out]: error code
+                )pbdoc",
+    py::arg("index"), py::arg("timeoutsec"))
+
+    .def(
         "sempost",
         [](IMAGE & img, long index)
     {

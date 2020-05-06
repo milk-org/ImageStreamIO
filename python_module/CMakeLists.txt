@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.8)
 
 project(ImageStreamIOWrap LANGUAGES CXX)
 
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 if(NOT TARGET pybind11)
   if(NOT DEFINED WYRM_ROOT)
     set(WYRM_ROOT $ENV{WYRM_ROOT})

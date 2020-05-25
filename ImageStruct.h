@@ -18,7 +18,7 @@
 #ifndef _IMAGESTRUCT_H
 #define _IMAGESTRUCT_H
 
-#define IMAGESTRUCT_VERSION "0.0.01"
+#define IMAGESTRUCT_VERSION "1.0"
 
 #include <semaphore.h>
 #include <stdint.h>
@@ -388,10 +388,18 @@ typedef struct /**< structure used to store data arrays                      */
 
     } array; /**< pointer to data array */
 
-
+	
+	
     sem_t **semptr;                    /**< array of pointers to semaphores   (each 8 bytes on 64-bit system) */
 
     IMAGE_KEYWORD *kw;
+
+
+	pid_t creatorPID;  /**< PID of process that created the image */
+	
+	pid_t ownerPID;    /**< PID of process owning the image */
+	/* this may be used to purge images/streams when a process is completed/dead */
+	/* set to 1 to indicate the image/stream does not belong to a process */
 
     // PID of process that read shared memory stream
     // Initialized at 0. Otherwise, when process is waiting on semaphore, its PID is written in this array
@@ -406,7 +414,6 @@ typedef struct /**< structure used to store data arrays                      */
     struct timespec *atimearray;       /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */    
     struct timespec *writetimearray;   /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */   
 
-    // total size is 152 byte = 1216 bit
 #ifdef DATA_PACKED
 } __attribute__((__packed__)) IMAGE;
 #else

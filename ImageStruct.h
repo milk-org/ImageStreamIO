@@ -286,6 +286,11 @@ typedef struct
     struct timespec writetime;         /**< last write time into data array         */
 
 
+	pid_t creatorPID;  /**< PID of process that created the stream (if shared = 1) */
+	
+	pid_t ownerPID;    /**< PID of process owning the stream (if shared = 1) */
+	/* this may be used to purge stream(s) when a process is completed/dead */
+	/* set to 1 to indicate the stream does not belong to a process */
 
 
     uint8_t  shared;                   /**< 1 if in shared memory                                                        */
@@ -395,11 +400,6 @@ typedef struct /**< structure used to store data arrays                      */
     IMAGE_KEYWORD *kw;
 
 
-	pid_t creatorPID;  /**< PID of process that created the image */
-	
-	pid_t ownerPID;    /**< PID of process owning the image */
-	/* this may be used to purge images/streams when a process is completed/dead */
-	/* set to 1 to indicate the image/stream does not belong to a process */
 
     // PID of process that read shared memory stream
     // Initialized at 0. Otherwise, when process is waiting on semaphore, its PID is written in this array

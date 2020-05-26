@@ -289,8 +289,9 @@ typedef struct
 	pid_t creatorPID;  /**< PID of process that created the stream (if shared = 1) */
 	
 	pid_t ownerPID;    /**< PID of process owning the stream (if shared = 1) */
-	/* this may be used to purge stream(s) when a process is completed/dead */
-	/* set to 1 to indicate the stream does not belong to a process */
+	/* May be used to purge stream(s) when a process is completed/dead */
+	/* Initialized to 0 */
+	/* Set to 1 to indicate the stream does not belong to a process */
 
 
     uint8_t  shared;                   /**< 1 if in shared memory                                                        */

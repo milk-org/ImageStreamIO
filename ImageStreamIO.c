@@ -765,7 +765,7 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md = (IMAGE_METADATA *)map;
         image->md->shared = 1;
         image->md->creatorPID = getpid();
-        image->md->ownerPID = 1;
+        image->md->ownerPID = 0; // default value, indicates unset
         image->md->sem = NBsem;
 
         map += sizeof(IMAGE_METADATA);

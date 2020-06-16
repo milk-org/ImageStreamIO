@@ -336,7 +336,6 @@ typedef struct
 typedef struct /**< structure used to store data arrays                      */
 {
     char name[80];     /**< local name (can be different from name in shared memory) */
-    // mem offset = 80
 
     /** @brief Image usage flag
      *

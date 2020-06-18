@@ -733,6 +733,7 @@ errno_t ImageStreamIO_createIm_gpu(
 
         image->shmfd = SM_fd;
         image->memsize = sharedsize;
+		
 
         int result;
         result = lseek(SM_fd, sharedsize - 1, SEEK_SET);
@@ -767,6 +768,19 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->creatorPID = getpid();
         image->md->ownerPID = 0; // default value, indicates unset
         image->md->sem = NBsem;
+
+
+		{
+			struct stat file_stat;
+			int ret;  
+			ret = fstat (SM_fd, &file_stat);  
+			if (ret < 0) {  
+				ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
+				return IMAGESTREAMIO_INODE;
+				} 
+			image->md->inode = file_stat.st_ino;  // inode now contains inode number of the file with descriptor fd
+		}
+
 
         map += sizeof(IMAGE_METADATA);
 

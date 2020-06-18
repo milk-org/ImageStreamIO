@@ -18,7 +18,7 @@
 #ifndef _IMAGESTRUCT_H
 #define _IMAGESTRUCT_H
 
-#define IMAGESTRUCT_VERSION "1.0"
+#define IMAGESTRUCT_VERSION "1.01"
 
 #include <semaphore.h>
 #include <stdint.h>
@@ -295,12 +295,13 @@ typedef struct
 
 
     uint8_t  shared;                   /**< 1 if in shared memory                                                        */
+    ino_t    inode;                    /**< inode nummber if shared memory */
     int8_t   location;                 /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
     uint8_t  status;                   /**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
     uint64_t flag;                     /**< bitmask, encodes read/write permissions.... NOTE: enum instead of defines */
 
     uint8_t  logflag;                  /**< set to 1 to start logging         */
-    uint16_t sem;                      /**< number of semaphores in use, specified at image creation      */
+    uint16_t sem;                      /**< number of semaphores supported, specified at image creation      */
 
 
     uint64_t : 0; // align array to 8-byte boundary for speed
@@ -310,7 +311,6 @@ typedef struct
     uint64_t cnt2;                  /**< in event mode, this is the # of events                                       */
 
     uint8_t  write;               	/**< 1 if image is being written                                                  */
-
 
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
@@ -323,6 +323,24 @@ typedef struct
 } IMAGE_METADATA;
 #endif
 
+
+
+/** @brief STREAM_PROC_TRACE holds trigger and timing info
+ * 
+ * Array of STREAM_PROC_TRACE is held within streams to track history.
+ * This information is assempled by a process, and then written to 
+ * all streams it writes.
+ * 
+ */
+typedef struct
+{
+	pid_t           procPID;        /**< PID of process writing stream*/
+	ino_t           triggerinode;   /**< trigger stream inode */
+	struct timespec ts_procstart;   /**< timestamp process trigger start */
+	struct timespec ts_procend;     /**< timestamp process step complete */
+	int             trigsemindex;   /**< trigger semaphore */
+	uint64_t        cnt0;           /**< trigger stream cnt0 value at trigger */
+} STREAM_PROC_TRACE;
 
 
 
@@ -394,11 +412,11 @@ typedef struct /**< structure used to store data arrays                      */
     } array; /**< pointer to data array */
 
 	
+	// Semaphores
 	
     sem_t **semptr;                    /**< array of pointers to semaphores   (each 8 bytes on 64-bit system) */
 
     IMAGE_KEYWORD *kw;
-
 
 
     // PID of process that read shared memory stream
@@ -407,8 +425,14 @@ typedef struct /**< structure used to store data arrays                      */
     pid_t *semReadPID;
 
     // PID of the process writing the data
+    // Unlike the semReadPID array, semWritePID is a circular buffer keeping short-term
+    // history of PIDs corresponding to the last few writes
     pid_t *semWritePID;
 
+	
+	//STREAM_PROC_TRACE *streamproctrace;
+
+	
     uint64_t *flagarray;               /**<  flag for each slice if needed (depends on imagetype) */
     uint64_t *cntarray;                /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
     struct timespec *atimearray;       /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */    

@@ -20,6 +20,11 @@
 
 #define IMAGESTRUCT_VERSION "1.01"
 
+
+
+
+
+
 #include <semaphore.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -74,6 +79,8 @@ extern "C" {
 #define SEMAPHORE_MAXVAL    10            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 #define SEMAPHORE_INITVAL    0            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 #define IMAGE_NB_SEMAPHORE  10            /**< Number of semaphores per image */
+
+#define IMAGE_NB_PROCTRACE  10            /**< Number of STREAM_PROC_TRACE entries per image */
 
 // Data types are defined as machine-independent types for portability
 
@@ -302,6 +309,7 @@ typedef struct
 
     uint8_t  logflag;                  /**< set to 1 to start logging         */
     uint16_t sem;                      /**< number of semaphores supported, specified at image creation      */
+    uint16_t NBproctrace;              /**< number of streamproctrace entries */
 
 
     uint64_t : 0; // align array to 8-byte boundary for speed
@@ -334,8 +342,8 @@ typedef struct
  */
 typedef struct
 {
-	pid_t           procPID;        /**< PID of process writing stream*/
-	ino_t           triggerinode;   /**< trigger stream inode */
+	pid_t           procwrite_PID;        /**< PID of process writing stream*/
+	ino_t           trigger_inode;   /**< trigger stream inode */
 	struct timespec ts_procstart;   /**< timestamp process trigger start */
 	struct timespec ts_procend;     /**< timestamp process step complete */
 	int             trigsemindex;   /**< trigger semaphore */
@@ -425,12 +433,11 @@ typedef struct /**< structure used to store data arrays                      */
     pid_t *semReadPID;
 
     // PID of the process writing the data
-    // Unlike the semReadPID array, semWritePID is a circular buffer keeping short-term
-    // history of PIDs corresponding to the last few writes
-    pid_t *semWritePID;
+    pid_t *semWritePID; // to be retired
 
-	
-	//STREAM_PROC_TRACE *streamproctrace;
+	// array
+	// keeps track of stream history/depedencies
+	STREAM_PROC_TRACE *streamproctrace;
 
 	
     uint64_t *flagarray;               /**<  flag for each slice if needed (depends on imagetype) */

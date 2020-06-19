@@ -639,6 +639,8 @@ errno_t ImageStreamIO_createIm_gpu(
     }
 
 
+	int NBproctrace = IMAGE_NB_PROCTRACE;
+
 
     nelement = 1;
     for(i = 0; i < naxis; i++)
@@ -768,7 +770,7 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->creatorPID = getpid();
         image->md->ownerPID = 0; // default value, indicates unset
         image->md->sem = NBsem;
-
+		image->md->NBproctrace = NBproctrace;
 
 		{
 			struct stat file_stat;
@@ -807,6 +809,9 @@ errno_t ImageStreamIO_createIm_gpu(
         image->semWritePID = (pid_t *)(map);
         map += sizeof(pid_t) * NBsem;
 
+		image->streamproctrace = (STREAM_PROC_TRACE *)(map);
+		map += sizeof(STREAM_PROC_TRACE) * NBproctrace;
+
         if((imagetype & 0xF000F) ==
                 (CIRCULAR_BUFFER | ZAXIS_TEMPORAL))    // Circular buffer
         {
@@ -828,6 +833,7 @@ errno_t ImageStreamIO_createIm_gpu(
 
         image->md = (IMAGE_METADATA *) malloc(sizeof(IMAGE_METADATA));
         image->md->shared = 0;
+        image->md->inode = 0;
         if(NBkw > 0)
         {
             image->kw = (IMAGE_KEYWORD *) malloc(sizeof(IMAGE_KEYWORD) * NBkw);

@@ -886,6 +886,18 @@ errno_t ImageStreamIO_createIm_gpu(
             image->semReadPID[semindex] = -1;
             image->semWritePID[semindex] = -1;
         }
+        
+        for (int proctraceindex = 0; proctraceindex < NBproctrace; proctraceindex++)
+        {			
+			image->streamproctrace[proctraceindex].procwrite_PID = 0;
+			image->streamproctrace[proctraceindex].trigger_inode = 0;
+			image->streamproctrace[proctraceindex].ts_procstart.tv_sec = 0;
+			image->streamproctrace[proctraceindex].ts_procstart.tv_nsec = 0;
+			image->streamproctrace[proctraceindex].ts_procend.tv_sec = 0;
+			image->streamproctrace[proctraceindex].ts_procend.tv_nsec = 0;
+			image->streamproctrace[proctraceindex].trigsemindex = -1;
+			image->streamproctrace[proctraceindex].cnt0 = 0;
+		}
 
     }
     else
@@ -1644,18 +1656,26 @@ int ImageStreamIO_getsemwaitindex(
 {
     pid_t readProcessPID;
     int semindex;
+    int skiptoscan = 0;
 
     readProcessPID = getpid();
 
-    // Check if default semindex is available
-    if((image->semReadPID[semindexdefault] == 0) ||
-            (getpgid(image->semReadPID[semindexdefault]) < 0))
+
+    // check that semindexdefault is within range
+    if( (semindexdefault < image->md->sem) && (semindexdefault >= 0))
     {
-        image->semReadPID[semindexdefault] = readProcessPID;
-        return semindexdefault;
+        // Check if semindexdefault available
+        if((image->semReadPID[semindexdefault] == 0) ||
+                (getpgid(image->semReadPID[semindexdefault]) < 0))
+        {
+			// if OK, then adopt it
+            image->semReadPID[semindexdefault] = readProcessPID;
+            return semindexdefault;
+        }
     }
 
     // if not, look for available semindex
+
     semindex = 0;
     do
     {
@@ -1669,6 +1689,8 @@ int ImageStreamIO_getsemwaitindex(
     }
     while(semindex < image->md->sem);
 
+	
+	// if no semaphore found, return -1
     return -1;
 }
 

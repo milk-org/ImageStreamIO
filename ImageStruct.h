@@ -342,7 +342,7 @@ typedef struct
  */
 typedef struct
 {
-	pid_t           procwrite_PID;        /**< PID of process writing stream*/
+	pid_t           procwrite_PID;        /**< PID of process writing stream. 0 if no entry*/	
 	ino_t           trigger_inode;   /**< trigger stream inode */
 	struct timespec ts_procstart;   /**< timestamp process trigger start */
 	struct timespec ts_procend;     /**< timestamp process step complete */

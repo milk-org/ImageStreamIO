@@ -873,7 +873,7 @@ errno_t ImageStreamIO_createIm_gpu(
     image->md->write = 0;
     image->md->cnt0 = 0;
     image->md->cnt1 = 0;
-
+    
     if(shared == 1)
     {
         //DEBUG_TRACEPOINTLOG("%s %d NBsem = %d", __FILE__, __LINE__, NBsem);
@@ -893,8 +893,8 @@ errno_t ImageStreamIO_createIm_gpu(
 			image->streamproctrace[proctraceindex].trigger_inode = 0;
 			image->streamproctrace[proctraceindex].ts_procstart.tv_sec = 0;
 			image->streamproctrace[proctraceindex].ts_procstart.tv_nsec = 0;
-			image->streamproctrace[proctraceindex].ts_procend.tv_sec = 0;
-			image->streamproctrace[proctraceindex].ts_procend.tv_nsec = 0;
+			image->streamproctrace[proctraceindex].ts_streamupdate.tv_sec = 0;
+			image->streamproctrace[proctraceindex].ts_streamupdate.tv_nsec = 0;
 			image->streamproctrace[proctraceindex].trigsemindex = -1;
 			image->streamproctrace[proctraceindex].cnt0 = 0;
 		}
@@ -1188,6 +1188,9 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     image->semWritePID = (pid_t *)(map);
     map += sizeof(pid_t) * image->md->sem;
+
+	image->streamproctrace = (STREAM_PROC_TRACE *)(map);
+	map += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
 
     if((image->md->imagetype & 0xF000F) ==
             (CIRCULAR_BUFFER | ZAXIS_TEMPORAL))
@@ -1495,11 +1498,12 @@ long ImageStreamIO_sempost(
         {
             int semval;
 
+			image->semWritePID[s] = writeProcessPID;
+			
             sem_getvalue(image->semptr[s], &semval);
             if(semval < SEMAPHORE_MAXVAL)
             {
-                sem_post(image->semptr[s]);
-                image->semWritePID[s] = writeProcessPID;
+                sem_post(image->semptr[s]);                
             }
         }
     }

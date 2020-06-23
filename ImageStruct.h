@@ -20,7 +20,7 @@
 
 #define IMAGESTRUCT_VERSION "1.01"
 
-
+#define STRINGMAXLEN_IMAGE_NAME          80
 
 
 
@@ -207,7 +207,7 @@ typedef struct
      */
 
     /** @brief Image Name */
-    char name[80];
+    char name[STRINGMAXLEN_IMAGE_NAME];
 
 
     /** @brief Number of axis
@@ -342,12 +342,14 @@ typedef struct
  */
 typedef struct
 {
+	int             triggermode;
 	pid_t           procwrite_PID;        /**< PID of process writing stream. 0 if no entry*/	
-	ino_t           trigger_inode;   /**< trigger stream inode */
-	struct timespec ts_procstart;   /**< timestamp process trigger start */
-	struct timespec ts_procend;     /**< timestamp process step complete */
-	int             trigsemindex;   /**< trigger semaphore */
-	uint64_t        cnt0;           /**< trigger stream cnt0 value at trigger */
+	ino_t           trigger_inode;        /**< trigger stream inode */
+	struct timespec ts_procstart;         /**< timestamp process triggered */
+	struct timespec ts_streamupdate;      /**< timestamp write this stream */
+	int             trigsemindex;         /**< trigger semaphore */
+	int             triggerstatus;
+	uint64_t        cnt0;                 /**< trigger stream cnt0 value at trigger */
 } STREAM_PROC_TRACE;
 
 
@@ -361,7 +363,7 @@ typedef struct
  */
 typedef struct /**< structure used to store data arrays                      */
 {
-    char name[80];     /**< local name (can be different from name in shared memory) */
+    char name[STRINGMAXLEN_IMAGE_NAME];     /**< local name (can be different from name in shared memory) */
 
     /** @brief Image usage flag
      *
@@ -432,8 +434,8 @@ typedef struct /**< structure used to store data arrays                      */
     // The array can be used to look for available semaphores
     pid_t *semReadPID;
 
-    // PID of the process writing the data
-    pid_t *semWritePID; // to be retired
+    // PID of the process posting the semaphores
+    pid_t *semWritePID; 
 
 	// array
 	// keeps track of stream history/depedencies

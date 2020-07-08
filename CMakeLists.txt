@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.8)
 set(LIBNAME "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
-option(python_build "Compile Python Wrappers" OFF)
+option(build_python_module "Compile Python Wrappers" OFF)
 option(gtest_build_tests "Build Unit Tests" OFF)
 
 project(${LIBNAME} LANGUAGES C)
@@ -35,11 +35,11 @@ endif(USE_CUDA)
 #
 # Python wrap.
 #
-# The python wrapper is not built by default.  To build it, set the python_build
+# The python wrapper is not built by default.  To build it, set the build_python_module
 # option to ON.  You can do it by running ccmake or specifying the
-# -Dpython_build=ON flag when running cmake.
+# -Dbuild_python_module=ON flag when running cmake.
 
-if(python_build)
+if(build_python_module)
   add_subdirectory(python_module)
 endif()
 

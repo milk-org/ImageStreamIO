@@ -1660,7 +1660,6 @@ int ImageStreamIO_getsemwaitindex(
 {
     pid_t readProcessPID;
     int semindex;
-    int skiptoscan = 0;
 
     readProcessPID = getpid();
 

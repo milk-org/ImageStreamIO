@@ -33,12 +33,12 @@ class CMakeBuildExt(build_ext):
 
         for ext in self.extensions:
             self.build_extension(ext)
-        
+
         # build_ext.run()
 
     def build_extension(self, ext):
         self.announce("Preparing the build environment", level=3)
-        
+
         extdir = os.path.abspath(
             os.path.dirname(self.get_ext_fullpath(ext.name)))
 
@@ -77,7 +77,7 @@ class CMakeBuildExt(build_ext):
         else:
             cmake_args += ['-DUSE_CUDA=OFF']
 
-        cmake_args += ['-Dpython_build=ON']
+        cmake_args += ['-Dbuild_python_module=ON']
 
         os.makedirs(self.build_temp, exist_ok=True)
 

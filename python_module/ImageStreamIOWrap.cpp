@@ -741,8 +741,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m)
         }
         return semWritePID;
     })
-    .def_property_readonly(
-        "kw",
+    .def(
+        "get_kws",
         [](const IMAGE & img)
     {
         if(img.array.raw == nullptr)
@@ -761,7 +761,31 @@ PYBIND11_MODULE(ImageStreamIOWrap, m)
         }
         return keywords;
     })
-    .def_buffer([](const IMAGE & img) -> py::buffer_info
+    .def("set_kws",
+        [](const IMAGE & img, std::map<std::string, IMAGE_KEYWORD> & keywords)
+        {
+            if(img.array.raw == nullptr)
+            {
+                throw std::runtime_error("image not initialized");
+            }
+            std::map<std::string, IMAGE_KEYWORD>::iterator it = keywords.begin();
+            int cnt = 0;
+            while (it != keywords.end())
+            {
+                if (cnt >= img.md->NBkw)
+                    throw std::runtime_error("Too many keywords provided");
+                img.kw[cnt] = it->second;
+                it++;
+                cnt++;
+            }
+            // Pad with empty keywords
+            if (cnt < img.md->NBkw) {
+                img.kw[cnt] = IMAGE_KEYWORD();
+            }
+        }
+    )
+    .def_buffer(
+        [](const IMAGE & img) -> py::buffer_info
     {
         if(img.array.raw == nullptr)
         {

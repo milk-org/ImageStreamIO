@@ -21,6 +21,8 @@
 #define IMAGESTRUCT_VERSION "1.01"
 
 #define STRINGMAXLEN_IMAGE_NAME          80
+#define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
+#define KEYWORD_MAX_COMMENT 80            /**< maximun size of a keyword's comment */
 
 
 
@@ -151,17 +153,17 @@ extern "C" {
  * 	- value
  */
 typedef struct {
-    char name[16];         /**< keyword name                                                   */
-    char type;             /**< N: unused, L: long, D: double, S: 16-char string               */
-    uint64_t : 0;  // align array to 8-byte boundary for speed
+    char name[KEYWORD_MAX_STRING]; /**< keyword name                                                   */
+    char type;                     /**< N: unused, L: long, D: double, S: 16-char string               */
+    uint64_t : 0;                  // align array to 8-byte boundary for speed
 
     union {
         int64_t numl;
         double  numf;
-        char    valstr[16];
+        char    valstr[KEYWORD_MAX_STRING];
     } value;
 
-    char comment[80];
+    char comment[KEYWORD_MAX_COMMENT];
 #ifdef DATA_PACKED
 } __attribute__((__packed__)) IMAGE_KEYWORD;
 #else
@@ -279,7 +281,7 @@ typedef struct
 
     // relative timers using time relative to process start
 
-    // double creationtime;             /**< Creation / load time of data structure (since process start)  */    
+    // double creationtime;             /**< Creation / load time of data structure (since process start)  */
     // double lastaccesstime;           /**< last time the image was accessed  (since process start)                      */
 
 
@@ -294,7 +296,7 @@ typedef struct
 
 
 	pid_t creatorPID;  /**< PID of process that created the stream (if shared = 1) */
-	
+
 	pid_t ownerPID;    /**< PID of process owning the stream (if shared = 1) */
 	/* May be used to purge stream(s) when a process is completed/dead */
 	/* Initialized to 0 */
@@ -334,16 +336,16 @@ typedef struct
 
 
 /** @brief STREAM_PROC_TRACE holds trigger and timing info
- * 
+ *
  * Array of STREAM_PROC_TRACE is held within streams to track history.
- * This information is assempled by a process, and then written to 
+ * This information is assempled by a process, and then written to
  * all streams it writes.
- * 
+ *
  */
 typedef struct
 {
 	int             triggermode;
-	pid_t           procwrite_PID;        /**< PID of process writing stream. 0 if no entry*/	
+	pid_t           procwrite_PID;        /**< PID of process writing stream. 0 if no entry*/
 	ino_t           trigger_inode;        /**< trigger stream inode */
 	struct timespec ts_procstart;         /**< timestamp process triggered */
 	struct timespec ts_streamupdate;      /**< timestamp write this stream */
@@ -383,7 +385,7 @@ typedef struct /**< structure used to store data arrays                      */
 
     IMAGE_METADATA *md;
 
-    
+
     uint64_t : 0; // align array to 8-byte boundary for speed
 
     /** @brief data storage array
@@ -421,9 +423,9 @@ typedef struct /**< structure used to store data arrays                      */
 
     } array; /**< pointer to data array */
 
-	
+
 	// Semaphores
-	
+
     sem_t **semptr;                    /**< array of pointers to semaphores   (each 8 bytes on 64-bit system) */
 
     IMAGE_KEYWORD *kw;
@@ -435,17 +437,17 @@ typedef struct /**< structure used to store data arrays                      */
     pid_t *semReadPID;
 
     // PID of the process posting the semaphores
-    pid_t *semWritePID; 
+    pid_t *semWritePID;
 
 	// array
 	// keeps track of stream history/depedencies
 	STREAM_PROC_TRACE *streamproctrace;
 
-	
+
     uint64_t *flagarray;               /**<  flag for each slice if needed (depends on imagetype) */
     uint64_t *cntarray;                /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
-    struct timespec *atimearray;       /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */    
-    struct timespec *writetimearray;   /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */   
+    struct timespec *atimearray;       /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
+    struct timespec *writetimearray;   /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
 
 #ifdef DATA_PACKED
 } __attribute__((__packed__)) IMAGE;

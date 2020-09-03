@@ -619,8 +619,8 @@ errno_t ImageStreamIO_createIm_gpu(
     uint8_t *map;
 
     int kw;
-    //char comment[80];
-    //char kname[16];
+    //char comment[KEYWORD_MAX_COMMENT];
+    //char kname[KEYWORD_MAX_STRING];
 
     // Get shm directory name (only on first call to this function)
     static char shmdirname[200];
@@ -703,6 +703,7 @@ errno_t ImageStreamIO_createIm_gpu(
         }
 
         sharedsize += NBkw * sizeof(IMAGE_KEYWORD);
+        sharedsize += sizeof(STREAM_PROC_TRACE) * NBproctrace;
         sharedsize +=
             2 * NBsem * sizeof(pid_t);  // one read PID array, one write PID array
 
@@ -735,7 +736,7 @@ errno_t ImageStreamIO_createIm_gpu(
 
         image->shmfd = SM_fd;
         image->memsize = sharedsize;
-		
+
 
         int result;
         result = lseek(SM_fd, sharedsize - 1, SEEK_SET);
@@ -774,12 +775,12 @@ errno_t ImageStreamIO_createIm_gpu(
 
 		{
 			struct stat file_stat;
-			int ret;  
-			ret = fstat (SM_fd, &file_stat);  
-			if (ret < 0) {  
+			int ret;
+			ret = fstat (SM_fd, &file_stat);
+			if (ret < 0) {
 				ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
 				return IMAGESTREAMIO_INODE;
-				} 
+				}
 			image->md->inode = file_stat.st_ino;  // inode now contains inode number of the file with descriptor fd
 		}
 
@@ -850,8 +851,8 @@ errno_t ImageStreamIO_createIm_gpu(
     image->md->location = location;
     image->md->datatype = datatype;
     image->md->naxis = naxis;
-    strncpy(image->name, name, 80);  // local name
-    strncpy(image->md->name, name, 80);
+    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME);  // local name
+    strncpy(image->md->name, name, STRINGMAXLEN_IMAGE_NAME);
     image->md->nelement = 1;
     for(i = 0; i < naxis; i++)
     {
@@ -873,7 +874,7 @@ errno_t ImageStreamIO_createIm_gpu(
     image->md->write = 0;
     image->md->cnt0 = 0;
     image->md->cnt1 = 0;
-    
+
     if(shared == 1)
     {
         //DEBUG_TRACEPOINTLOG("%s %d NBsem = %d", __FILE__, __LINE__, NBsem);
@@ -886,9 +887,9 @@ errno_t ImageStreamIO_createIm_gpu(
             image->semReadPID[semindex] = -1;
             image->semWritePID[semindex] = -1;
         }
-        
+
         for (int proctraceindex = 0; proctraceindex < NBproctrace; proctraceindex++)
-        {			
+        {
 			image->streamproctrace[proctraceindex].procwrite_PID = 0;
 			image->streamproctrace[proctraceindex].trigger_inode = 0;
 			image->streamproctrace[proctraceindex].ts_procstart.tv_sec = 0;
@@ -1208,7 +1209,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         // map += sizeof(uint64_t) * image->md->size[2];
     }
 
-    strncpy(image->name, name, 80);
+    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME);
 
     // looking for semaphores
     //printf("Looking for semaphores\n"); fflush(stdout); //TEST
@@ -1499,11 +1500,11 @@ long ImageStreamIO_sempost(
             int semval;
 
 			image->semWritePID[s] = writeProcessPID;
-			
+
             sem_getvalue(image->semptr[s], &semval);
             if(semval < SEMAPHORE_MAXVAL)
             {
-                sem_post(image->semptr[s]);                
+                sem_post(image->semptr[s]);
             }
         }
     }
@@ -1692,7 +1693,7 @@ int ImageStreamIO_getsemwaitindex(
     }
     while(semindex < image->md->sem);
 
-	
+
 	// if no semaphore found, return -1
     return -1;
 }

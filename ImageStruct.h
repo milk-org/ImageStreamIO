@@ -131,6 +131,22 @@ extern "C" {
 #define Dtype                                          9   /**< default data type for floating point */
 #define CDtype                                        11   /**< default data type for complex */
 
+
+
+// semaphores control
+// written by writer to control readers
+// IMAGE.semctrl
+#define IMAGE_SEMAPHORE_CONTROL_READY          0x00000001 /**< Semaphore ready for semwait. If 0, exit semwait calls until back to 1. This flag is used to notify readers that semaphores are going to be destroyed or re-created, or to pause readers for other reasons */
+
+// semaphores status
+// written by readers to communicate real-time status back to stream
+// IMAGE.semstatus
+#define IMAGE_SEMAPHORE_STATUS_CONNECTED       0x00000001  /**< semaphore is connected to PID */
+#define IMAGE_SEMAPHORE_STATUS_SEMWAIT         0x00000002  /**< semaphore is being waited for by PID */
+#define IMAGE_SEMAPHORE_STATUS_SEMREADYWAIT    0x00000004  /**< PID waiting for semaphore to be ready */
+#define IMAGE_SEMAPHORE_STATUS_SEMTIMEOUT      0x00000008  /**< PID semwait timed out */
+
+
 // Type of stream
 
 #define CIRCULAR_BUFFER  0x0001  /**< Circular buffer, slice z axis is encoding time -> record writetime array */
@@ -303,7 +319,8 @@ typedef struct
 	/* Set to 1 to indicate the stream does not belong to a process */
 
 
-    uint8_t  shared;                   /**< 1 if in shared memory                                                        */
+    uint8_t  shared;                   /**< stream is in shared memory */
+    
     ino_t    inode;                    /**< inode nummber if shared memory */
     int8_t   location;                 /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
     uint8_t  status;                   /**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
@@ -338,7 +355,7 @@ typedef struct
 /** @brief STREAM_PROC_TRACE holds trigger and timing info
  *
  * Array of STREAM_PROC_TRACE is held within streams to track history.
- * This information is assempled by a process, and then written to
+ * This information is assembled by a process, and then written to
  * all streams it writes.
  *
  */
@@ -438,6 +455,14 @@ typedef struct /**< structure used to store data arrays                      */
 
     // PID of the process posting the semaphores
     pid_t *semWritePID;
+    
+    // semaphore control, written by writer to control semaphore behavior
+    // see SEMAPHORE_CONTROL_XXX defines for details
+    uint32_t *semctrl;
+
+    // semaphore status, written by readers to report back to stream what is their current status
+    // see SEMAPHORE_STATUS_XXX defines for details
+    uint32_t *semstatus;
 
 	// array
 	// keeps track of stream history/depedencies

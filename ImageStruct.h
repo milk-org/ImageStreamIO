@@ -18,7 +18,7 @@
 #ifndef _IMAGESTRUCT_H
 #define _IMAGESTRUCT_H
 
-#define IMAGESTRUCT_VERSION "1.01"
+#define IMAGESTRUCT_VERSION "1.02"
 
 #define STRINGMAXLEN_IMAGE_NAME          80
 #define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */

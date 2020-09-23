@@ -809,6 +809,12 @@ errno_t ImageStreamIO_createIm_gpu(
 
         image->semWritePID = (pid_t *)(map);
         map += sizeof(pid_t) * NBsem;
+        
+        image->semctrl = (uint32_t*)(map);
+        map += sizeof(uint32_t) * NBsem;
+
+        image->semstatus = (uint32_t*)(map);
+        map += sizeof(uint32_t) * NBsem;
 
 		image->streamproctrace = (STREAM_PROC_TRACE *)(map);
 		map += sizeof(STREAM_PROC_TRACE) * NBproctrace;
@@ -886,6 +892,8 @@ errno_t ImageStreamIO_createIm_gpu(
         {
             image->semReadPID[semindex] = -1;
             image->semWritePID[semindex] = -1;
+            image->semctrl[semindex] = 0;
+            image->semstatus[semindex] = 0;
         }
 
         for (int proctraceindex = 0; proctraceindex < NBproctrace; proctraceindex++)
@@ -1189,6 +1197,12 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     image->semWritePID = (pid_t *)(map);
     map += sizeof(pid_t) * image->md->sem;
+    
+    image->semctrl = (uint32_t *)(map);
+    map += sizeof(uint32_t) * image->md->sem;
+
+    image->semstatus = (uint32_t *)(map);
+    map += sizeof(uint32_t) * image->md->sem;
 
 	image->streamproctrace = (STREAM_PROC_TRACE *)(map);
 	map += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;

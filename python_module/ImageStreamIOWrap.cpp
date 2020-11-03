@@ -565,7 +565,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             }
             std::vector<std::chrono::system_clock::time_point> acqtimearray(
                 img.md->size[2]);
-            for (int i = 0; i < img.md->sem; ++i) {
+            for (int i = 0; i < img.md->size[2]; ++i) {
               auto acqtime =
                   std::chrono::seconds{img.atimearray[i].tv_sec} +
                   std::chrono::nanoseconds{img.atimearray[i].tv_nsec};
@@ -585,7 +585,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             }
             std::vector<std::chrono::system_clock::time_point> writetimearray(
                 img.md->size[2]);
-            for (int i = 0; i < img.md->sem; ++i) {
+            for (int i = 0; i < img.md->size[2]; ++i) {
               auto writetime =
                   std::chrono::seconds{img.writetimearray[i].tv_sec} +
                   std::chrono::nanoseconds{img.writetimearray[i].tv_nsec};
@@ -604,7 +604,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               throw std::runtime_error("cntarray not initialized");
             }
             std::vector<uint64_t> cntarray(img.md->size[2]);
-            for (int i = 0; i < img.md->sem; ++i) {
+            for (int i = 0; i < img.md->size[2]; ++i) {
               cntarray[i] = img.cntarray[i];
             }
             return cntarray;
@@ -619,7 +619,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               throw std::runtime_error("flagarray not initialized");
             }
             std::vector<uint64_t> flagarray(img.md->size[2]);
-            for (int i = 0; i < img.md->sem; ++i) {
+            for (int i = 0; i < img.md->size[2]; ++i) {
               flagarray[i] = img.flagarray[i];
             }
             return flagarray;

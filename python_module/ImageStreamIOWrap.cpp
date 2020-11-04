@@ -609,21 +609,22 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             }
             return cntarray;
           })
-      .def_property_readonly(
-          "flagarray",
-          [](const IMAGE &img) {
-            if (img.array.raw == nullptr) {
-              throw std::runtime_error("image not initialized");
-            }
-            if (img.flagarray == NULL) {
-              throw std::runtime_error("flagarray not initialized");
-            }
-            std::vector<uint64_t> flagarray(img.md->size[2]);
-            for (int i = 0; i < img.md->size[2]; ++i) {
-              flagarray[i] = img.flagarray[i];
-            }
-            return flagarray;
-          })
+      // TODO: fix flagarray never allocated and cause segfaults
+      // .def_property_readonly(
+      //     "flagarray",
+      //     [](const IMAGE &img) {
+      //       if (img.array.raw == nullptr) {
+      //         throw std::runtime_error("image not initialized");
+      //       }
+      //       if (img.flagarray == NULL) {
+      //         throw std::runtime_error("flagarray not initialized");
+      //       }
+      //       std::vector<uint64_t> flagarray(img.md->size[2]);
+      //       for (int i = 0; i < img.md->size[2]; ++i) {
+      //         flagarray[i] = img.flagarray[i];
+      //       }
+      //       return flagarray;
+      //     })
       .def_property_readonly(
           "semWritePID",
           [](const IMAGE &img) {

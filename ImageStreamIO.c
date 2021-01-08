@@ -639,7 +639,7 @@ errno_t ImageStreamIO_createIm_gpu(
     }
 
 
-	int NBproctrace = IMAGE_NB_PROCTRACE;
+    int NBproctrace = IMAGE_NB_PROCTRACE;
 
 
     nelement = 1;
@@ -771,18 +771,20 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->creatorPID = getpid();
         image->md->ownerPID = 0; // default value, indicates unset
         image->md->sem = NBsem;
-		image->md->NBproctrace = NBproctrace;
+        image->md->NBproctrace = NBproctrace;
 
-		{
-			struct stat file_stat;
-			int ret;
-			ret = fstat (SM_fd, &file_stat);
-			if (ret < 0) {
-				ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
-				return IMAGESTREAMIO_INODE;
-				}
-			image->md->inode = file_stat.st_ino;  // inode now contains inode number of the file with descriptor fd
-		}
+        {
+            struct stat file_stat;
+            int ret;
+            ret = fstat(SM_fd, &file_stat);
+            if(ret < 0)
+            {
+                ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
+                return IMAGESTREAMIO_INODE;
+            }
+            image->md->inode =
+                file_stat.st_ino;  // inode now contains inode number of the file with descriptor fd
+        }
 
 
         map += sizeof(IMAGE_METADATA);
@@ -809,15 +811,15 @@ errno_t ImageStreamIO_createIm_gpu(
 
         image->semWritePID = (pid_t *)(map);
         map += sizeof(pid_t) * NBsem;
-        
-        image->semctrl = (uint32_t*)(map);
+
+        image->semctrl = (uint32_t *)(map);
         map += sizeof(uint32_t) * NBsem;
 
-        image->semstatus = (uint32_t*)(map);
+        image->semstatus = (uint32_t *)(map);
         map += sizeof(uint32_t) * NBsem;
 
-		image->streamproctrace = (STREAM_PROC_TRACE *)(map);
-		map += sizeof(STREAM_PROC_TRACE) * NBproctrace;
+        image->streamproctrace = (STREAM_PROC_TRACE *)(map);
+        map += sizeof(STREAM_PROC_TRACE) * NBproctrace;
 
         if((imagetype & 0xF000F) ==
                 (CIRCULAR_BUFFER | ZAXIS_TEMPORAL))    // Circular buffer
@@ -896,17 +898,17 @@ errno_t ImageStreamIO_createIm_gpu(
             image->semstatus[semindex] = 0;
         }
 
-        for (int proctraceindex = 0; proctraceindex < NBproctrace; proctraceindex++)
+        for(int proctraceindex = 0; proctraceindex < NBproctrace; proctraceindex++)
         {
-			image->streamproctrace[proctraceindex].procwrite_PID = 0;
-			image->streamproctrace[proctraceindex].trigger_inode = 0;
-			image->streamproctrace[proctraceindex].ts_procstart.tv_sec = 0;
-			image->streamproctrace[proctraceindex].ts_procstart.tv_nsec = 0;
-			image->streamproctrace[proctraceindex].ts_streamupdate.tv_sec = 0;
-			image->streamproctrace[proctraceindex].ts_streamupdate.tv_nsec = 0;
-			image->streamproctrace[proctraceindex].trigsemindex = -1;
-			image->streamproctrace[proctraceindex].cnt0 = 0;
-		}
+            image->streamproctrace[proctraceindex].procwrite_PID = 0;
+            image->streamproctrace[proctraceindex].trigger_inode = 0;
+            image->streamproctrace[proctraceindex].ts_procstart.tv_sec = 0;
+            image->streamproctrace[proctraceindex].ts_procstart.tv_nsec = 0;
+            image->streamproctrace[proctraceindex].ts_streamupdate.tv_sec = 0;
+            image->streamproctrace[proctraceindex].ts_streamupdate.tv_nsec = 0;
+            image->streamproctrace[proctraceindex].trigsemindex = -1;
+            image->streamproctrace[proctraceindex].cnt0 = 0;
+        }
 
     }
     else
@@ -919,6 +921,9 @@ errno_t ImageStreamIO_createIm_gpu(
     {
         image->kw[kw].type = 'N';
     }
+
+    image->used = 1;
+    image->createcnt++;
 
     //DEBUG_TRACEPOINTLOG("%s %d NBsem = %d", __FILE__, __LINE__, image->md->sem);
 
@@ -1197,15 +1202,15 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     image->semWritePID = (pid_t *)(map);
     map += sizeof(pid_t) * image->md->sem;
-    
+
     image->semctrl = (uint32_t *)(map);
     map += sizeof(uint32_t) * image->md->sem;
 
     image->semstatus = (uint32_t *)(map);
     map += sizeof(uint32_t) * image->md->sem;
 
-	image->streamproctrace = (STREAM_PROC_TRACE *)(map);
-	map += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
+    image->streamproctrace = (STREAM_PROC_TRACE *)(map);
+    map += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
 
     if((image->md->imagetype & 0xF000F) ==
             (CIRCULAR_BUFFER | ZAXIS_TEMPORAL))
@@ -1513,7 +1518,7 @@ long ImageStreamIO_sempost(
         {
             int semval;
 
-			image->semWritePID[s] = writeProcessPID;
+            image->semWritePID[s] = writeProcessPID;
 
             sem_getvalue(image->semptr[s], &semval);
             if(semval < SEMAPHORE_MAXVAL)
@@ -1680,13 +1685,13 @@ int ImageStreamIO_getsemwaitindex(
 
 
     // check that semindexdefault is within range
-    if( (semindexdefault < image->md->sem) && (semindexdefault >= 0))
+    if((semindexdefault < image->md->sem) && (semindexdefault >= 0))
     {
         // Check if semindexdefault available
         if((image->semReadPID[semindexdefault] == 0) ||
                 (getpgid(image->semReadPID[semindexdefault]) < 0))
         {
-			// if OK, then adopt it
+            // if OK, then adopt it
             image->semReadPID[semindexdefault] = readProcessPID;
             return semindexdefault;
         }
@@ -1708,7 +1713,7 @@ int ImageStreamIO_getsemwaitindex(
     while(semindex < image->md->sem);
 
 
-	// if no semaphore found, return -1
+    // if no semaphore found, return -1
     return -1;
 }
 

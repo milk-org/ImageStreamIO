@@ -18,7 +18,7 @@
 #ifndef _IMAGESTRUCT_H
 #define _IMAGESTRUCT_H
 
-#define IMAGESTRUCT_VERSION "1.02"
+#define IMAGESTRUCT_VERSION "1.03"
 
 #define STRINGMAXLEN_IMAGE_NAME          80
 #define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
@@ -376,6 +376,8 @@ typedef struct /**< structure used to store data arrays                      */
      *
      */
     uint8_t used;
+
+    int64_t createcnt; /**< increments when image is (re)-created */
 
     int32_t shmfd; /**< if shared memory, file descriptor */
 

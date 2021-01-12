@@ -61,9 +61,10 @@ extern "C" {
 
 #define SHAREDMEMDIR    "/milk/shm"          /**< default location of file mapped semaphores, can be over-ridden by env variable MILK_SHM_DIR */
 
-#define SEMAPHORE_MAXVAL    10            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
+#define SEMAPHORE_MAXVAL    1            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 #define SEMAPHORE_INITVAL    0            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 #define IMAGE_NB_SEMAPHORE  10            /**< Number of semaphores per image */
+#define IMAGE_PLACEHOLDER   128            /**< Add a placeholder after the image */
 
 #define IMAGE_NB_PROCTRACE  10            /**< Number of STREAM_PROC_TRACE entries per image */
 
@@ -303,7 +304,7 @@ typedef struct
 
 
     uint8_t  shared;                   /**< stream is in shared memory */
-    
+
     ino_t    inode;                    /**< inode nummber if shared memory */
     int8_t   location;                 /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
     uint8_t  status;                   /**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
@@ -440,7 +441,7 @@ typedef struct /**< structure used to store data arrays                      */
 
     // PID of the process posting the semaphores
     pid_t *semWritePID;
-    
+
     // semaphore control, written by writer to control semaphore behavior
     // see SEMAPHORE_CONTROL_XXX defines for details
     uint32_t *semctrl;

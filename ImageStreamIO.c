@@ -579,7 +579,7 @@ uint64_t ImageStreamIO_offset_data(
     else
     {
         image->array.raw = map;
-        offset = ImageStreamIO_typesize(datatype) * image->md->nelement;
+        offset = ImageStreamIO_typesize(datatype) * image->md->nelement + IMAGE_PLACEHOLDER;
     }
 
     return offset;
@@ -598,11 +598,11 @@ uint64_t ImageStreamIO_initialize_buffer(
     {
         if(image->md->shared == 1)
         {
-            memset(image->array.raw, '\0', image->md->nelement * size_element);
+            memset(image->array.raw, '\0', image->md->nelement * size_element + IMAGE_PLACEHOLDER);
         }
         else
         {
-            image->array.raw = calloc((size_t)image->md->nelement, size_element);
+            image->array.raw = calloc((size_t)image->md->nelement + IMAGE_PLACEHOLDER / size_element, size_element);
             if(image->array.raw == NULL)
             {
                 ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC, "memory allocation failed");
@@ -618,7 +618,7 @@ uint64_t ImageStreamIO_initialize_buffer(
                 fprintf(stderr, "\n");
                 fprintf(stderr, "Requested memory size = %ld elements = %f Mb\n",
                         (long)image->md->nelement,
-                        1.0 / 1024 / 1024 * image->md->nelement * sizeof(uint8_t));
+                        1.0 / 1024 / 1024 * image->md->nelement * size_element);
                 fprintf(stderr, " %c[%d;m", (char)27, 0);
                 exit(EXIT_FAILURE); ///\todo Is this really an exit or should we return?
             }
@@ -629,7 +629,7 @@ uint64_t ImageStreamIO_initialize_buffer(
 #ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
         checkCudaErrors(
-            cudaMalloc(&image->array.raw, size_element * image->md->nelement));
+            cudaMalloc(&image->array.raw, size_element * image->md->nelement + IMAGE_PLACEHOLDER));
         if(image->md->shared == 1)
         {
             checkCudaErrors(
@@ -758,7 +758,7 @@ errno_t ImageStreamIO_createIm_gpu(
                 SEMAPHORE_INITVAL);  // SEMAPHORE_INITVAL defined in ImageStruct.h
         }
         sharedsize = sizeof(IMAGE_METADATA);
-        datasharedsize = imdatamemsize;
+        datasharedsize = imdatamemsize + IMAGE_PLACEHOLDER;
 
         if(location == -1)
         {

@@ -7,7 +7,7 @@ ImageStreamIO_unitTest.cpp
 )
 
 target_link_libraries(ImageStreamIOTest
-    PRIVATE GTest::GTest GTest::Main ImageStreamIO
+    PUBLIC GTest::GTest GTest::Main ImageStreamIO
 )
 
 gtest_add_tests(TARGET ImageStreamIOTest

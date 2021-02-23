@@ -17,9 +17,9 @@ if(NOT TARGET pybind11)
 
   add_library(ImageStreamIOWrap MODULE ImageStreamIOWrap.cpp)
 
-  target_compile_features(ImageStreamIOWrap PRIVATE cxx_std_14)
-  target_include_directories(ImageStreamIOWrap PRIVATE "${pybind11_inc}")
-  target_compile_options(ImageStreamIOWrap PRIVATE "-Wno-deprecated-declarations")
+  target_compile_features(ImageStreamIOWrap PUBLIC cxx_std_14)
+  target_include_directories(ImageStreamIOWrap PUBLIC "${pybind11_inc}")
+  target_compile_options(ImageStreamIOWrap PUBLIC "-Wno-deprecated-declarations")
   set_target_properties(ImageStreamIOWrap
           PROPERTIES PREFIX
               "${PYTHON_MODULE_PREFIX}"
@@ -29,7 +29,7 @@ else()
   pybind11_add_module(ImageStreamIOWrap ImageStreamIOWrap.cpp)
 endif()
 
-target_link_libraries(ImageStreamIOWrap PRIVATE ImageStreamIO)
+target_link_libraries(ImageStreamIOWrap PUBLIC ImageStreamIO)
 
 install(TARGETS ImageStreamIOWrap
         EXPORT ImageStreamIOWrapConfig

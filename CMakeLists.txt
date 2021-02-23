@@ -16,14 +16,11 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(CFITSIO cfitsio)
 if(${CFITSIO_FOUND})
   link_directories(${CFITSIO_LIBRARY_DIRS})
-  target_compile_definitions(${LIBNAME} PRIVATE USE_CFITSIO=1)
-  target_include_directories(${LIBNAME} PRIVATE ${CFITSIO_INCLUDE_DIRS})
+  target_compile_definitions(${LIBNAME} PUBLIC USE_CFITSIO=1)
+  target_include_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
 endif()
 
-target_include_directories(${LIBNAME}
-                           PUBLIC ${PROJECT_SOURCE_DIR}
-                                  ${PROJECT_SOURCE_DIR}/src
-                                  ${PROJECT_SOURCE_DIR}/..)
+target_include_directories(${LIBNAME} PUBLIC ${PROJECT_SOURCE_DIR})
 
 if(USE_CUDA)
   find_package(CUDA REQUIRED)

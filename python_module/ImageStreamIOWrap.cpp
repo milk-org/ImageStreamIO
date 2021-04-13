@@ -652,8 +652,23 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
              }
              return keywords;
            })
-      .def(
-          "set_kws",
+
+      .def("get_kws_list",
+           [](const IMAGE &img) {
+             if (img.array.raw == nullptr) {
+               throw std::runtime_error("image not initialized");
+             }
+             std::list<IMAGE_KEYWORD> keywords;
+             for (int i = 0; i < img.md->NBkw; ++i) {
+               if (strcmp(img.kw[i].name, "") == 0) {
+                 break;
+               }
+               keywords.push_back(img.kw[i]);
+             }
+             return keywords;
+           })
+
+      .def("set_kws",
           [](const IMAGE &img, std::map<std::string, IMAGE_KEYWORD> &keywords) {
             if (img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
@@ -673,6 +688,29 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               img.kw[cnt] = IMAGE_KEYWORD();
             }
           })
+
+      .def("set_kws_list",
+          [](const IMAGE &img, std::list<IMAGE_KEYWORD> &keywords) {
+            if (img.array.raw == nullptr) {
+              throw std::runtime_error("image not initialized");
+            }
+            std::list<IMAGE_KEYWORD>::iterator it =
+                keywords.begin();
+            int cnt = 0;
+            while (it != keywords.end()) {
+              if (cnt >= img.md->NBkw)
+                throw std::runtime_error("Too many keywords provided");
+              img.kw[cnt] = *it;
+              it++;
+              cnt++;
+            }
+            // Pad with empty keywords
+            if (cnt < img.md->NBkw) {
+              img.kw[cnt] = IMAGE_KEYWORD();
+            }
+          })
+
+
       .def_buffer([](const IMAGE &img) -> py::buffer_info {
         if (img.array.raw == nullptr) {
           py::print("image not initialized");

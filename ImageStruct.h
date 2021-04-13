@@ -20,6 +20,10 @@
 
 #define IMAGESTRUCT_VERSION "0.0.01"
 
+#define STRINGMAXLEN_IMAGE_NAME          80
+#define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
+#define KEYWORD_MAX_COMMENT 80            /**< maximun size of a keyword's comment */
+
 #include <semaphore.h>
 #include <stdint.h>
 #include <stdio.h>

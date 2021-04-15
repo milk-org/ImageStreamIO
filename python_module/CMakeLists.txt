@@ -11,7 +11,7 @@ if(NOT TARGET pybind11)
   endif()
   if(IS_DIRECTORY ${WYRM_ROOT})
     add_subdirectory(${WYRM_ROOT}/pybind pybind11_dir)
-    pybind11_add_module(ImageStreamIOWrap ImageStreamIOWrap.cpp)
+    pybind11_add_module(ImageStreamIOWrap-backport ImageStreamIOWrap.cpp)
   else()
     execute_process(COMMAND bash -c "python -m pybind11 --includes"
                     OUTPUT_VARIABLE pybind11_inc)
@@ -22,12 +22,12 @@ if(NOT TARGET pybind11)
     string(REGEX REPLACE "\n$" "" pybind11_inc "${pybind11_inc}")
     string(REGEX REPLACE "\n$" "" PYTHON_MODULE_EXTENSION "${PYTHON_MODULE_EXTENSION}")
 
-    add_library(ImageStreamIOWrap MODULE ImageStreamIOWrap.cpp)
+    add_library(ImageStreamIOWrap-backport MODULE ImageStreamIOWrap.cpp)
 
-    target_compile_features(ImageStreamIOWrap PRIVATE cxx_std_14)
-    target_include_directories(ImageStreamIOWrap PRIVATE "${pybind11_inc}")
-    target_compile_options(ImageStreamIOWrap PRIVATE "-Wno-deprecated-declarations")
-    set_target_properties(ImageStreamIOWrap
+    target_compile_features(ImageStreamIOWrap-backport PRIVATE cxx_std_14)
+    target_include_directories(ImageStreamIOWrap-backport PRIVATE "${pybind11_inc}")
+    target_compile_options(ImageStreamIOWrap-backport PRIVATE "-Wno-deprecated-declarations")
+    set_target_properties(ImageStreamIOWrap-backport
             PROPERTIES PREFIX
                "${PYTHON_MODULE_PREFIX}"
                SUFFIX
@@ -35,12 +35,12 @@ if(NOT TARGET pybind11)
   
     endif()
 else()
-  pybind11_add_module(ImageStreamIOWrap ImageStreamIOWrap.cpp)
+  pybind11_add_module(ImageStreamIOWrap-backport ImageStreamIOWrap.cpp)
 endif()  
 
-target_link_libraries(ImageStreamIOWrap PRIVATE ImageStreamIO)
+target_link_libraries(ImageStreamIOWrap-backport PRIVATE ImageStreamIO-backport)
 
-install(TARGETS ImageStreamIOWrap
+install(TARGETS ImageStreamIOWrap-backport
         EXPORT ImageStreamIOWrapConfig
         ARCHIVE DESTINATION python
         LIBRARY DESTINATION python)

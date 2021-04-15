@@ -11,7 +11,7 @@ if(NOT TARGET pybind11)
   endif()
   if(IS_DIRECTORY ${WYRM_ROOT})
     add_subdirectory(${WYRM_ROOT}/pybind pybind11_dir)
-    pybind11_add_module(ImageStreamIOWrap-backport ImageStreamIOWrap.cpp)
+    pybind11_add_module(ImageStreamIOWrap_backport ImageStreamIOWrap.cpp)
   else()
     execute_process(COMMAND bash -c "python -m pybind11 --includes"
                     OUTPUT_VARIABLE pybind11_inc)
@@ -22,12 +22,12 @@ if(NOT TARGET pybind11)
     string(REGEX REPLACE "\n$" "" pybind11_inc "${pybind11_inc}")
     string(REGEX REPLACE "\n$" "" PYTHON_MODULE_EXTENSION "${PYTHON_MODULE_EXTENSION}")
 
-    add_library(ImageStreamIOWrap-backport MODULE ImageStreamIOWrap.cpp)
+    add_library(ImageStreamIOWrap_backport MODULE ImageStreamIOWrap.cpp)
 
-    target_compile_features(ImageStreamIOWrap-backport PRIVATE cxx_std_14)
-    target_include_directories(ImageStreamIOWrap-backport PRIVATE "${pybind11_inc}")
-    target_compile_options(ImageStreamIOWrap-backport PRIVATE "-Wno-deprecated-declarations")
-    set_target_properties(ImageStreamIOWrap-backport
+    target_compile_features(ImageStreamIOWrap_backport PRIVATE cxx_std_14)
+    target_include_directories(ImageStreamIOWrap_backport PRIVATE "${pybind11_inc}")
+    target_compile_options(ImageStreamIOWrap_backport PRIVATE "-Wno-deprecated-declarations")
+    set_target_properties(ImageStreamIOWrap_backport
             PROPERTIES PREFIX
                "${PYTHON_MODULE_PREFIX}"
                SUFFIX
@@ -35,12 +35,12 @@ if(NOT TARGET pybind11)
   
     endif()
 else()
-  pybind11_add_module(ImageStreamIOWrap-backport ImageStreamIOWrap.cpp)
+  pybind11_add_module(ImageStreamIOWrap_backport ImageStreamIOWrap.cpp)
 endif()  
 
-target_link_libraries(ImageStreamIOWrap-backport PRIVATE ImageStreamIO-backport)
+target_link_libraries(ImageStreamIOWrap_backport PRIVATE ImageStreamIO_backport)
 
-install(TARGETS ImageStreamIOWrap-backport
+install(TARGETS ImageStreamIOWrap_backport
         EXPORT ImageStreamIOWrapConfig
         ARCHIVE DESTINATION python
         LIBRARY DESTINATION python)

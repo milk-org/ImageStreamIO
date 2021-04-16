@@ -151,12 +151,14 @@ extern "C" {
  * 	- type
  * 	- value
  */
-typedef struct {
+typedef struct
+{
     char name[KEYWORD_MAX_STRING]; /**< keyword name                                                   */
     char type;                     /**< N: unused, L: long, D: double, S: 16-char string               */
     uint64_t : 0;                  // align array to 8-byte boundary for speed
 
-    union {
+    union
+    {
         int64_t numl;
         double  numf;
         char    valstr[KEYWORD_MAX_STRING];
@@ -166,24 +168,28 @@ typedef struct {
 #ifdef DATA_PACKED
 } __attribute__((__packed__)) IMAGE_KEYWORD;
 #else
-} IMAGE_KEYWORD;
+}
+IMAGE_KEYWORD;
 #endif
 
 /** @brief structure holding two 8-byte integers
  *
  * Used in an union with struct timespec to ensure fixed 16 byte length
  */
-typedef struct {
+typedef struct
+{
     int64_t firstlong;
     int64_t secondlong;
 } TIMESPECFIXED;
 
-typedef struct {
+typedef struct
+{
     float re;
     float im;
 } complex_float;
 
-typedef struct {
+typedef struct
+{
     double re;
     double im;
 } complex_double;
@@ -290,20 +296,22 @@ typedef struct
     struct timespec creationtime;
     struct timespec lastaccesstime;
 
-    struct timespec atime;             /**< time at which data was acquires/created. This time CAN be copied from input to output */
-    struct timespec writetime;         /**< last write time into data array         */
+    struct timespec
+        atime;             /**< time at which data was acquires/created. This time CAN be copied from input to output */
+    struct timespec
+        writetime;         /**< last write time into data array         */
 
 
-	pid_t creatorPID;  /**< PID of process that created the stream (if shared = 1) */
+    pid_t creatorPID;  /**< PID of process that created the stream (if shared = 1) */
 
-	pid_t ownerPID;    /**< PID of process owning the stream (if shared = 1) */
-	/* May be used to purge stream(s) when a process is completed/dead */
-	/* Initialized to 0 */
-	/* Set to 1 to indicate the stream does not belong to a process */
+    pid_t ownerPID;    /**< PID of process owning the stream (if shared = 1) */
+    /* May be used to purge stream(s) when a process is completed/dead */
+    /* Initialized to 0 */
+    /* Set to 1 to indicate the stream does not belong to a process */
 
 
     uint8_t  shared;                   /**< stream is in shared memory */
-    
+
     ino_t    inode;                    /**< inode nummber if shared memory */
     int8_t   location;                 /**< -1 if in CPU memory, >=0 if in GPU memory on `location` device               */
     uint8_t  status;                   /**< 1 to log image (default); 0 : do not log: 2 : stop log (then goes back to 2) */
@@ -344,14 +352,16 @@ typedef struct
  */
 typedef struct
 {
-	int             triggermode;
-	pid_t           procwrite_PID;        /**< PID of process writing stream. 0 if no entry*/
-	ino_t           trigger_inode;        /**< trigger stream inode */
-	struct timespec ts_procstart;         /**< timestamp process triggered */
-	struct timespec ts_streamupdate;      /**< timestamp write this stream */
-	int             trigsemindex;         /**< trigger semaphore */
-	int             triggerstatus;
-	uint64_t        cnt0;                 /**< trigger stream cnt0 value at trigger */
+    int             triggermode;
+    pid_t
+    procwrite_PID;        /**< PID of process writing stream. 0 if no entry*/
+    ino_t           trigger_inode;        /**< trigger stream inode */
+    struct timespec ts_procstart;         /**< timestamp process triggered */
+    struct timespec ts_streamupdate;      /**< timestamp write this stream */
+    int             trigsemindex;         /**< trigger semaphore */
+    int             triggerstatus;
+    uint64_t
+    cnt0;                 /**< trigger stream cnt0 value at trigger */
 } STREAM_PROC_TRACE;
 
 
@@ -402,7 +412,8 @@ typedef struct /**< structure used to store data arrays                      */
      *
      * @note Up to this point, all members of the structure have a fixed memory offset to the start point
      */
-    union {
+    union
+    {
         void *raw;  // raw pointer
 
         uint8_t *UI8;  // char
@@ -426,7 +437,7 @@ typedef struct /**< structure used to store data arrays                      */
     } array; /**< pointer to data array */
 
 
-	// Semaphores
+    // Semaphores
 
     sem_t **semptr;                    /**< array of pointers to semaphores   (each 8 bytes on 64-bit system) */
 
@@ -440,7 +451,7 @@ typedef struct /**< structure used to store data arrays                      */
 
     // PID of the process posting the semaphores
     pid_t *semWritePID;
-    
+
     // semaphore control, written by writer to control semaphore behavior
     // see SEMAPHORE_CONTROL_XXX defines for details
     uint32_t *semctrl;
@@ -449,15 +460,17 @@ typedef struct /**< structure used to store data arrays                      */
     // see SEMAPHORE_STATUS_XXX defines for details
     uint32_t *semstatus;
 
-	// array
-	// keeps track of stream history/depedencies
-	STREAM_PROC_TRACE *streamproctrace;
+    // array
+    // keeps track of stream history/depedencies
+    STREAM_PROC_TRACE *streamproctrace;
 
 
     uint64_t *flagarray;               /**<  flag for each slice if needed (depends on imagetype) */
     uint64_t *cntarray;                /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
-    struct timespec *atimearray;       /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
-    struct timespec *writetimearray;   /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
+    struct timespec
+        *atimearray;       /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
+    struct timespec
+        *writetimearray;   /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
 
 #ifdef DATA_PACKED
 } __attribute__((__packed__)) IMAGE;

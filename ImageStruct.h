@@ -165,12 +165,9 @@ typedef struct
     } value;
 
     char comment[KEYWORD_MAX_COMMENT];
-#ifdef DATA_PACKED
-} __attribute__((__packed__)) IMAGE_KEYWORD;
-#else
 }
 IMAGE_KEYWORD;
-#endif
+
 
 /** @brief structure holding two 8-byte integers
  *
@@ -335,11 +332,7 @@ typedef struct
 
     cudaIpcMemHandle_t cudaMemHandle;
 
-#ifdef DATA_PACKED
-} __attribute__((__packed__)) IMAGE_METADATA;
-#else
 } IMAGE_METADATA;
-#endif
 
 
 
@@ -472,11 +465,8 @@ typedef struct /**< structure used to store data arrays                      */
     struct timespec
         *writetimearray;   /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
 
-#ifdef DATA_PACKED
-} __attribute__((__packed__)) IMAGE;
-#else
 } IMAGE;
-#endif
+
 
 #ifdef __cplusplus
 }  // extern "C"

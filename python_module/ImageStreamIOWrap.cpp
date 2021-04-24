@@ -36,8 +36,8 @@ struct IMAGE_METADATA_B {
 struct IMAGE_B {
     IMAGE img;
 
-    IMAGE_B() : img(){};
-    IMAGE_B(IMAGE img) : img(img){};
+    IMAGE_B() : img(){std::cout << "Call 1" << std::endl;};
+    IMAGE_B(IMAGE img) : img(img){std::cout << "Call 2" << std::endl;};
 };
 
 std::string toString(const IMAGE_KEYWORD_B &kw) {
@@ -557,20 +557,19 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
   // IMAGE interface
   py::class_<IMAGE_B>(m, "Image", py::buffer_protocol())
       .def(py::init([]() { return std::unique_ptr<IMAGE_B>(new IMAGE_B()); }))
-      .def_property_readonly("used", [](const IMAGE_B &img) { return img.img.used; })
-      .def_property_readonly("memsize", [](const IMAGE_B &img) { return img.img.memsize; })
-      .def_property_readonly("md", [](const IMAGE_B &img) { return img.img.md; })
+      .def_property_readonly("used", [](const IMAGE_B &img_b) { return img_b.img.used; })
+      .def_property_readonly("memsize", [](const IMAGE_B &img_b) { return img_b.img.memsize; })
+      .def_property_readonly("md", [](const IMAGE_B &img_b) { return img_b.img.md; })
       .def_property_readonly(
           "shape",
           [](const IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            py::tuple dims(img.md->naxis);
-            const uint32_t *ptr = img.md->size;
+            py::tuple dims(img_b.img.md->naxis);
+            const uint32_t *ptr = img_b.img.md->size;
             // std::copy(ptr, ptr + img.md->naxis, dims);
-            for (int i{}; i < img.md->naxis; ++i) {
+            for (int i{}; i < img_b.img.md->naxis; ++i) {
               dims[i] = ptr[i];
             }
             return dims;
@@ -579,32 +578,30 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def_property_readonly(
           "semReadPID",
           [](const IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            std::vector<pid_t> semReadPID(img.md->sem);
-            for (int i = 0; i < img.md->sem; ++i) {
-              semReadPID[i] = img.semReadPID[i];
+            std::vector<pid_t> semReadPID(img_b.img.md->sem);
+            for (int i = 0; i < img_b.img.md->sem; ++i) {
+              semReadPID[i] = img_b.img.semReadPID[i];
             }
             return semReadPID;
           })
       .def_property_readonly(
           "acqtimearray",
           [](const IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            if (img.atimearray == NULL) {
+            if (img_b.img.atimearray == NULL) {
               throw std::runtime_error("acqtimearray not initialized");
             }
             std::vector<std::chrono::system_clock::time_point> acqtimearray(
-                img.md->size[2]);
-            for (int i = 0; i < img.md->size[2]; ++i) {
+                img_b.img.md->size[2]);
+            for (int i = 0; i < img_b.img.md->size[2]; ++i) {
               auto acqtime =
-                  std::chrono::seconds{img.atimearray[i].tv_sec} +
-                  std::chrono::nanoseconds{img.atimearray[i].tv_nsec};
+                  std::chrono::seconds{img_b.img.atimearray[i].tv_sec} +
+                  std::chrono::nanoseconds{img_b.img.atimearray[i].tv_nsec};
               std::chrono::system_clock::time_point tp{acqtime};
               acqtimearray[i] = tp;
             }
@@ -613,19 +610,18 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def_property_readonly(
           "writetimearray",
           [](const IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            if (img.writetimearray == NULL) {
+            if (img_b.img.writetimearray == NULL) {
               throw std::runtime_error("writetimearray not initialized");
             }
             std::vector<std::chrono::system_clock::time_point> writetimearray(
-                img.md->size[2]);
-            for (int i = 0; i < img.md->size[2]; ++i) {
+                img_b.img.md->size[2]);
+            for (int i = 0; i < img_b.img.md->size[2]; ++i) {
               auto writetime =
-                  std::chrono::seconds{img.writetimearray[i].tv_sec} +
-                  std::chrono::nanoseconds{img.writetimearray[i].tv_nsec};
+                  std::chrono::seconds{img_b.img.writetimearray[i].tv_sec} +
+                  std::chrono::nanoseconds{img_b.img.writetimearray[i].tv_nsec};
               std::chrono::system_clock::time_point tp{writetime};
               writetimearray[i] = tp;
             }
@@ -634,16 +630,15 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def_property_readonly(
           "cntarray",
           [](const IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            if (img.cntarray == NULL) {
+            if (img_b.img.cntarray == NULL) {
               throw std::runtime_error("cntarray not initialized");
             }
-            std::vector<uint64_t> cntarray(img.md->size[2]);
-            for (int i = 0; i < img.md->size[2]; ++i) {
-              cntarray[i] = img.cntarray[i];
+            std::vector<uint64_t> cntarray(img_b.img.md->size[2]);
+            for (int i = 0; i < img_b.img.md->size[2]; ++i) {
+              cntarray[i] = img_b.img.cntarray[i];
             }
             return cntarray;
           })
@@ -666,124 +661,119 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def_property_readonly(
           "semWritePID",
           [](const IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            std::vector<pid_t> semWritePID(img.md->sem);
-            for (int i = 0; i < img.md->sem; ++i) {
-              semWritePID[i] = img.semWritePID[i];
+            std::vector<pid_t> semWritePID(img_b.img.md->sem);
+            for (int i = 0; i < img_b.img.md->sem; ++i) {
+              semWritePID[i] = img_b.img.semWritePID[i];
             }
             return semWritePID;
           })
       .def("get_kws",
            [](const IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-             if (img.array.raw == nullptr) {
+             if (img_b.img.array.raw == nullptr) {
                throw std::runtime_error("image not initialized");
              }
              std::map<std::string, IMAGE_KEYWORD_B> keywords;
-             for (int i = 0; i < img.md->NBkw; ++i) {
-               if (strcmp(img.kw[i].name, "") == 0) {
+             for (int i = 0; i < img_b.img.md->NBkw; ++i) {
+               if (strcmp(img_b.img.kw[i].name, "") == 0) {
                  break;
                }
-               std::string key(img.kw[i].name);
-               keywords[key] = img.kw[i];
+               std::string key(img_b.img.kw[i].name);
+               keywords[key] = img_b.img.kw[i];
              }
              return keywords;
            })
 
       .def("get_kws_list",
            [](const IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-             if (img.array.raw == nullptr) {
+             if (img_b.img.array.raw == nullptr) {
                throw std::runtime_error("image not initialized");
              }
              std::list<IMAGE_KEYWORD_B> keywords;
-             for (int i = 0; i < img.md->NBkw; ++i) {
-               if (strcmp(img.kw[i].name, "") == 0) {
+             for (int i = 0; i < img_b.img.md->NBkw; ++i) {
+               if (strcmp(img_b.img.kw[i].name, "") == 0) {
                  break;
                }
-               keywords.push_back(IMAGE_KEYWORD_B(img.kw[i]));
+               keywords.push_back(IMAGE_KEYWORD_B(img_b.img.kw[i]));
              }
              return keywords;
            })
 
       .def("set_kws",
           [](const IMAGE_B &img_b, std::map<std::string, IMAGE_KEYWORD_B> &keywords) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
             std::map<std::string, IMAGE_KEYWORD_B>::iterator it =
                 keywords.begin();
             int cnt = 0;
             while (it != keywords.end()) {
-              if (cnt >= img.md->NBkw)
+              if (cnt >= img_b.img.md->NBkw)
                 throw std::runtime_error("Too many keywords provided");
-              img.kw[cnt] = (it->second).kw;
+              img_b.img.kw[cnt] = (it->second).kw;
               it++;
               cnt++;
             }
             // Pad with empty keywords
-            if (cnt < img.md->NBkw) {
-              img.kw[cnt] = IMAGE_KEYWORD_B().kw;
+            if (cnt < img_b.img.md->NBkw) {
+              img_b.img.kw[cnt] = IMAGE_KEYWORD_B().kw;
             }
           })
 
       .def("set_kws_list",
           [](const IMAGE_B &img_b, std::list<IMAGE_KEYWORD_B> &keywords) {
             IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
             std::list<IMAGE_KEYWORD_B>::iterator it =
                 keywords.begin();
             int cnt = 0;
             while (it != keywords.end()) {
-              if (cnt >= img.md->NBkw)
+              if (cnt >= img_b.img.md->NBkw)
                 throw std::runtime_error("Too many keywords provided");
-              img.kw[cnt] = (*it).kw;
+              img_b.img.kw[cnt] = (*it).kw;
               it++;
               cnt++;
             }
             // Pad with empty keywords
-            if (cnt < img.md->NBkw) {
-              img.kw[cnt] = IMAGE_KEYWORD_B().kw;
+            if (cnt < img_b.img.md->NBkw) {
+              img_b.img.kw[cnt] = IMAGE_KEYWORD_B().kw;
             }
           })
 
 
       .def_buffer([](const IMAGE_B &img_b) -> py::buffer_info {
-        IMAGE img = img_b.img;
-        if (img.array.raw == nullptr) {
+        if (img_b.img.array.raw == nullptr) {
           py::print("image not initialized");
           return py::buffer_info();
         }
-        if (img.md->location >= 0) {
+        if (img_b.img.md->location >= 0) {
           py::print("Can not use this with a GPU buffer");
           return py::buffer_info();
         }
 
-        ImageStreamIODataType_b dt(img.md->datatype);
+        ImageStreamIODataType_b dt(img_b.img.md->datatype);
         std::string format = ImageStreamIODataTypeToPyFormat(dt);
-        std::vector<ssize_t> shape(img.md->naxis);
-        std::vector<ssize_t> strides(img.md->naxis);
+        std::vector<ssize_t> shape(img_b.img.md->naxis);
+        std::vector<ssize_t> strides(img_b.img.md->naxis);
         ssize_t stride = dt.asize;
 
         // Row Major representation
         // for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
         // Col Major representation
-        for (int8_t axis(0); axis < img.md->naxis; ++axis) {
-          shape[axis] = img.md->size[axis];
+        for (int8_t axis(0); axis < img_b.img.md->naxis; ++axis) {
+          shape[axis] = img_b.img.md->size[axis];
           strides[axis] = stride;
           stride *= shape[axis];
         }
         return py::buffer_info(
-            img.array.raw, // Pointer to buffer
+            img_b.img.array.raw, // Pointer to buffer
             dt.asize,      // Size of one scalar
             format,        // Python struct-style format descriptor
-            img.md->naxis, // Number of dimensions
+            img_b.img.md->naxis, // Number of dimensions
             shape,         // Buffer dimensions
             strides        // Strides (in bytes) for each index
         );
@@ -791,31 +781,30 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
 
       .def("copy",
            [](const IMAGE_B &img_b) -> py::object {
-             IMAGE img = img_b.img;
-             if (img.array.raw == nullptr)
+             if (img_b.img.array.raw == nullptr)
                throw std::runtime_error("image not initialized");
-             ImageStreamIODataType_b dt(img.md->datatype);
+             ImageStreamIODataType_b dt(img_b.img.md->datatype);
              switch (dt.datatype) {
                case ImageStreamIODataType_b::DataType::UINT8:
-                 return convert_img<uint8_t>(img);
+                 return convert_img<uint8_t>(img_b.img);
                case ImageStreamIODataType_b::DataType::INT8:
-                 return convert_img<int8_t>(img);
+                 return convert_img<int8_t>(img_b.img);
                case ImageStreamIODataType_b::DataType::UINT16:
-                 return convert_img<uint16_t>(img);
+                 return convert_img<uint16_t>(img_b.img);
                case ImageStreamIODataType_b::DataType::INT16:
-                 return convert_img<int16_t>(img);
+                 return convert_img<int16_t>(img_b.img);
                case ImageStreamIODataType_b::DataType::UINT32:
-                 return convert_img<uint32_t>(img);
+                 return convert_img<uint32_t>(img_b.img);
                case ImageStreamIODataType_b::DataType::INT32:
-                 return convert_img<int32_t>(img);
+                 return convert_img<int32_t>(img_b.img);
                case ImageStreamIODataType_b::DataType::UINT64:
-                 return convert_img<uint64_t>(img);
+                 return convert_img<uint64_t>(img_b.img);
                case ImageStreamIODataType_b::DataType::INT64:
-                 return convert_img<int64_t>(img);
+                 return convert_img<int64_t>(img_b.img);
                case ImageStreamIODataType_b::DataType::FLOAT:
-                 return convert_img<float>(img);
+                 return convert_img<float>(img_b.img);
                case ImageStreamIODataType_b::DataType::DOUBLE:
-                 return convert_img<double>(img);
+                 return convert_img<double>(img_b.img);
                // case ImageStreamIODataType_b::DataType::COMPLEX_FLOAT: return ;
                // case ImageStreamIODataType_b::DataType::COMPLEX_DOUBLE: return ;
                default:
@@ -908,7 +897,6 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
           [](IMAGE_B &img_b, const std::string &name, const py::buffer &buffer,
              int8_t location, uint8_t shared, int NBsem, int NBkw,
              uint64_t imagetype) {
-            IMAGE img = img_b.img;
             py::buffer_info info = buffer.request();
 
             auto buf = pybind11::array::ensure(buffer);
@@ -926,29 +914,29 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
             }
 
             int res = ImageStreamIO_createIm_gpu(
-                &img, name.c_str(), buf.ndim(), dims, datatype, location,
+                &(img_b.img), name.c_str(), buf.ndim(), dims, datatype, location,
                 shared, NBsem, NBkw, imagetype);
             if (res == 0) {
               if (buf.dtype() == pybind11::dtype::of<uint8_t>()) {
-                write<uint8_t>(img, buffer);
+                write<uint8_t>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<int8_t>()) {
-                write<int8_t>(img, buffer);
+                write<int8_t>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<uint16_t>()) {
-                write<uint16_t>(img, buffer);
+                write<uint16_t>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<int16_t>()) {
-                write<int16_t>(img, buffer);
+                write<int16_t>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<uint32_t>()) {
-                write<uint32_t>(img, buffer);
+                write<uint32_t>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<int32_t>()) {
-                write<int32_t>(img, buffer);
+                write<int32_t>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<uint64_t>()) {
-                write<uint64_t>(img, buffer);
+                write<uint64_t>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<int64_t>()) {
-                write<int64_t>(img, buffer);
+                write<int64_t>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<float>()) {
-                write<float>(img, buffer);
+                write<float>(img_b.img, buffer);
               } else if (buf.dtype() == pybind11::dtype::of<double>()) {
-                write<double>(img, buffer);
+                write<double>(img_b.img, buffer);
               } else {
                 throw std::invalid_argument("unsupported array datatype");
               }
@@ -1047,8 +1035,7 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def(
           "open",
           [](IMAGE_B &img_b, std::string name) {
-            IMAGE img = img_b.img;
-            return ImageStreamIO_openIm(&img, name.c_str());
+            return ImageStreamIO_openIm(&(img_b.img), name.c_str());
           },
           R"pbdoc(
             Open / connect to existing shared memory image stream
@@ -1062,11 +1049,10 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def(
           "close",
           [](IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            return ImageStreamIO_closeIm(&img);
+            return ImageStreamIO_closeIm(&(img_b.img));
           },
           R"pbdoc(
             Close a shared memory image stream
@@ -1079,11 +1065,10 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def(
           "destroy",
           [](IMAGE_B &img_b) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            return ImageStreamIO_destroyIm(&img);
+            return ImageStreamIO_destroyIm(&(img_b.img));
           },
           R"pbdoc(
             For a shared image:
@@ -1099,11 +1084,10 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def(
           "getsemwaitindex",
           [](IMAGE_B &img_b, long index) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            return ImageStreamIO_getsemwaitindex(&img, index);
+            return ImageStreamIO_getsemwaitindex(&(img_b.img), index);
           },
           R"pbdoc(
             Get available shmim semaphore index
@@ -1119,11 +1103,10 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def(
           "semwait",
           [](IMAGE_B &img_b, long index) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            return ImageStreamIO_semwait(&img, index);
+            return ImageStreamIO_semwait(&(img_b.img), index);
           },
           R"pbdoc(
                 Read / connect to existing shared memory image stream
@@ -1137,8 +1120,7 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def(
           "semtimedwait",
           [](IMAGE_B &img_b, long index, float timeoutsec) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
             struct timespec timeout;
@@ -1146,7 +1128,7 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
             timeout.tv_nsec += (long)(timeoutsec * 1000000000L);
             timeout.tv_sec += timeout.tv_nsec / 1000000000L;
             timeout.tv_nsec = timeout.tv_nsec % 1000000000L;
-            return ImageStreamIO_semtimedwait(&img, index, &timeout);
+            return ImageStreamIO_semtimedwait(&(img_b.img), index, &timeout);
           },
           R"pbdoc(
                 Read / connect to existing shared memory image stream
@@ -1160,11 +1142,10 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def(
           "sempost",
           [](IMAGE_B &img_b, long index) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            return ImageStreamIO_sempost(&img, index);
+            return ImageStreamIO_sempost(&(img_b.img), index);
           },
           R"pbdoc(
                 Read / connect to existing shared memory image stream
@@ -1178,11 +1159,10 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
       .def(
           "semflush",
           [](IMAGE_B &img_b, long index) {
-            IMAGE img = img_b.img;
-            if (img.array.raw == nullptr) {
+            if (img_b.img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            return ImageStreamIO_semflush(&img, index);
+            return ImageStreamIO_semflush(&(img_b.img), index);
           },
           R"pbdoc(
                 Flush shmim semaphore

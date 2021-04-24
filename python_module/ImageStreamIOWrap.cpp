@@ -36,8 +36,8 @@ struct IMAGE_METADATA_B {
 struct IMAGE_B {
     IMAGE img;
 
-    IMAGE_B() : img(){std::cout << "Call 1" << std::endl;};
-    IMAGE_B(IMAGE img) : img(img){std::cout << "Call 2" << std::endl;};
+    IMAGE_B() : img(){};
+    IMAGE_B(IMAGE img) : img(img){};
 };
 
 std::string toString(const IMAGE_KEYWORD_B &kw) {

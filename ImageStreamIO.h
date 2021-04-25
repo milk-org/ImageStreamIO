@@ -17,8 +17,7 @@ extern "C"
 
 #include "ImageStruct.h"
 
-
-void __attribute__ ((constructor)) libinit_ImageStreamIO();
+void __attribute__((constructor)) libinit_ImageStreamIO();
 
 
 
@@ -40,7 +39,8 @@ errno_t ImageStreamIO_set_default_printError();
   * \returns IMAGESTREAMIO_SUCCESS on success
   * \returns IMAGESTREAMIO_FAILURE on an error
   */
-errno_t ImageStreamIO_set_printError( errno_t (*new_printError)( const char *, const char *, int, errno_t, char * ) );
+errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
+                                     const char *, int, errno_t, char *));
 
 
 /* =============================================================================================== */
@@ -50,15 +50,18 @@ errno_t ImageStreamIO_set_printError( errno_t (*new_printError)( const char *, c
 /* =============================================================================================== */
 /* =============================================================================================== */
 
-inline uint64_t ImageStreamIO_nbSlices(const IMAGE *image) {
+inline uint64_t ImageStreamIO_nbSlices(const IMAGE *image)
+{
     return (image->md->naxis == 3 ? image->md->size[2] : 1);
 }
 
-inline uint64_t ImageStreamIO_writeIndex(const IMAGE *image) {
+inline uint64_t ImageStreamIO_writeIndex(const IMAGE *image)
+{
     return (image->md->cnt1 + 1) % ImageStreamIO_nbSlices(image);
 }
 
-inline uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image) {
+inline uint64_t ImageStreamIO_readLastWroteIndex(const IMAGE *image)
+{
     return (image->md->naxis == 3 ? image->md->cnt1 : 0);
 }
 
@@ -113,7 +116,8 @@ errno_t ImageStreamIO_readBufferAt(
 inline errno_t ImageStreamIO_writeBuffer(
     const IMAGE *image, ///< [in] the name of the shared memory file
     void **buffer ///< [out] raw pointer where the producer should write
-) {
+)
+{
     const uint64_t write_index = ImageStreamIO_writeIndex(image);
     return ImageStreamIO_readBufferAt(image, write_index, buffer);
 }
@@ -141,7 +145,8 @@ inline errno_t ImageStreamIO_writeBuffer(
 inline errno_t ImageStreamIO_readLastWroteBuffer(
     const IMAGE *image, ///< [in] the name of the shared memory file
     void **buffer ///< [out] raw pointer where the consumer will find the last frame wrote
-) {
+)
+{
     const int64_t read_index = ImageStreamIO_readLastWroteIndex(image);
     return ImageStreamIO_readBufferAt(image, read_index, buffer);
 }
@@ -163,9 +168,9 @@ inline errno_t ImageStreamIO_readLastWroteBuffer(
   * \returns IMAGESTREAMIO_FAILURE on error
   */
 errno_t ImageStreamIO_filename(
-    char * file_name,    ///< [out] the file name string to fill in
+    char *file_name,     ///< [out] the file name string to fill in
     size_t ssz,          ///< [in] the allocated size of file_name
-    const char * im_name ///< [in] the image name
+    const char *im_name  ///< [in] the image name
 );
 
 /** @brief Get the size in bytes from the data type code.
@@ -173,7 +178,8 @@ errno_t ImageStreamIO_filename(
   * \returns the size in bytes of the data type if valid
   * \returns -1 if atype is not valid
   */
-int ImageStreamIO_typesize( uint8_t atype /**< [in] the type code (see ImageStruct.h*/
+int ImageStreamIO_typesize(uint8_t
+                           atype  /**< [in] the type code (see ImageStruct.h*/
                           );
 
 /** @brief Get the FITSIO BITPIX from the data type code.
@@ -181,7 +187,8 @@ int ImageStreamIO_typesize( uint8_t atype /**< [in] the type code (see ImageStru
   * \returns the BITPIX if atype valid
   * \returns -1 if atype is not valid
   */
-int ImageStreamIO_bitpix( uint8_t atype /**< [in] the type code (see ImageStruct.h*/
+int ImageStreamIO_bitpix(uint8_t
+                         atype  /**< [in] the type code (see ImageStruct.h*/
                         );
 
 ///@}
@@ -196,7 +203,8 @@ int ImageStreamIO_bitpix( uint8_t atype /**< [in] the type code (see ImageStruct
 /** @brief Create shared memory image stream (legacy API) */
 errno_t ImageStreamIO_createIm(
     IMAGE *image,      ///< [out] IMAGE structure which will have its members allocated and initialized.
-    const char *name,  ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
+    const char
+    *name,  ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
     long naxis,        ///< [in] number of axes in the image.
     uint32_t *size,    ///< [in] the size of the image along each axis.  Must have naxis elements.
     uint8_t atype,     ///< [in] data type code
@@ -207,7 +215,8 @@ errno_t ImageStreamIO_createIm(
 /** @brief Create shared memory image stream */
 errno_t ImageStreamIO_createIm_gpu(
     IMAGE *image,      ///< [out] IMAGE structure which will have its members allocated and initialized.
-    const char *name,  ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
+    const char
+    *name,  ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
     long naxis,        ///< [in] number of axes in the image.
     uint32_t *size,    ///< [in] the size of the image along each axis.  Must have naxis elements.
     uint8_t atype,     ///< [in] data type code
@@ -215,7 +224,8 @@ errno_t ImageStreamIO_createIm_gpu(
     int shared,        ///< [in] if true then a shared memory buffer is allocated.  If false, only local storage is used.
     int NBsem,         ///< [in] the number of semaphores to allocate.
     int NBkw,          ///< [in] the number of keywords to allocate.
-    uint64_t imagetype ///< [in] type of the stream
+    uint64_t imagetype,///< [in] type of the stream
+    uint32_t CBsize    ///< [in] Number of circ buff frames if shared mem, 0 if unused
 );
 
 /** @brief Deallocate and remove an IMAGE structure.
@@ -243,17 +253,19 @@ errno_t ImageStreamIO_destroyIm(
   */
 errno_t ImageStreamIO_openIm(
     IMAGE *image,    ///< [out] IMAGE structure which will be attached to the existing IMAGE
-    const char *name ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
+    const char
+    *name ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
 );
 
 
 
-void* ImageStreamIO_get_image_d_ptr(IMAGE *image);
+void *ImageStreamIO_get_image_d_ptr(IMAGE *image);
 
 
 /** @brief Read / connect to existing shared memory image stream */
 errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
-    const char *name, ///< [in] the name of the shared memory file to access, as in data.tmpfsdir/<name>_im.shm
+    const char
+    *name, ///< [in] the name of the shared memory file to access, as in data.tmpfsdir/<name>_im.shm
     IMAGE *image      ///< [out] the IMAGE structure to connect to the stream
 );
 
@@ -266,7 +278,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
   * \returns the appropriate error code otherwise if an error occurs
   *
   */
-errno_t ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structure which contains the image data and meta-data.*/);
+errno_t ImageStreamIO_closeIm(IMAGE
+                              *image /**< [in] A real-time image structure which contains the image data and meta-data.*/);
 
 ///@}
 
@@ -278,7 +291,7 @@ errno_t ImageStreamIO_closeIm(IMAGE * image /**< [in] A real-time image structur
 /* =============================================================================================== */
 
 
-/** @brief Destroy shmim semaphores 
+/** @brief Destroy shmim semaphores
  *
  * ## Purpose
  *
@@ -317,7 +330,7 @@ int ImageStreamIO_createsem(
 
 
 
-/** @brief Post all shmim semaphores 
+/** @brief Post all shmim semaphores
  *
  * ## Purpose
  *
@@ -342,7 +355,7 @@ long ImageStreamIO_sempost(
 
 
 
-/** @brief Post all shmim semaphores except one 
+/** @brief Post all shmim semaphores except one
  *
  * ## Purpose
  *

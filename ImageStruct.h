@@ -18,7 +18,7 @@
 #ifndef _IMAGESTRUCT_H
 #define _IMAGESTRUCT_H
 
-#define IMAGESTRUCT_VERSION "1.03"
+#define IMAGESTRUCT_VERSION "1.04"
 
 #define STRINGMAXLEN_IMAGE_NAME          80
 #define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
@@ -164,6 +164,7 @@ typedef struct
         char    valstr[KEYWORD_MAX_STRING];
     } value;
 
+    uint64_t cnt; // counter, incremented at each keyword write
     char comment[KEYWORD_MAX_COMMENT];
 }
 IMAGE_KEYWORD;
@@ -233,6 +234,7 @@ typedef struct
      * This is computed upon image creation
      */
     uint64_t nelement;
+    uint64_t imdatamemsize; // image size [bytes]
 
 
 
@@ -293,10 +295,11 @@ typedef struct
     struct timespec creationtime;
     struct timespec lastaccesstime;
 
-    struct timespec
-        atime;             /**< time at which data was acquires/created. This time CAN be copied from input to output */
-    struct timespec
-        writetime;         /**< last write time into data array         */
+    // time at which data was acquires/created. This time CAN be copied from input to output
+    struct timespec atime;
+
+    // last write time into data array
+    struct timespec writetime;
 
 
     pid_t creatorPID;  /**< PID of process that created the stream (if shared = 1) */
@@ -330,6 +333,10 @@ typedef struct
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
 
+    // fast circular memory buffer
+    uint32_t CBsize;  // 0 if no CB allocated
+    uint32_t CBindex; // current index
+
     cudaIpcMemHandle_t cudaMemHandle;
 
 } IMAGE_METADATA;
@@ -357,6 +364,17 @@ typedef struct
     cnt0;                 /**< trigger stream cnt0 value at trigger */
 } STREAM_PROC_TRACE;
 
+
+
+/** @brief CBFRAMEMD fast access circular buffer metadata
+ */
+typedef struct
+{
+    uint64_t cnt0;
+    uint64_t cnt1;
+    struct timespec atime;
+    struct timespec writetime;
+} CBFRAMEMD;
 
 
 /** @brief IMAGE structure
@@ -460,10 +478,20 @@ typedef struct /**< structure used to store data arrays                      */
 
     uint64_t *flagarray;               /**<  flag for each slice if needed (depends on imagetype) */
     uint64_t *cntarray;                /**< For circular buffer: counter array for circular buffer, copy of cnt0 onto slice index  */
-    struct timespec
-        *atimearray;       /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
-    struct timespec
-        *writetimearray;   /**< For each slice index: time at which data was acquires/created. This time CAN be copied from input to output */
+
+    // For each slice index: time at which data was acquires/created. This time CAN be copied from input to output
+    struct timespec *atimearray;
+
+    // For each slice index: time at which data was written. This time CAN be copied from input to output
+    struct timespec *writetimearray;
+
+
+    // Circular Buffer (CB) option
+    // if CBsize>0, recent frames are memcpied in circular buffer
+    // recent frames may be accessed in small CB for logging
+
+    CBFRAMEMD * CircBuff_md; // circular buffer metadata
+    void * CBimdata;         // data storage for circ buffer
 
 } IMAGE;
 

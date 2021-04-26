@@ -862,7 +862,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
           "create",
           [](IMAGE &img, const std::string &name, const py::buffer &buffer,
              int8_t location, uint8_t shared, int NBsem, int NBkw,
-             uint64_t imagetype) {
+             uint64_t imagetype, 0) {
             py::buffer_info info = buffer.request();
 
             auto buf = pybind11::array::ensure(buffer);

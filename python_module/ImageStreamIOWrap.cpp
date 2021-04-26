@@ -881,7 +881,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
 
             int res = ImageStreamIO_createIm_gpu(
                 &img, name.c_str(), buf.ndim(), dims, datatype, location,
-                shared, NBsem, NBkw, imagetype);
+                shared, NBsem, NBkw, imagetype, CBsize);
             if (res == 0) {
               if (buf.dtype() == pybind11::dtype::of<uint8_t>()) {
                 write<uint8_t>(img, buffer);

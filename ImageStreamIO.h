@@ -209,7 +209,9 @@ errno_t ImageStreamIO_createIm(
     uint32_t *size,    ///< [in] the size of the image along each axis.  Must have naxis elements.
     uint8_t atype,     ///< [in] data type code
     int shared,        ///< [in] if true then a shared memory buffer is allocated.  If false, only local storage is used.
-    int NBkw           ///< [in] the number of keywords to allocate.
+    int NBkw,          ///< [in] the number of keywords to allocate.
+    int CBsize         ///< [in] Circular Buffer size
+
 );
 
 /** @brief Create shared memory image stream */

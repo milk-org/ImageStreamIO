@@ -586,12 +586,13 @@ errno_t ImageStreamIO_createIm(
     uint32_t   *size,
     uint8_t     datatype,
     int         shared,
-    int         NBkw
+    int         NBkw,
+    int         CBsize
 )
 {
     return ImageStreamIO_createIm_gpu(image, name, naxis, size, datatype, -1,
                                       shared, IMAGE_NB_SEMAPHORE, NBkw,
-                                      MATH_DATA, 0);
+                                      MATH_DATA, (uint32_t) CBsize);
 }
 
 

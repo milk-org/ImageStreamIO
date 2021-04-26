@@ -860,6 +860,7 @@ errno_t ImageStreamIO_createIm_gpu(
         map += datasharedsize * CBsize;
         image->md->CBsize = CBsize;
         image->md->CBindex = 0;
+        image->md->CBcycle = 0;
 
     }
     else
@@ -880,6 +881,7 @@ errno_t ImageStreamIO_createIm_gpu(
         }
         image->md->CBsize = 0;
         image->md->CBindex = 0;
+        image->md->CBcycle = 0;
     }
 
 

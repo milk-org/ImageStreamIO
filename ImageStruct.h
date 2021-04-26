@@ -334,8 +334,9 @@ typedef struct
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
 
     // fast circular memory buffer
-    uint32_t CBsize;  // 0 if no CB allocated
-    uint32_t CBindex; // current index
+    uint32_t CBsize;    // 0 if no CB allocated
+    uint32_t CBindex;   // current index within buffer
+    uint64_t CBcycle;   // number of buffer cycles
 
     cudaIpcMemHandle_t cudaMemHandle;
 

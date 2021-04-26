@@ -862,7 +862,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
           "create",
           [](IMAGE &img, const std::string &name, const py::buffer &buffer,
              int8_t location, uint8_t shared, int NBsem, int NBkw,
-             uint64_t imagetype, 0) {
+             uint64_t imagetype, uint32_t CBsize) {
             py::buffer_info info = buffer.request();
 
             auto buf = pybind11::array::ensure(buffer);
@@ -919,12 +919,14 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 NBkw     [in]:  the number of keywords to allocate.
                 NBsem    [in]:  the number of semaphore to attach.
                 imagetype[in]:  the type of the image to create (ImageStreamIOType).
+                CBsize   [in]:  fast circular buffer size
             Return:
                 ret      [out]: error code
             )pbdoc",
           py::arg("name"), py::arg("buffer"), py::arg("location") = -1,
           py::arg("shared") = 1, py::arg("NBsem") = IMAGE_NB_SEMAPHORE,
-          py::arg("NBkw") = 1, py::arg("imagetype") = MATH_DATA)
+          py::arg("NBkw") = 1, py::arg("imagetype") = MATH_DATA,
+          py::arg("CBsize") = 0)
 
       // .def(
       //     "create",

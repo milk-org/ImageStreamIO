@@ -39,7 +39,8 @@
 #endif
 
 
-
+// shared memory and semaphores file permission
+#define FILEMODE 0666
 
 
 
@@ -666,7 +667,8 @@ errno_t ImageStreamIO_createIm_gpu(
         remove(sname);
         image->semlog = NULL;
 
-        if((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED)
+        umask(0);
+        if((image->semlog = sem_open(sname, O_CREAT, FILEMODE, 1)) == SEM_FAILED)
         {
             fprintf(stderr, "Semaphore %s :", sname);
             ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT,
@@ -738,7 +740,8 @@ errno_t ImageStreamIO_createIm_gpu(
         }
 
         int SM_fd;  // shared memory file descriptor
-        SM_fd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+        umask(0);
+        SM_fd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t) FILEMODE);
         if(SM_fd == -1)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,
@@ -1273,7 +1276,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
                  snb);
         //DEBUG_TRACEPOINTLOG("%4d looking for %s", __LINE__, sname);
         sem_t *stest;
-        if((stest = sem_open(sname, 0, 0644, 0)) == SEM_FAILED)
+        umask(0);
+        if((stest = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
         {
             sOK = 0; //not an error here
         }
@@ -1292,12 +1296,13 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name,
                  s);
-        if((image->semptr[s] = sem_open(sname, 0, 0644, 0)) == SEM_FAILED)
+        umask(0);
+        if((image->semptr[s] = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
         {
             //printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
             //       sname);
 
-            if((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 1)) ==
+            if((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 1)) ==
                     SEM_FAILED)
             {
                 ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
@@ -1313,11 +1318,12 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     }
 
     snprintf(sname, sizeof(sname), "%s.%s_semlog", shmdirname, image->md->name);
-    if((image->semlog = sem_open(sname, 0, 0644, 0)) == SEM_FAILED)
+    umask(0);
+    if((image->semlog = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
     {
         //printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
         //       sname);
-        if((image->semlog = sem_open(sname, O_CREAT, 0644, 1)) == SEM_FAILED)
+        if((image->semlog = sem_open(sname, O_CREAT, FILEMODE, 1)) == SEM_FAILED)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
             return IMAGESTREAMIO_SEMINIT;
@@ -1496,8 +1502,8 @@ int ImageStreamIO_createsem(
         char sname[200];
         snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name,
                  s);
-
-        if((image->semptr[s] = sem_open(sname, O_CREAT, 0644, 0)) == SEM_FAILED)
+        umask(0);
+        if((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 0)) == SEM_FAILED)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initilization");
         }

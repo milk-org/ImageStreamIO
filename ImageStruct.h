@@ -234,7 +234,7 @@ typedef struct
      * This is computed upon image creation
      */
     uint64_t nelement;
-    uint64_t imdatamemsize; // image size [bytes]
+    //uint64_t imdatamemsize; // image size [bytes] <- End of struct for retro compatibility
 
 
 
@@ -337,6 +337,8 @@ typedef struct
     uint32_t CBsize;    // 0 if no CB allocated
     uint32_t CBindex;   // current index within buffer
     uint64_t CBcycle;   // number of buffer cycles
+
+    uint64_t imdatamemsize; // image size [bytes]
 
     cudaIpcMemHandle_t cudaMemHandle;
 

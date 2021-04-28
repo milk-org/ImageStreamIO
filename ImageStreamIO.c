@@ -1883,3 +1883,45 @@ long ImageStreamIO_semflush(
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
+
+// Function to be called each time image content is updated
+// Increments counter, sets write flag to zero etc...
+long ImageStreamIO_UpdateIm(
+    IMAGE *image
+)
+{
+    if(image->md->shared == 1)
+    {
+        image->md->cnt0++;
+        image->md->write = 0;
+        ImageStreamIO_sempost(image, -1); // post all semaphores
+
+        // update circular buffer if applicable
+        if(image->md->CBsize > 0)
+        {
+            // write index
+            uint32_t CBindexWrite = image->md->CBindex + 1;
+            int CBcycleincrement = 0;
+            if(CBindexWrite >= image->md->CBsize)
+            {
+                CBindexWrite = 0;
+                CBcycleincrement = 1;
+            }
+            // destination pointer
+            void *destptr;
+            destptr = image->CBimdata +
+                      image->md->imdatamemsize * CBindexWrite;
+
+            memcpy(destptr, image->array.raw,
+                   image->md->imdatamemsize);
+
+            image->md->CBcycle += CBcycleincrement;
+            image->md->CBindex = CBindexWrite;
+        }
+    }
+
+
+    return IMAGESTREAMIO_SUCCESS;
+}

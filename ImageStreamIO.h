@@ -470,6 +470,19 @@ long ImageStreamIO_semflush(
     long index
 );
 
+
+
+
+
+long ImageStreamIO_UpdateIm(
+    IMAGE *image
+);
+
+
+
+
+
+
 ///@}
 
 

@@ -1108,6 +1108,23 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
           py::arg("index"), py::arg("timeoutsec"))
 
       .def(
+          "semtrywait",
+          [](IMAGE &img, long index) {
+            if (img.array.raw == nullptr) {
+              throw std::runtime_error("image not initialized");
+            }
+            return ImageStreamIO_semtrywait(&img, index);
+          },
+          R"pbdoc(
+                Check the semaphore value in non-blocking mode
+                Parameters:
+                    index  [in]:  index of semaphore to wait
+                Return:
+                    ret    [out]: error code
+                )pbdoc",
+          py::arg("index"))
+
+      .def(
           "sempost",
           [](IMAGE_B &img_b, long index) {
             if (img_b.img.array.raw == nullptr) {

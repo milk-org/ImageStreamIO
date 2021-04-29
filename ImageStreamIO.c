@@ -1204,6 +1204,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     map += sizeof(IMAGE_METADATA);
 
+    // gain image data array pointer
     if(image->md->location >= 0)
     {
         image->array.raw = NULL;
@@ -1215,6 +1216,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         fflush(stdout);
         return IMAGESTREAMIO_FAILURE;
     }
+
 
     //printf("%ld keywords\n", (long)image->md->NBkw); fflush(stdout); //TEST
 
@@ -1263,8 +1265,24 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         map += sizeof(struct timespec) * image->md->size[2];
 
         image->cntarray = (uint64_t *)(map);
-        // map += sizeof(uint64_t) * image->md->size[2];
+        map += sizeof(uint64_t) * image->md->size[2];
     }
+
+    if(image->md->CBsize > 0)
+    {
+        image->CircBuff_md = (CBFRAMEMD *) map;
+        map += sizeof(CBFRAMEMD) * image->md->CBsize;
+
+        image->CBimdata = map;
+    }
+    else
+    {
+        image->CircBuff_md = NULL;
+        image->CBimdata = NULL;
+    }
+
+
+
 
     strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME);
 
@@ -1894,9 +1912,6 @@ long ImageStreamIO_UpdateIm(
 {
     if(image->md->shared == 1)
     {
-        image->md->cnt0++;
-        image->md->write = 0;
-        ImageStreamIO_sempost(image, -1); // post all semaphores
 
         // update circular buffer if applicable
         if(image->md->CBsize > 0)
@@ -1920,6 +1935,12 @@ long ImageStreamIO_UpdateIm(
             image->md->CBcycle += CBcycleincrement;
             image->md->CBindex = CBindexWrite;
         }
+
+
+        image->md->cnt0++;
+        image->md->write = 0;
+        ImageStreamIO_sempost(image, -1); // post all semaphores
+
     }
 
 

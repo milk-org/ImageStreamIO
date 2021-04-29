@@ -812,85 +812,53 @@ PYBIND11_MODULE(ImageStreamIOWrap_backport, m) {
              }
            })
 
-      .def("write", &write<uint8_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
+      .def(
+          "write",
+          [](IMAGE_B &img_b, py::buffer &buffer) {
+            py::buffer_info info = buffer.request();
 
-      .def("write", &write<uint16_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
+            auto buf = pybind11::array::ensure(buffer);
 
-      .def("write", &write<uint32_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
+            if (!buf) {
+              throw std::invalid_argument("input buffer is not an np.array");
+            }
+            uint8_t datatype =
+                PyFormatToImageStreamIODataType(info.format).datatype;
 
-      .def("write", &write<uint64_t>,
-           R"pbdoc(
+            uint32_t dims[buf.ndim()];
+            for (int i = 0; i < buf.ndim(); ++i) {
+              dims[i] = buf.shape()[i];
+            };
+            if (buf.dtype() == pybind11::dtype::of<uint8_t>()) {
+                write<uint8_t>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<int8_t>()) {
+                write<int8_t>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<uint16_t>()) {
+                write<uint16_t>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<int16_t>()) {
+                write<int16_t>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<uint32_t>()) {
+                write<uint32_t>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<int32_t>()) {
+                write<int32_t>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<uint64_t>()) {
+                write<uint64_t>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<int64_t>()) {
+                write<int64_t>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<float>()) {
+                write<float>(img_b.img, buffer);
+              } else if (buf.dtype() == pybind11::dtype::of<double>()) {
+                write<double>(img_b.img, buffer);
+              } else {
+                throw std::invalid_argument("unsupported array datatype");
+              }
+          },
+          R"pbdoc(
           Write into memory image stream
           Parameters:
             buffer [in]:  buffer to put into memory image stream
           )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<int8_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<int16_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<int32_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<int64_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<float>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<double>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
+          py::arg("buffer"))
 
       .def(
           "create",

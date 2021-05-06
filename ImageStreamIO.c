@@ -410,36 +410,36 @@ int ImageStreamIO_typesize(
 {
     switch(datatype)
     {
-        case _DATATYPE_UINT8:
-            return SIZEOF_DATATYPE_UINT8;
-        case _DATATYPE_INT8:
-            return SIZEOF_DATATYPE_INT8;
-        case _DATATYPE_UINT16:
-            return SIZEOF_DATATYPE_UINT16;
-        case _DATATYPE_INT16:
-            return SIZEOF_DATATYPE_INT16;
-        case _DATATYPE_UINT32:
-            return SIZEOF_DATATYPE_UINT32;
-        case _DATATYPE_INT32:
-            return SIZEOF_DATATYPE_INT32;
-        case _DATATYPE_UINT64:
-            return SIZEOF_DATATYPE_UINT64;
-        case _DATATYPE_INT64:
-            return SIZEOF_DATATYPE_INT64;
-        case _DATATYPE_HALF:
-            return SIZEOF_DATATYPE_HALF;
-        case _DATATYPE_FLOAT:
-            return SIZEOF_DATATYPE_FLOAT;
-        case _DATATYPE_DOUBLE:
-            return SIZEOF_DATATYPE_DOUBLE;
-        case _DATATYPE_COMPLEX_FLOAT:
-            return SIZEOF_DATATYPE_COMPLEX_FLOAT;
-        case _DATATYPE_COMPLEX_DOUBLE:
-            return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
+    case _DATATYPE_UINT8:
+        return SIZEOF_DATATYPE_UINT8;
+    case _DATATYPE_INT8:
+        return SIZEOF_DATATYPE_INT8;
+    case _DATATYPE_UINT16:
+        return SIZEOF_DATATYPE_UINT16;
+    case _DATATYPE_INT16:
+        return SIZEOF_DATATYPE_INT16;
+    case _DATATYPE_UINT32:
+        return SIZEOF_DATATYPE_UINT32;
+    case _DATATYPE_INT32:
+        return SIZEOF_DATATYPE_INT32;
+    case _DATATYPE_UINT64:
+        return SIZEOF_DATATYPE_UINT64;
+    case _DATATYPE_INT64:
+        return SIZEOF_DATATYPE_INT64;
+    case _DATATYPE_HALF:
+        return SIZEOF_DATATYPE_HALF;
+    case _DATATYPE_FLOAT:
+        return SIZEOF_DATATYPE_FLOAT;
+    case _DATATYPE_DOUBLE:
+        return SIZEOF_DATATYPE_DOUBLE;
+    case _DATATYPE_COMPLEX_FLOAT:
+        return SIZEOF_DATATYPE_COMPLEX_FLOAT;
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
 
-        default:
-            ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
-            return -1; //This is an in-band error code, so can't be > 0.
+    default:
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
+        return -1; //This is an in-band error code, so can't be > 0.
     }
 }
 
@@ -452,31 +452,31 @@ int ImageStreamIO_bitpix(
     switch(datatype)
     {
 #ifdef USE_CFITSIO
-        case _DATATYPE_UINT8:
-            return BYTE_IMG;
-        case _DATATYPE_INT8:
-            return SBYTE_IMG;
-        case _DATATYPE_UINT16:
-            return USHORT_IMG;
-        case _DATATYPE_INT16:
-            return SHORT_IMG;
-        case _DATATYPE_UINT32:
-            return ULONG_IMG;
-        case _DATATYPE_INT32:
-            return LONG_IMG;
-        case _DATATYPE_UINT64:
-            return ULONGLONG_IMG;
-        case _DATATYPE_INT64:
-            return LONGLONG_IMG;
-        case _DATATYPE_FLOAT:
-            return FLOAT_IMG;
-        case _DATATYPE_DOUBLE:
-            return DOUBLE_IMG;
+    case _DATATYPE_UINT8:
+        return BYTE_IMG;
+    case _DATATYPE_INT8:
+        return SBYTE_IMG;
+    case _DATATYPE_UINT16:
+        return USHORT_IMG;
+    case _DATATYPE_INT16:
+        return SHORT_IMG;
+    case _DATATYPE_UINT32:
+        return ULONG_IMG;
+    case _DATATYPE_INT32:
+        return LONG_IMG;
+    case _DATATYPE_UINT64:
+        return ULONGLONG_IMG;
+    case _DATATYPE_INT64:
+        return LONGLONG_IMG;
+    case _DATATYPE_FLOAT:
+        return FLOAT_IMG;
+    case _DATATYPE_DOUBLE:
+        return DOUBLE_IMG;
 #endif
-        default:
-            ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
-                                     "bitpix not implemented for type");
-            return -1; //This is an in-band error code, must be unique from valid BITPIX values.
+    default:
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
+                                 "bitpix not implemented for type");
+        return -1; //This is an in-band error code, must be unique from valid BITPIX values.
     }
 }
 
@@ -872,11 +872,21 @@ errno_t ImageStreamIO_createIm_gpu(
         image->memsize = 0;
 
         image->md = (IMAGE_METADATA *) malloc(sizeof(IMAGE_METADATA));
+        if( image->md == NULL )
+        {
+            printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+            abort();
+        }
         image->md->shared = 0;
         image->md->inode = 0;
         if(NBkw > 0)
         {
             image->kw = (IMAGE_KEYWORD *) malloc(sizeof(IMAGE_KEYWORD) * NBkw);
+            if( image->kw == NULL )
+            {
+                printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+                abort();
+            }
         }
         else
         {
@@ -1310,6 +1320,11 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     //        image->md->sem = snb;
     image->semptr = (sem_t **)malloc(sizeof(sem_t *) * image->md->sem);
+    if( image->semptr == NULL )
+    {
+        printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+        abort();
+    }
     for(s = 0; s < image->md->sem; s++)
     {
         snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name,
@@ -1514,6 +1529,11 @@ int ImageStreamIO_createsem(
 
     // printf("malloc semptr %ld entries\n", NBsem);
     image->semptr = (sem_t **)malloc(sizeof(sem_t **) * NBsem);
+    if( image->semptr == NULL )
+    {
+        printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+        abort();
+    }
 
     for(s = 0; s < NBsem; s++)
     {

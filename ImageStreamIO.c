@@ -46,9 +46,9 @@
 
 
 #if defined NDEBUG
-#define DEBUG_TRACEPOINTLOG(...)
+#define DEBUG_TRACEPOINT_LOG(...)
 #else
-#define DEBUG_TRACEPOINTLOG(...) do { \
+#define DEBUG_TRACEPOINT_LOG(...) do { \
 char msg[1000]; \
 sprintf(msg, __VA_ARGS__); \
 ImageStreamIO_write_process_log(msg); \
@@ -932,7 +932,6 @@ errno_t ImageStreamIO_createIm_gpu(
 
     if(shared == 1)
     {
-        //DEBUG_TRACEPOINTLOG("%s %d NBsem = %d", __FILE__, __LINE__, NBsem);
         ImageStreamIO_createsem(image, NBsem);  // IMAGE_NB_SEMAPHORE
         // defined in ImageStruct.h
 
@@ -973,7 +972,7 @@ errno_t ImageStreamIO_createIm_gpu(
     image->createcnt++;
 
 
-    DEBUG_TRACEPOINTLOG("%s %d NBsem = %d", __FILE__, __LINE__, image->md->sem);
+    //DEBUG_TRACEPOINT_LOG("%s %d NBsem = %d", __FILE__, __LINE__, image->md->sem);
 
     return IMAGESTREAMIO_SUCCESS;
 }
@@ -1174,8 +1173,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     image->md = (IMAGE_METADATA *)map;
     image->md->shared = 1;
 
-    //DEBUG_TRACEPOINTLOG("%4d md->sem  = %d", __LINE__, (int) (image->md->sem) );
-    //DEBUG_TRACEPOINTLOG("%4d md->cnt0 = %d", __LINE__, (int) (image->md->cnt0) );
 
     if(strcmp(image->md->version, IMAGESTRUCT_VERSION))
     {
@@ -1302,7 +1299,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name,
                  snb);
-        //DEBUG_TRACEPOINTLOG("%4d looking for %s", __LINE__, sname);
         sem_t *stest;
         umask(0);
         if((stest = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
@@ -1311,11 +1307,9 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         }
         else
         {
-            //DEBUG_TRACEPOINTLOG("%4d found %s", __LINE__, sname);
             sem_close(stest);
             snb++;
         }
-        //DEBUG_TRACEPOINTLOG("%4d NBsem = %ld", __LINE__, snb);
     }
 
     //        image->md->sem = snb;
@@ -1445,8 +1439,6 @@ errno_t ImageStreamIO_destroysem(
             }
         initSHAREDMEMDIR = 1;
     }
-
-    //DEBUG_TRACEPOINTLOG("image->md->sem = %d", image->md->sem);
 
     // Remove semaphores if any
     if(image->md->sem > 0)

@@ -1296,8 +1296,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     map += ImageStreamIO_offset_data(image, map);
     if(image->array.raw == NULL)
     {
-        printf("Fail to retrieve data pointer\n");
-        fflush(stdout);
+        // printf("Fail to retrieve data pointer\n");
+        // fflush(stdout);
         return IMAGESTREAMIO_FAILURE;
     }
 

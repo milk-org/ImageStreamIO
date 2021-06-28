@@ -5,6 +5,7 @@ project(ImageStreamIOWrap LANGUAGES CXX)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+find_package(pybind11)
 if(NOT TARGET pybind11)
   execute_process(COMMAND bash -c "${PYTHON_EXECUTABLE} -m pybind11 --includes"
                   OUTPUT_VARIABLE pybind11_inc)

@@ -904,8 +904,8 @@ errno_t ImageStreamIO_createIm_gpu(
     image->md->location = location;
     image->md->datatype = datatype;
     image->md->naxis = naxis;
-    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME);  // local name
-    strncpy(image->md->name, name, STRINGMAXLEN_IMAGE_NAME);
+    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME-1);  // local name
+    strncpy(image->md->name, name, STRINGMAXLEN_IMAGE_NAME-1);
     for(long i = 0; i < naxis; i++)
     {
         image->md->size[i] = size[i];
@@ -1291,7 +1291,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
 
 
-    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME);
+    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME-1);
 
     // looking for semaphores
     //printf("Looking for semaphores\n"); fflush(stdout); //TEST

@@ -67,20 +67,20 @@ int main()
 	// create an image in shared memory
 	ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, 10, NBkw, 2);
 
-    strncpy(imarray.kw[0].name, "symcode", KEYWORD_MAX_STRING);
+    strncpy(imarray.kw[0].name, "symcode", KEYWORD_MAX_STRING-1);
     imarray.kw[0].type = 'L';
     imarray.kw[0].value.numl = 5;
-    strncpy(imarray.kw[0].comment, "symcode value", KEYWORD_MAX_COMMENT);
+    strncpy(imarray.kw[0].comment, "symcode value", KEYWORD_MAX_COMMENT-1);
 
-    strncpy(imarray.kw[1].name, "exposure", KEYWORD_MAX_STRING);
+    strncpy(imarray.kw[1].name, "exposure", KEYWORD_MAX_STRING-1);
     imarray.kw[1].type = 'D';
     imarray.kw[1].value.numf = 8000.;
-    strncpy(imarray.kw[1].comment, "in us, exposure value", 80);
+    strncpy(imarray.kw[1].comment, "in us, exposure value", KEYWORD_MAX_COMMENT-1);
 
-    strncpy(imarray.kw[2].name, "source", KEYWORD_MAX_STRING);
+    strncpy(imarray.kw[2].name, "source", KEYWORD_MAX_STRING-1);
     imarray.kw[2].type = 'S';
-    strncpy(imarray.kw[2].value.valstr, "ImCreate_cube", KEYWORD_MAX_STRING);
-    strncpy(imarray.kw[2].comment, "source value", KEYWORD_MAX_COMMENT);
+    strncpy(imarray.kw[2].value.valstr, "ImCreate_cube", KEYWORD_MAX_STRING-1);
+    strncpy(imarray.kw[2].comment, "source value", KEYWORD_MAX_COMMENT-1);
 
 
 	free(imsize);

@@ -3,8 +3,7 @@ cmake_minimum_required(VERSION 3.8)
 set(LIBNAME "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
-message("")
-message(" SRCNAME = ${SRCNAME} -> LIBNAME = ${LIBNAME}")
+message("SRCNAME = ${SRCNAME} -> LIBNAME = ${LIBNAME}")
 
 option(build_python_module "Compile Python Wrappers" OFF)
 option(gtest_build_tests "Build Unit Tests" OFF)

@@ -8,7 +8,9 @@
  *
  */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <math.h>
 #include <pthread.h>
@@ -1122,7 +1124,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     if(SM_fd == -1)
     {
         image->used = 0;
-        char wmsg[200];
+        char wmsg[256];
         sprintf(wmsg, "Cannot open file \"%s\"\n", SM_fname);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;

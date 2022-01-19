@@ -182,6 +182,15 @@ int ImageStreamIO_typesize(uint8_t
                            atype  /**< [in] the type code (see ImageStruct.h*/
                           );
 
+/** @brief Get the appropriate floating point type for arithmetic from any type
+  *
+  * \returns the atype of the matching float type
+  * \returns -1 if atype is not valid
+  */
+int ImageStreamIO_floattype(
+    uint8_t datatype
+);
+
 /** @brief Get the FITSIO BITPIX from the data type code.
   *
   * \returns the BITPIX if atype valid

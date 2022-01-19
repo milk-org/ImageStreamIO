@@ -443,6 +443,45 @@ int ImageStreamIO_typesize(
     }
 }
 
+int ImageStreamIO_floattype(
+    uint8_t datatype
+)
+{
+    switch(datatype)
+    {
+    case _DATATYPE_UINT8:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_INT8:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_UINT16:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_INT16:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_UINT32:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_INT32:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_UINT64:
+        return _DATATYPE_DOUBLE;
+    case _DATATYPE_INT64:
+        return _DATATYPE_DOUBLE;
+    case _DATATYPE_HALF:
+        return _DATATYPE_HALF;
+    case _DATATYPE_FLOAT:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_DOUBLE:
+        return _DATATYPE_DOUBLE;
+    case _DATATYPE_COMPLEX_FLOAT:
+        return _DATATYPE_COMPLEX_FLOAT;
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return _DATATYPE_COMPLEX_DOUBLE;
+
+    default:
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
+        return -1; //This is an in-band error code, so can't be > 0.
+    }
+}
+
 
 
 int ImageStreamIO_bitpix(

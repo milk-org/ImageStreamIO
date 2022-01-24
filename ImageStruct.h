@@ -68,7 +68,6 @@ extern "C" {
 #define IMAGE_NB_PROCTRACE  10            /**< Number of STREAM_PROC_TRACE entries per image */
 
 // Data types are defined as machine-independent types for portability
-
 #define _DATATYPE_UINT8                                1  /**< uint8_t       = char */
 #define SIZEOF_DATATYPE_UINT8                          1
 
@@ -113,6 +112,8 @@ extern "C" {
 
 #define Dtype                                          9   /**< default data type for floating point */
 #define CDtype                                        11   /**< default data type for complex */
+
+
 
 
 

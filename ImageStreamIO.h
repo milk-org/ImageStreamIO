@@ -182,6 +182,12 @@ int ImageStreamIO_typesize(uint8_t
                            atype  /**< [in] the type code (see ImageStruct.h*/
                           );
 
+
+const char* ImageStreamIO_typename(
+    uint8_t datatype
+);
+
+
 /** @brief Get the appropriate floating point type for arithmetic from any type
   *
   * \returns the atype of the matching float type

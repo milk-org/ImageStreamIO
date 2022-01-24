@@ -443,6 +443,44 @@ int ImageStreamIO_typesize(
     }
 }
 
+const char* ImageStreamIO_typename(
+    uint8_t datatype
+)
+{
+    switch(datatype)
+    {
+    case _DATATYPE_UINT8:
+        return "UINT8";
+    case _DATATYPE_INT8:
+        return "INT8";
+    case _DATATYPE_UINT16:
+        return "UINT16";
+    case _DATATYPE_INT16:
+        return "INT16";
+    case _DATATYPE_UINT32:
+        return "UINT3232";
+    case _DATATYPE_INT32:
+        return "INT32";
+    case _DATATYPE_UINT64:
+        return "UINT64";
+    case _DATATYPE_INT64:
+        return "INT64";
+    case _DATATYPE_HALF:
+        return "FLT16";
+    case _DATATYPE_FLOAT:
+        return "FLT32";
+    case _DATATYPE_DOUBLE:
+        return "FLT64";
+    case _DATATYPE_COMPLEX_FLOAT:
+        return "CPLX32";
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return "CPLX64";
+
+    default:
+        return "unknown";
+    }
+}
+
 int ImageStreamIO_floattype(
     uint8_t datatype
 )

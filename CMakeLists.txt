@@ -15,6 +15,9 @@ add_compile_options(-Ofast)
 
 add_library(${LIBNAME} SHARED ${SRCNAME}.c)
 
+# set -C99 flag for 'for' loop initial declartaions
+set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CFITSIO cfitsio)
 if(${CFITSIO_FOUND})

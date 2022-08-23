@@ -400,7 +400,7 @@ const char *ImageStreamIO_typename(
     case _DATATYPE_INT16:
         return "INT16";
     case _DATATYPE_UINT32:
-        return "UINT3232";
+        return "UINT32";
     case _DATATYPE_INT32:
         return "INT32";
     case _DATATYPE_UINT64:

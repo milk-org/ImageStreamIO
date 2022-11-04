@@ -21,8 +21,8 @@
 #define IMAGESTRUCT_VERSION "1.04"
 
 #define STRINGMAXLEN_IMAGE_NAME          80
-#define KEYWORD_MAX_STRING  17            /**< maximun size of the keyword's name +1 for EOL */
-#define KEYWORD_MAX_COMMENT 81            /**< maximun size of a keyword's comment +1 for EOL */
+#define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
+#define KEYWORD_MAX_COMMENT 80            /**< maximun size of a keyword's comment */
 
 
 

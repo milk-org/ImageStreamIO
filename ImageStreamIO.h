@@ -188,6 +188,8 @@ const char* ImageStreamIO_typename(
 );
 
 
+int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed);
+
 /** @brief Get the appropriate floating point type for arithmetic from any type
   *
   * \returns the atype of the matching float type
@@ -273,8 +275,6 @@ errno_t ImageStreamIO_openIm(
     const char
     *name ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
 );
-
-
 
 void *ImageStreamIO_get_image_d_ptr(IMAGE *image);
 

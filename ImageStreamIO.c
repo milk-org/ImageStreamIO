@@ -423,6 +423,33 @@ const char *ImageStreamIO_typename(
     }
 }
 
+int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed) {
+    
+    int complex_retval = complex_allowed ? 0 : -1;
+
+    switch (datatype) {
+        case _DATATYPE_UINT8:
+        case _DATATYPE_INT8:
+        case _DATATYPE_UINT16:
+        case _DATATYPE_INT16:
+        case _DATATYPE_UINT32:
+        case _DATATYPE_INT32:
+        case _DATATYPE_UINT64:
+        case _DATATYPE_INT64:
+        case _DATATYPE_HALF:
+        case _DATATYPE_FLOAT:
+        case _DATATYPE_DOUBLE:
+            return 0;
+        case _DATATYPE_COMPLEX_FLOAT:
+        case _DATATYPE_COMPLEX_DOUBLE:
+            return complex_retval;
+
+    default:
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
+        return -1; // This is an in-band error code, so can't be > 0.
+    }
+}
+
 int ImageStreamIO_floattype(
     uint8_t datatype)
 {

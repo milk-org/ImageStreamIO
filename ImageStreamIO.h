@@ -486,7 +486,9 @@ long ImageStreamIO_semflush(
 );
 
 
-
+long ImageStreamIO_semvalue(
+    IMAGE *image,
+    long index); // Warning returns in-band error if semID is bad.
 
 
 long ImageStreamIO_UpdateIm(

@@ -1861,6 +1861,22 @@ long ImageStreamIO_semflush(
     return IMAGESTREAMIO_SUCCESS;
 }
 
+long ImageStreamIO_semvalue(
+    IMAGE *image,
+    long index)
+{
+    if(index > image->md->sem - 1)
+        printf("ERROR: image %s semaphore # %ld does not exist\n",
+               image->md->name, index);
+    else
+    {
+        int semval;
+        sem_getvalue(image->semptr[index], &semval);
+        return semval;
+    }
+    return -1; // in-band error bad
+}
+
 // Function to be called each time image content is updated
 // Increments counter, sets write flag to zero etc...
 long ImageStreamIO_UpdateIm(

@@ -1156,5 +1156,23 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          py::arg("index"));
+          py::arg("index"))
+
+      .def(
+        "semvalue",
+        [](IMAGE &img, long index) {
+          if (img.array.raw == nullptr) {
+            throw std::runtime_error("image not initialized");
+          }
+          return ImageStreamIO_semvalue(&img, index);
+        },
+        R"pbdoc(
+              Flush shmim semaphore
+              Parameters:
+                  index  [in]:  index of semaphore to flush; flush all semaphores if index<0
+              Return:
+                  ret    [out]: error code
+              )pbdoc",
+        py::arg("index"));
 }
+

@@ -182,6 +182,23 @@ int ImageStreamIO_typesize(uint8_t
                            atype  /**< [in] the type code (see ImageStruct.h*/
                           );
 
+
+const char* ImageStreamIO_typename(
+    uint8_t datatype
+);
+
+
+int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed);
+
+/** @brief Get the appropriate floating point type for arithmetic from any type
+  *
+  * \returns the atype of the matching float type
+  * \returns -1 if atype is not valid
+  */
+int ImageStreamIO_floattype(
+    uint8_t datatype
+);
+
 /** @brief Get the FITSIO BITPIX from the data type code.
   *
   * \returns the BITPIX if atype valid
@@ -258,8 +275,6 @@ errno_t ImageStreamIO_openIm(
     const char
     *name ///< [in] the name of the shared memory file will be data.tmpfsdir/<name>_im.shm
 );
-
-
 
 void *ImageStreamIO_get_image_d_ptr(IMAGE *image);
 
@@ -471,7 +486,9 @@ long ImageStreamIO_semflush(
 );
 
 
-
+long ImageStreamIO_semvalue(
+    IMAGE *image,
+    long index); // Warning returns in-band error if semID is bad.
 
 
 long ImageStreamIO_UpdateIm(

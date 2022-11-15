@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.8)
 set(LIBNAME "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
+message("")
 message("SRCNAME = ${SRCNAME} -> LIBNAME = ${LIBNAME}")
 
 option(build_python_module "Compile Python Wrappers" OFF)
@@ -13,6 +14,8 @@ project(${LIBNAME} LANGUAGES C)
 add_compile_options(-Ofast)
 
 add_library(${LIBNAME} SHARED ${SRCNAME}.c)
+# set -C99 flag for 'for' loop initial declartaions
+set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CFITSIO cfitsio)

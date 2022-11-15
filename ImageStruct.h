@@ -69,6 +69,7 @@ extern "C" {
 
 // Data types are defined as machine-independent types for portability
 
+#define _DATATYPE_UNINITIALIZED                        0
 #define _DATATYPE_UINT8                                1  /**< uint8_t       = char */
 #define SIZEOF_DATATYPE_UINT8                          1
 

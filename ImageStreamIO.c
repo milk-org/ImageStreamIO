@@ -450,6 +450,42 @@ int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed) {
     }
 }
 
+const char *ImageStreamIO_typename_short(
+    uint8_t datatype)
+{
+    switch (datatype)
+    {
+    case _DATATYPE_UINT8:
+        return " UI8";
+    case _DATATYPE_INT8:
+        return "  I8";
+    case _DATATYPE_UINT16:
+        return "UI16";
+    case _DATATYPE_INT16:
+        return " I16";
+    case _DATATYPE_UINT32:
+        return "UI32";
+    case _DATATYPE_INT32:
+        return " I32";
+    case _DATATYPE_UINT64:
+        return " UI64";
+    case _DATATYPE_INT64:
+        return " I64";
+    case _DATATYPE_HALF:
+        return " F16";
+    case _DATATYPE_FLOAT:
+        return " FLT";
+    case _DATATYPE_DOUBLE:
+        return " DBL";
+    case _DATATYPE_COMPLEX_FLOAT:
+        return "CFLT";
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return "CDBL";
+    default:
+        return " ???";
+    }
+}
+
 int ImageStreamIO_floattype(
     uint8_t datatype)
 {

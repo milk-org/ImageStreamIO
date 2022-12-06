@@ -225,7 +225,7 @@ errno_t ImageStreamIO_printWARNING(
 
     fprintf(stderr, "%c[%d;%dmWARNING   %c[%d;m\n",
             (char)27, 1, 35, (char)27, 0);
-    fprintf(stderr, "%c[%d;%dm (%d) %s  %c[%d;m\n", (char)27, 1, 35, fn, warnmessage,
+    fprintf(stderr, "%c[%d;%dm (PID %d) %s  %c[%d;m\n", (char)27, 1, 35, fn, (int) getpid(), warnmessage,
             (char)27, 0);
 
     return IMAGESTREAMIO_SUCCESS;

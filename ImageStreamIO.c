@@ -221,12 +221,12 @@ errno_t ImageStreamIO_printERROR_(
 errno_t ImageStreamIO_printWARNING(
     char *warnmessage)
 {
-    fprintf(stderr,
+    /*fprintf(stderr,
             "%c[%d;%dmWARNING   %c[%d;m\n",
             (char)27, 1, 35, (char)27, 0);
     fprintf(stderr, "%c[%d;%dm %s  %c[%d;m\n", (char)27, 1, 35, warnmessage,
             (char)27, 0);
-
+*/
     return IMAGESTREAMIO_SUCCESS;
 }
 
@@ -1154,7 +1154,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         image->used = 0;
         char wmsg[200];
-        snprintf(wmsg, 200, "Cannot open file \"%s\"\n", SM_fname);
+        snprintf(wmsg, 200, "Cannot open shm file \"%s\"\n", SM_fname);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }

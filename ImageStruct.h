@@ -21,6 +21,9 @@
 #define IMAGESTRUCT_VERSION "1.04"
 
 #define STRINGMAXLEN_IMAGE_NAME          80
+#define STRINGMAXLEN_FILE_NAME          200
+#define STRINGMAXLEN_DIR_NAME           800
+
 #define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
 #define KEYWORD_MAX_COMMENT 80            /**< maximun size of a keyword's comment */
 

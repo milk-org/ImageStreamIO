@@ -47,7 +47,7 @@
     do                                        \
     {                                         \
         char msg[1000];                       \
-        sprintf(msg, __VA_ARGS__);            \
+        snprintf(msg, 1000, __VA_ARGS__);     \
         ImageStreamIO_write_process_log(msg); \
     } while (0)
 #endif
@@ -128,11 +128,11 @@ errno_t ImageStreamIO_write_process_log(
     char *msg)
 {
     FILE *fplog;
-    char fname[200];
+    char fname[STRINGMAXLEN_FILE_NAME];
     pid_t thisPID;
 
     thisPID = getpid();
-    sprintf(fname, "logreport.%05d.log", thisPID);
+    snprintf(fname, STRINGMAXLEN_FILE_NAME, "logreport.%05d.log", thisPID);
 
     struct tm *uttime;
     time_t tvsec0;
@@ -258,6 +258,8 @@ errno_t ImageStreamIO_readBufferAt(
     return IMAGESTREAMIO_SUCCESS;
 }
 
+
+
 errno_t ImageStreamIO_shmdirname(
     char *shmdname)
 {
@@ -269,7 +271,7 @@ errno_t ImageStreamIO_shmdirname(
     if (MILK_SHM_DIR != NULL)
     {
         // printf(" [ MILK_SHM_DIR ] '%s'\n", MILK_SHM_DIR);
-        sprintf(shmdname, "%s", MILK_SHM_DIR);
+        snprintf(shmdname,STRINGMAXLEN_DIR_NAME, "%s", MILK_SHM_DIR);
 
         // does this direcory exist ?
         tmpdir = opendir(shmdname);
@@ -290,7 +292,7 @@ errno_t ImageStreamIO_shmdirname(
         tmpdir = opendir(SHAREDMEMDIR);
         if (tmpdir) // directory exits
         {
-            sprintf(shmdname, "%s", SHAREDMEMDIR);
+            snprintf(shmdname, STRINGMAXLEN_DIR_NAME, "%s", SHAREDMEMDIR);
             shmdirOK = 1;
             closedir(tmpdir);
         }
@@ -306,7 +308,7 @@ errno_t ImageStreamIO_shmdirname(
         }
         else
         {
-            sprintf(shmdname, "/tmp");
+            snprintf(shmdname, STRINGMAXLEN_DIR_NAME, "/tmp");
             shmdirOK = 1;
         }
     }
@@ -320,7 +322,7 @@ errno_t ImageStreamIO_filename(
     const char *im_name)
 {
 
-    static char shmdirname[200];
+    static char shmdirname[STRINGMAXLEN_DIR_NAME];
     static int initSHAREDMEMDIR = 0;
 
     if (initSHAREDMEMDIR == 0)
@@ -347,6 +349,7 @@ errno_t ImageStreamIO_filename(
         return IMAGESTREAMIO_FAILURE;
     }
 }
+
 
 int ImageStreamIO_typesize(
     uint8_t datatype)
@@ -1142,7 +1145,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     IMAGE *image)
 {
     int SM_fd;
-    char SM_fname[200];
+    char SM_fname[STRINGMAXLEN_FILE_NAME];
 
     ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name);
 
@@ -1151,7 +1154,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         image->used = 0;
         char wmsg[200];
-        sprintf(wmsg, "Cannot open file \"%s\"\n", SM_fname);
+        snprintf(wmsg, 200, "Cannot open file \"%s\"\n", SM_fname);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
@@ -1201,7 +1204,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     if (strcmp(image->md->version, IMAGESTRUCT_VERSION))
     {
         char errmsg[200];
-        sprintf(errmsg, "Stream %s corrupted, or incompatible version. Should be %s",
+        snprintf(errmsg, 200, "Stream %s corrupted, or incompatible version. Should be %s",
                 name, IMAGESTRUCT_VERSION);
         ImageStreamIO_printERROR(IMAGESTREAMIO_VERSION, errmsg);
         return IMAGESTREAMIO_VERSION;

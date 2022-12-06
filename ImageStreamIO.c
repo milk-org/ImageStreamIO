@@ -221,9 +221,10 @@ errno_t ImageStreamIO_printERROR_(
 errno_t ImageStreamIO_printWARNING(
     char *warnmessage)
 {
-    printf("%c[%d;%dmWARNING   %c[%d;m\n",
+
+    fprintf(stderr, "%c[%d;%dmWARNING   %c[%d;m\n",
             (char)27, 1, 35, (char)27, 0);
-    printf("%c[%d;%dm %s  %c[%d;m\n", (char)27, 1, 35, warnmessage,
+    fprintf(stderr, "%c[%d;%dm %s  %c[%d;m\n", (char)27, 1, 35, warnmessage,
             (char)27, 0);
 
     return IMAGESTREAMIO_SUCCESS;

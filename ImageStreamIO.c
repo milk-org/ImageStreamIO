@@ -92,7 +92,7 @@ errno_t ImageStreamIO_set_default_printError()
 }
 
 errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
-                                                               const char *, int, errno_t, char *))
+                                     const char *, int, errno_t, char *))
 {
     internal_printError = new_printError;
     return IMAGESTREAMIO_SUCCESS;
@@ -428,25 +428,25 @@ const char *ImageStreamIO_typename(
 }
 
 int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed) {
-    
+
     int complex_retval = complex_allowed ? 0 : -1;
 
     switch (datatype) {
-        case _DATATYPE_UINT8:
-        case _DATATYPE_INT8:
-        case _DATATYPE_UINT16:
-        case _DATATYPE_INT16:
-        case _DATATYPE_UINT32:
-        case _DATATYPE_INT32:
-        case _DATATYPE_UINT64:
-        case _DATATYPE_INT64:
-        case _DATATYPE_HALF:
-        case _DATATYPE_FLOAT:
-        case _DATATYPE_DOUBLE:
-            return 0;
-        case _DATATYPE_COMPLEX_FLOAT:
-        case _DATATYPE_COMPLEX_DOUBLE:
-            return complex_retval;
+    case _DATATYPE_UINT8:
+    case _DATATYPE_INT8:
+    case _DATATYPE_UINT16:
+    case _DATATYPE_INT16:
+    case _DATATYPE_UINT32:
+    case _DATATYPE_INT32:
+    case _DATATYPE_UINT64:
+    case _DATATYPE_INT64:
+    case _DATATYPE_HALF:
+    case _DATATYPE_FLOAT:
+    case _DATATYPE_DOUBLE:
+        return 0;
+    case _DATATYPE_COMPLEX_FLOAT:
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return complex_retval;
 
     default:
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
@@ -713,7 +713,7 @@ errno_t ImageStreamIO_createIm_gpu(
     uint64_t imdatamemsize = ImageStreamIO_typesize(datatype) * nelement;
 
     if (((imagetype & 0xF000F) == CIRCULAR_BUFFER) &&
-        (naxis != 3))
+            (naxis != 3))
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_createIm_gpu, "
@@ -779,7 +779,7 @@ errno_t ImageStreamIO_createIm_gpu(
         sharedsize += sizeof(STREAM_PROC_TRACE) * NBproctrace;
 
         if ((imagetype & 0xF000F) ==
-            (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // Circular buffer
+                (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // Circular buffer
         {
             // room for atimearray, writetimearray and cntarray
             sharedsize += size[2] * (2 * sizeof(struct timespec) + sizeof(uint64_t));
@@ -898,7 +898,7 @@ errno_t ImageStreamIO_createIm_gpu(
         map += sizeof(STREAM_PROC_TRACE) * NBproctrace;
 
         if ((imagetype & 0xF000F) ==
-            (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // If main image is circular buffer
+                (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // If main image is circular buffer
         {
             image->atimearray = (struct timespec *)(map);
             map += sizeof(struct timespec) * size[2];
@@ -1030,69 +1030,77 @@ errno_t ImageStreamIO_createIm_gpu(
     return IMAGESTREAMIO_SUCCESS;
 }
 
+
+
 errno_t ImageStreamIO_destroyIm(
     IMAGE *image)
 {
-
-    // Get shm directory name (only on first call to this function)
-    static char shmdirname[200];
-    static int initSHAREDMEMDIR = 0;
-    if (initSHAREDMEMDIR == 0)
+    if(image->used == 1)
     {
-        unsigned int stri;
+        // Get shm directory name (only on first call to this function)
+        static char shmdirname[200];
+        static int initSHAREDMEMDIR = 0;
+        if (initSHAREDMEMDIR == 0)
+        {
+            unsigned int stri;
 
-        ImageStreamIO_shmdirname(shmdirname);
-        for (stri = 0; stri < strlen(shmdirname); stri++)
-            if (shmdirname[stri] == '/') // replace leading '/' by '.'
-            {
-                shmdirname[stri] = '.';
-            }
-        initSHAREDMEMDIR = 1;
-    }
+            ImageStreamIO_shmdirname(shmdirname);
+            for (stri = 0; stri < strlen(shmdirname); stri++)
+                if (shmdirname[stri] == '/') // replace leading '/' by '.'
+                {
+                    shmdirname[stri] = '.';
+                }
+            initSHAREDMEMDIR = 1;
+        }
 
-    char fname[200];
+        char fname[200];
 
-    // close and remove semlog
-    sem_close(image->semlog);
-    snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_semlog", shmdirname,
-             image->md->name);
-    sem_unlink(fname);
-    image->semlog = NULL;
-    remove(fname);
-
-    // close and remove all semaphores
-    ImageStreamIO_destroysem(image);
-    image->semptr = NULL;
-
-    if (image->memsize > 0)
-    {
-        close(image->shmfd);
-        // Get this before unmapping.
-        ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
-        munmap(image->md, image->memsize);
-        image->md = NULL;
-        image->kw = NULL;
-        // Remove the file
+        // close and remove semlog
+        sem_close(image->semlog);
+        snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_semlog", shmdirname,
+                 image->md->name);
+        sem_unlink(fname);
+        image->semlog = NULL;
         remove(fname);
-    }
-    else
-    {
-        free(image->array.UI8);
-    }
-    image->array.UI8 = NULL;
 
-    if (image->md != NULL)
-    {
-        free(image->md);
-        image->md = NULL;
+        // close and remove all semaphores
+        ImageStreamIO_destroysem(image);
+        image->semptr = NULL;
+
+        if (image->memsize > 0)
+        {
+            close(image->shmfd);
+            // Get this before unmapping.
+            ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
+            munmap(image->md, image->memsize);
+            image->md = NULL;
+            image->kw = NULL;
+            // Remove the file
+            remove(fname);
+        }
+        else
+        {
+            free(image->array.UI8);
+        }
+        image->array.UI8 = NULL;
+
+        if (image->md != NULL)
+        {
+            free(image->md);
+            image->md = NULL;
+        }
+
+        image->kw = NULL;
+
+        image->used = 0;
     }
-
-    image->kw = NULL;
-
-    image->used = 0;
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
+
+
 
 errno_t ImageStreamIO_openIm(
     IMAGE *image,
@@ -1206,7 +1214,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         char errmsg[200];
         snprintf(errmsg, 200, "Stream %s corrupted, or incompatible version. Should be %s",
-                name, IMAGESTRUCT_VERSION);
+                 name, IMAGESTRUCT_VERSION);
         ImageStreamIO_printERROR(IMAGESTREAMIO_VERSION, errmsg);
         return IMAGESTREAMIO_VERSION;
     }
@@ -1285,7 +1293,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     map += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
 
     if ((image->md->imagetype & 0xF000F) ==
-        (CIRCULAR_BUFFER | ZAXIS_TEMPORAL))
+            (CIRCULAR_BUFFER | ZAXIS_TEMPORAL))
     {
         // printf("circuar buffer\n"); fflush(stdout); //TEST
 
@@ -1352,7 +1360,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
             //        sname);
 
             if ((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 1)) ==
-                SEM_FAILED)
+                    SEM_FAILED)
             {
                 ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
                 return IMAGESTREAMIO_SEMINIT;
@@ -1763,7 +1771,7 @@ int ImageStreamIO_getsemwaitindex(
     {
         // Check if semindexdefault available
         if ((image->semReadPID[semindexdefault] == 0) ||
-            (getpgid(image->semReadPID[semindexdefault]) < 0))
+                (getpgid(image->semReadPID[semindexdefault]) < 0))
         {
             // if OK, then adopt it
             image->semReadPID[semindexdefault] = readProcessPID;
@@ -1776,7 +1784,7 @@ int ImageStreamIO_getsemwaitindex(
     for (int semindex = 0; semindex < image->md->sem; ++semindex)
     {
         if ((image->semReadPID[semindex] == 0) ||
-            (getpgid(image->semReadPID[semindex]) < 0))
+                (getpgid(image->semReadPID[semindex]) < 0))
         {
             image->semReadPID[semindex] = readProcessPID;
             return semindex;

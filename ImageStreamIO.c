@@ -119,6 +119,8 @@ void check(cudaError_t result, char const *const func, const char *const file,
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
 #endif
 
+
+
 /**
  * @brief Write entry into debug log
  *
@@ -155,6 +157,8 @@ errno_t ImageStreamIO_write_process_log(
 
     return 0;
 }
+
+
 
 /**
  * Print error to stderr
@@ -213,6 +217,8 @@ errno_t ImageStreamIO_printERROR_(
     return IMAGESTREAMIO_SUCCESS;
 }
 
+
+
 /**
  * Print warning to stderr
  *
@@ -230,6 +236,9 @@ errno_t ImageStreamIO_printWARNING(
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
+
 
 /* ============================================================================================================================================================================================== */
 /* @name 0. Utilities */
@@ -562,6 +571,8 @@ int ImageStreamIO_bitpix(
     }
 }
 
+
+
 uint64_t ImageStreamIO_offset_data(
     IMAGE *image,
     void *map)
@@ -585,6 +596,8 @@ uint64_t ImageStreamIO_offset_data(
 
     return offset;
 }
+
+
 
 uint64_t ImageStreamIO_initialize_buffer(
     IMAGE *image)
@@ -642,6 +655,12 @@ uint64_t ImageStreamIO_initialize_buffer(
     return ImageStreamIO_offset_data(image, image->array.raw);
 }
 
+
+
+
+
+
+
 /* ===============================================================================================
  */
 /* ===============================================================================================
@@ -668,6 +687,8 @@ errno_t ImageStreamIO_createIm(
                                       shared, IMAGE_NB_SEMAPHORE, NBkw,
                                       MATH_DATA, (uint32_t)CBsize);
 }
+
+
 
 errno_t ImageStreamIO_createIm_gpu(
     IMAGE *image,
@@ -766,6 +787,9 @@ errno_t ImageStreamIO_createIm_gpu(
         }
 
         sharedsize += sizeof(IMAGE_KEYWORD) * NBkw;
+
+
+        sharedsize += sizeof(SEMFILEDATA) * NBsem;
 
         // one read PID array, one write PID array
         sharedsize += 2 * NBsem * sizeof(pid_t);
@@ -881,6 +905,9 @@ errno_t ImageStreamIO_createIm_gpu(
         }
         image->kw = (IMAGE_KEYWORD *)(map);
         map += sizeof(IMAGE_KEYWORD) * NBkw;
+
+        image->semfile = (SEMFILEDATA*)(map);
+        map += sizeof(SEMFILEDATA) * NBsem;
 
         image->semReadPID = (pid_t *)(map);
         map += sizeof(pid_t) * NBsem;
@@ -1277,6 +1304,10 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
                  image->kw[kw].value.valstr, image->kw[kw].comment);
       }
     */
+
+    image->semfile = (SEMFILEDATA *)(map);
+    map += sizeof(SEMFILEDATA) * image->md->sem;
+
     image->semReadPID = (pid_t *)(map);
     map += sizeof(pid_t) * image->md->sem;
 
@@ -1371,6 +1402,27 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
                     image->semptr[s], 1,
                     SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
             }
+
+
+            // get semaphore inode
+            {
+                struct stat file_stat;
+                int ret;
+                char fullsname[STRINGMAXLEN_SEMFILENAME];
+
+                snprintf(fullsname, sizeof(sname), "/dev/shm/sem.%s", sname);
+
+
+                int fd = open(fullsname, O_RDONLY);
+                ret = fstat (fd, &file_stat);
+                if (ret < 0) {
+                    // error getting file stat
+                }
+                snprintf(image->semfile[s].fname, STRINGMAXLEN_SEMFILENAME, "%s", sname);
+
+                image->semfile[s].inode = file_stat.st_ino;
+                close(fd);
+            }
         }
     }
 
@@ -1395,6 +1447,13 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
+
+
+
+
+
 
 errno_t ImageStreamIO_closeIm(
     IMAGE *image)
@@ -1511,8 +1570,6 @@ int ImageStreamIO_createsem(
     IMAGE *image,
     long NBsem)
 {
-    long s;
-
     // printf("Creating %ld semaphores\n", NBsem);
 
     // Get shm directory name (only on first call to this function)
@@ -1543,10 +1600,10 @@ int ImageStreamIO_createsem(
         abort();
     }
 
-    for (s = 0; s < NBsem; s++)
+    for (int s = 0; s < NBsem; s++)
     {
         char sname[200];
-        snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirname, image->md->name,
+        snprintf(sname, sizeof(sname), "%s.%s_sem%02d", shmdirname, image->md->name,
                  s);
         umask(0);
         if ((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 0)) == SEM_FAILED)
@@ -1560,14 +1617,37 @@ int ImageStreamIO_createsem(
                 SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
         }
 
-        image->md->sem =
-            NBsem; // Do this last so nobody accesses before init is done.
-    }
+        // get semaphore inode
+        {
+            struct stat file_stat;
+            int ret;
+            char fullsname[STRINGMAXLEN_SEMFILENAME];
 
-    // printf("image->md->sem = %ld\n", (long)image->md->sem);
+            snprintf(fullsname, sizeof(sname), "/dev/shm/sem.%s", sname);
+
+
+            int fd = open(fullsname, O_RDONLY);
+            ret = fstat (fd, &file_stat);
+            if (ret < 0) {
+                // error getting file stat
+            }
+            snprintf(image->semfile[s].fname, STRINGMAXLEN_SEMFILENAME, "%s", sname);
+
+            image->semfile[s].inode = file_stat.st_ino;
+            close(fd);
+        }
+
+
+        // Do this last so nobody accesses before init is done.
+        image->md->sem = NBsem;
+    }
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
+
+
 
 /**
  * ## Purpose

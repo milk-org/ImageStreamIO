@@ -387,11 +387,23 @@ typedef struct
 } CBFRAMEMD;
 
 
+
+#define STRINGMAXLEN_SEMFILENAME 200
+typedef struct
+{
+    ino_t inode;
+    char  fname[STRINGMAXLEN_SEMFILENAME];
+} SEMFILEDATA;
+
+
+
 /** @brief IMAGE structure
  * The IMAGE structure includes :
  *   - an array of IMAGE_KEWORD structures
  *   - an array of IMAGE_METADATA structures (usually only 1 element)
  *
+ * IMPORTANT: memory allocations for dynamically allocated arrays need to be
+ * included in the memory size computation in ImageStreamIO_createIm_gpu
  *
  */
 typedef struct /**< structure used to store data arrays                      */
@@ -464,6 +476,8 @@ typedef struct /**< structure used to store data arrays                      */
 
     IMAGE_KEYWORD *kw;
 
+
+    SEMFILEDATA *semfile;
 
     // PID of process that read shared memory stream
     // Initialized at 0. Otherwise, when process is waiting on semaphore, its PID is written in this array

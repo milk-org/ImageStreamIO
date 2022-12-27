@@ -955,6 +955,7 @@ errno_t ImageStreamIO_createIm_gpu(
     }
     else
     {
+        // not shared memory, local memory only
         image->shmfd = 0;
         image->memsize = 0;
 

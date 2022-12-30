@@ -186,6 +186,12 @@ int ImageStreamIO_typesize(uint8_t
 const char* ImageStreamIO_typename(
     uint8_t datatype
 );
+const char* ImageStreamIO_typename_short(
+    uint8_t datatype
+);
+const char* ImageStreamIO_typename_7(
+    uint8_t datatype
+);
 
 
 int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed);
@@ -204,9 +210,11 @@ int ImageStreamIO_floattype(
   * \returns the BITPIX if atype valid
   * \returns -1 if atype is not valid
   */
-int ImageStreamIO_bitpix(uint8_t
-                         atype  /**< [in] the type code (see ImageStruct.h*/
+int ImageStreamIO_FITSIObitpix(uint8_t
+                        atype
                         );
+
+int ImageStreamIO_FITSIOdatatype(uint8_t datatype);
 
 ///@}
 

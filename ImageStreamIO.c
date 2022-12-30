@@ -436,6 +436,43 @@ const char *ImageStreamIO_typename(
     }
 }
 
+const char *ImageStreamIO_typename_7(
+    uint8_t datatype)
+{
+    switch (datatype)
+    {
+    case _DATATYPE_UINT8:
+        return "UINT8  ";
+    case _DATATYPE_INT8:
+        return "INT8   ";
+    case _DATATYPE_UINT16:
+        return "UINT16 ";
+    case _DATATYPE_INT16:
+        return "INT16  ";
+    case _DATATYPE_UINT32:
+        return "UINT32 ";
+    case _DATATYPE_INT32:
+        return "INT32  ";
+    case _DATATYPE_UINT64:
+        return "UINT64 ";
+    case _DATATYPE_INT64:
+        return "INT64  ";
+    case _DATATYPE_HALF:
+        return "FLT16  ";
+    case _DATATYPE_FLOAT:
+        return "FLOAT  ";
+    case _DATATYPE_DOUBLE:
+        return "DOUBLE ";
+    case _DATATYPE_COMPLEX_FLOAT:
+        return "CFLOAT ";
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return "CDOUBLE";
+
+    default:
+        return "unknown";
+    }
+}
+
 int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed) {
 
     int complex_retval = complex_allowed ? 0 : -1;
@@ -537,7 +574,39 @@ int ImageStreamIO_floattype(
     }
 }
 
-int ImageStreamIO_bitpix(
+int ImageStreamIO_FITSIOdatatype(uint8_t datatype) {
+    switch (datatype)
+    {
+#ifdef USE_CFITSIO
+    case _DATATYPE_UINT8:
+        return TBYTE;
+    case _DATATYPE_INT8:
+        return TSBYTE;
+    case _DATATYPE_UINT16:
+        return TUSHORT;
+    case _DATATYPE_INT16:
+        return TSHORT;
+    case _DATATYPE_UINT32:
+        return TUINT;
+    case _DATATYPE_INT32:
+        return TINT;
+    case _DATATYPE_UINT64:
+        return TULONG;
+    case _DATATYPE_INT64:
+        return TLONG;
+    case _DATATYPE_FLOAT:
+        return TFLOAT;
+    case _DATATYPE_DOUBLE:
+        return TDOUBLE;
+#endif
+    default:
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
+                                 "bitpix not implemented for type");
+        return -1; // This is an in-band error code, must be unique from valid BITPIX values.
+    }
+}
+
+int ImageStreamIO_FITSIObitpix(
     uint8_t datatype)
 {
     switch (datatype)

@@ -1676,15 +1676,18 @@ int ImageStreamIO_createsem(
         snprintf(sname, sizeof(sname), "%s.%s_sem%02d", shmdirname, image->md->name,
                  s);
         umask(0);
-        if ((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 0)) == SEM_FAILED)
+        if((image->semptr[s] = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
         {
-            ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initilization");
-        }
-        else
-        {
-            sem_init(
-                image->semptr[s], 1,
-                SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
+            if ((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 0)) == SEM_FAILED)
+            {
+                ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initilization");
+            }
+            else
+            {
+                sem_init(
+                    image->semptr[s], 1,
+                    SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
+            }
         }
 
         // get semaphore inode

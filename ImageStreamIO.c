@@ -884,6 +884,9 @@ errno_t ImageStreamIO_createIm_gpu(
         // fast circular buffer data buffer
         sharedsize += datasharedsize * CBsize;
 
+        // write time buffer
+        sharedsize += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
+
         char SM_fname[200];
         ImageStreamIO_filename(SM_fname, 200, name);
 
@@ -1021,6 +1024,14 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->CBsize = CBsize;
         image->md->CBindex = 0;
         image->md->CBcycle = 0;
+
+
+
+        image->writehist = (FRAMEWRITEMD *)(map);
+        map += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
+
+        image->md->wCBindex = 0;
+        image->md->wCBcycle = 0;
     }
     else
     {
@@ -1052,6 +1063,9 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->CBsize = 0;
         image->md->CBindex = 0;
         image->md->CBcycle = 0;
+
+        image->md->wCBindex = 0;
+        image->md->wCBcycle = 0;
     }
 
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
@@ -1421,6 +1435,10 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         image->CircBuff_md = NULL;
         image->CBimdata = NULL;
     }
+
+    image->writehist = (FRAMEWRITEMD *)map;
+    map += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
+
 
     strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME - 1);
 
@@ -2111,6 +2129,27 @@ long ImageStreamIO_UpdateIm(
 
         image->md->cnt0++;
         image->md->write = 0;
+
+        // Update image write history
+        image->md->wCBindex ++;
+        if( image->md->wCBindex == IMAGESTRUCT_FRAMEWRITEMDSIZE )
+        {
+            image->md->wCBindex = 0;
+        }
+        {
+            struct timespec ts;
+            if(clock_gettime(CLOCK_REALTIME, &ts) == -1)
+            {
+                perror("clock_gettime");
+                exit(EXIT_FAILURE);
+            }
+            image->writehist[image->md->wCBindex].writetime = ts;
+            image->writehist[image->md->wCBindex].cnt0 = image->md->cnt0;
+            image->writehist[image->md->wCBindex].wpid = getpid();
+        }
+
+
+
         ImageStreamIO_sempost(image, -1); // post all semaphores
     }
 

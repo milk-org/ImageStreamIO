@@ -27,7 +27,8 @@
 #define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
 #define KEYWORD_MAX_COMMENT 80            /**< maximun size of a keyword's comment */
 
-
+// number of entries in write history
+#define IMAGESTRUCT_FRAMEWRITEMDSIZE 100
 
 
 #include <semaphore.h>
@@ -345,6 +346,10 @@ typedef struct
     uint32_t CBindex;   // current index within buffer
     uint64_t CBcycle;   // number of buffer cycles
 
+    // write history circ buffer
+    uint32_t wCBindex;
+    uint64_t wCBcycle;
+
     uint64_t imdatamemsize; // image size [bytes]
 
     cudaIpcMemHandle_t cudaMemHandle;
@@ -385,6 +390,18 @@ typedef struct
     struct timespec atime;
     struct timespec writetime;
 } CBFRAMEMD;
+
+
+// Write metadata
+// keeps track of write times and PIDs
+typedef struct
+{
+    uint64_t cnt0;
+    pid_t wpid;       // write process PID
+    struct timespec writetime;
+} FRAMEWRITEMD;
+
+
 
 
 
@@ -516,6 +533,9 @@ typedef struct /**< structure used to store data arrays                      */
 
     CBFRAMEMD * CircBuff_md; // circular buffer metadata
     void * CBimdata;         // data storage for circ buffer
+
+    // Write history
+    FRAMEWRITEMD *writehist;
 
 } IMAGE;
 

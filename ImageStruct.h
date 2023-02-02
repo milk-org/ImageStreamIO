@@ -27,6 +27,9 @@
 #define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
 #define KEYWORD_MAX_COMMENT 80            /**< maximun size of a keyword's comment */
 
+// comment if no write history
+//#define IMAGESTRUCT_WRITEHISTORY
+
 // number of entries in write history
 #define IMAGESTRUCT_FRAMEWRITEMDSIZE 100
 
@@ -346,9 +349,11 @@ typedef struct
     uint32_t CBindex;   // current index within buffer
     uint64_t CBcycle;   // number of buffer cycles
 
+#ifdef IMAGESTRUCT_WRITEHISTORY
     // write history circ buffer
     uint32_t wCBindex;
     uint64_t wCBcycle;
+#endif
 
     uint64_t imdatamemsize; // image size [bytes]
 
@@ -534,8 +539,10 @@ typedef struct /**< structure used to store data arrays                      */
     CBFRAMEMD * CircBuff_md; // circular buffer metadata
     void * CBimdata;         // data storage for circ buffer
 
+#ifdef IMAGESTRUCT_WRITEHISTORY
     // Write history
     FRAMEWRITEMD *writehist;
+#endif
 
 } IMAGE;
 

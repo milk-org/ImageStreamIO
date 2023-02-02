@@ -1026,12 +1026,13 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->CBcycle = 0;
 
 
-
+#ifdef IMAGESTRUCT_WRITEHISTORY
         image->writehist = (FRAMEWRITEMD *)(map);
         map += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
 
         image->md->wCBindex = 0;
         image->md->wCBcycle = 0;
+#endif
     }
     else
     {
@@ -1064,8 +1065,10 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->CBindex = 0;
         image->md->CBcycle = 0;
 
+#ifdef IMAGESTRUCT_WRITEHISTORY
         image->md->wCBindex = 0;
         image->md->wCBcycle = 0;
+#endif
     }
 
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
@@ -1436,9 +1439,10 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         image->CBimdata = NULL;
     }
 
+#ifdef IMAGESTRUCT_WRITEHISTORY
     image->writehist = (FRAMEWRITEMD *)map;
     map += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
-
+#endif
 
     strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME - 1);
 
@@ -2130,6 +2134,7 @@ long ImageStreamIO_UpdateIm(
         image->md->cnt0++;
         image->md->write = 0;
 
+#ifdef IMAGESTRUCT_WRITEHISTORY
         // Update image write history
         image->md->wCBindex ++;
         if( image->md->wCBindex == IMAGESTRUCT_FRAMEWRITEMDSIZE )
@@ -2147,6 +2152,7 @@ long ImageStreamIO_UpdateIm(
             image->writehist[image->md->wCBindex].cnt0 = image->md->cnt0;
             image->writehist[image->md->wCBindex].wpid = getpid();
         }
+#endif
 
 
 

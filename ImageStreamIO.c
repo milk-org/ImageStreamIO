@@ -884,8 +884,10 @@ errno_t ImageStreamIO_createIm_gpu(
         // fast circular buffer data buffer
         sharedsize += datasharedsize * CBsize;
 
+        #ifdef IMAGESTRUCT_WRITEHISTORY
         // write time buffer
         sharedsize += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
+        #endif
 
         char SM_fname[200];
         ImageStreamIO_filename(SM_fname, 200, name);

@@ -842,17 +842,20 @@ errno_t ImageStreamIO_createIm_gpu(
 
         if (location == -1)
         {
+            // image on CPU
             // printf("shared memory space in CPU RAM = %ud bytes\n", sharedsize);
             sharedsize += datasharedsize;
         }
         else if (location >= 0)
         {
+            // image on GPU
             // printf("shared memory space in GPU%d RAM= %ud bytes\n", location,
             // sharedsize); //TEST
         }
         else
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "Error location unknown");
+            return IMAGESTREAMIO_FAILURE;
         }
 
         sharedsize += sizeof(IMAGE_KEYWORD) * NBkw;
@@ -884,10 +887,10 @@ errno_t ImageStreamIO_createIm_gpu(
         // fast circular buffer data buffer
         sharedsize += datasharedsize * CBsize;
 
-        #ifdef IMAGESTRUCT_WRITEHISTORY
+#ifdef IMAGESTRUCT_WRITEHISTORY
         // write time buffer
         sharedsize += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
-        #endif
+#endif
 
         char SM_fname[200];
         ImageStreamIO_filename(SM_fname, 200, name);
@@ -965,18 +968,16 @@ errno_t ImageStreamIO_createIm_gpu(
 
         if (location == -1)
         {
+            // CPU
             image->array.raw = map;
             map += datasharedsize;
         }
-        else if (location >= 0)
-        {
-            image->array.raw = NULL;
-        }
         else
         {
-            ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL, "Error location unknown");
-            return IMAGESTREAMIO_NOTIMPL;
+            // GPU
+            image->array.raw = NULL;
         }
+
         image->kw = (IMAGE_KEYWORD *)(map);
         map += sizeof(IMAGE_KEYWORD) * NBkw;
 

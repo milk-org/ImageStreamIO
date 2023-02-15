@@ -10,7 +10,7 @@ TEST(ImageStreamIOTestCreation, ImageCPUCreation) {
 
   EXPECT_EQ(EXIT_SUCCESS, ImageStreamIO_createIm_gpu(&imageTest, "ImageTest", 2,
                                                      dims, _DATATYPE_FLOAT, -1,
-                                                     0, 10, 10, MATH_DATA));
+                                                     0, 10, 10, MATH_DATA,0));
 }
 
 TEST(ImageStreamIOTestCreation, ImageCPUSharedCreation) {
@@ -19,7 +19,7 @@ TEST(ImageStreamIOTestCreation, ImageCPUSharedCreation) {
 
   EXPECT_EQ(EXIT_SUCCESS, ImageStreamIO_createIm_gpu(&imageTest, "ImageTest", 2,
                                                      dims, _DATATYPE_FLOAT, -1,
-                                                     1, 10, 10, MATH_DATA));
+                                                     1, 10, 10, MATH_DATA,0));
 }
 
 #ifdef HAVE_CUDA
@@ -29,7 +29,7 @@ TEST(ImageStreamIOTestCreation, ImageGPUSharedCreation) {
 
   EXPECT_EQ(EXIT_SUCCESS, ImageStreamIO_createIm_gpu(&imageTest, "ImageTest", 2,
                                                      dims, _DATATYPE_FLOAT, 0,
-                                                     1, 10, 10, MATH_DATA));
+                                                     1, 10, 10, MATH_DATA,0));
 }
 #endif
 
@@ -37,18 +37,18 @@ TEST(ImageStreamIOTestCreation, CubeCPUSharedCreationFailureDimension) {
   IMAGE circularbufferTest;
   uint32_t dims[2] = {512, 512};
 
-  EXPECT_EQ(EXIT_FAILURE, ImageStreamIO_createIm_gpu(
+  EXPECT_EQ(IMAGESTREAMIO_INVALIDARG, ImageStreamIO_createIm_gpu(
                               &circularbufferTest, "CubeTest", 2, dims,
-                              _DATATYPE_FLOAT, -1, 1, 10, 10, CIRCULAR_BUFFER));
+                              _DATATYPE_FLOAT, -1, 1, 10, 10, CIRCULAR_BUFFER,1));
 }
 
 TEST(ImageStreamIOTestCreation, CubeCPUSharedCreation) {
   IMAGE circularbufferTest;
-  uint32_t dims[3] = {10, 512, 512};
+  uint32_t dims[3] = {512, 512, 13};
 
   EXPECT_EQ(EXIT_SUCCESS, ImageStreamIO_createIm_gpu(
                               &circularbufferTest, "CubeTest", 3, dims,
-                              _DATATYPE_FLOAT, -1, 1, 10, 10, CIRCULAR_BUFFER));
+                              _DATATYPE_FLOAT, -1, 1, 10, 10, CIRCULAR_BUFFER,1));
 }
 
 TEST(ImageStreamIOTestOpen, ImageCPUSharedOpen) {
@@ -60,7 +60,7 @@ TEST(ImageStreamIOTestOpen, ImageCPUSharedOpen) {
 TEST(ImageStreamIOTestOpen, ImageCPUSharedOpenNotExist) {
   IMAGE imageTest;
 
-  EXPECT_EQ(EXIT_FAILURE, ImageStreamIO_openIm(&imageTest, "ImageTestNo"));
+  EXPECT_EQ(IMAGESTREAMIO_FILEOPEN, ImageStreamIO_openIm(&imageTest, "ImageTestNo"));
 }
 
 TEST(ImageStreamIOTestOpen, CubeCPUSharedOpen) {
@@ -79,7 +79,8 @@ TEST(ImageStreamIOTestRead, ImageCPUSharedNbSlices) {
 TEST(ImageStreamIOTestRead, CubeCPUSharedNbSlices) {
   IMAGE circularbufferTest;
   ImageStreamIO_read_sharedmem_image_toIMAGE("CubeTest", &circularbufferTest);
-  EXPECT_EQ(10, ImageStreamIO_nbSlices(&circularbufferTest));
+  EXPECT_EQ(13, ImageStreamIO_nbSlices(&circularbufferTest));
+  EXPECT_EQ(circularbufferTest.array.raw, (void*)circularbufferTest.array.UI8);
 }
 
 } // namespace

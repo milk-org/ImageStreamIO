@@ -473,8 +473,8 @@ const char *ImageStreamIO_typename_7(
     }
 }
 
-int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed) {
-
+int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed)
+{
     int complex_retval = complex_allowed ? 0 : -1;
 
     switch (datatype) {
@@ -574,7 +574,8 @@ int ImageStreamIO_floattype(
     }
 }
 
-int ImageStreamIO_FITSIOdatatype(uint8_t datatype) {
+int ImageStreamIO_FITSIOdatatype(uint8_t datatype)
+{
     switch (datatype)
     {
 #ifdef USE_CFITSIO

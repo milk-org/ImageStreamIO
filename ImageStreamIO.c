@@ -1272,7 +1272,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     IMAGE *image)
 {
     int SM_fd;
-    char SM_fname[STRINGMAXLEN_FILE_NAME];
+    char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
 
     ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name);
 
@@ -1285,11 +1285,13 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
+    // open() was successful. We'll need to close SM_fd for any failed exit
 
-    char sname[200];
-    uint8_t *map;
+    char sname[200] = {0};
+    uint8_t *map = NULL;
+    uint8_t *map_root = NULL;
     long s;
-    struct stat file_stat;
+    struct stat file_stat = {0};
 
     long snb = 0;
     int sOK = 1;
@@ -1314,9 +1316,10 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     // printf("File %s size: %zd\n", SM_fname, file_stat.st_size); fflush(stdout); //TEST
 
-    map = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
+    map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
                           MAP_SHARED, SM_fd, 0);
-    if (map == MAP_FAILED)
+    map = map_root;
+    if (map_root == MAP_FAILED)
     {
         close(SM_fd);
         ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
@@ -1334,6 +1337,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         snprintf(errmsg, 200, "Stream %s corrupted, or incompatible version. Should be %s",
                  name, IMAGESTRUCT_VERSION);
         ImageStreamIO_printERROR(IMAGESTREAMIO_VERSION, errmsg);
+        munmap(map_root, image->memsize);
+        close(SM_fd);
         return IMAGESTREAMIO_VERSION;
     }
 
@@ -1349,6 +1354,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name);
         fflush(stdout);
+        munmap(map_root, image->memsize);
+        close(SM_fd);
         return IMAGESTREAMIO_FAILURE;
     }
     for (axis = 0; axis < image->md->naxis; ++axis)
@@ -1357,6 +1364,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         {
             printf("IMAGE \"%s\" AXIS %d SIZE < 1... NOT LOADING\n", name, axis);
             fflush(stdout);
+            munmap(map_root, image->memsize);
+            close(SM_fd);
             return IMAGESTREAMIO_FAILURE;
         }
     }
@@ -1373,6 +1382,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         printf("Fail to retrieve data pointer\n");
         fflush(stdout);
+        munmap(map_root, image->memsize);
+        close(SM_fd);
         return IMAGESTREAMIO_FAILURE;
     }
 
@@ -1490,6 +1501,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
                     SEM_FAILED)
             {
                 ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
+                munmap(map_root, image->memsize);
+                close(SM_fd);
                 return IMAGESTREAMIO_SEMINIT;
             }
             else
@@ -1531,6 +1544,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         if ((image->semlog = sem_open(sname, O_CREAT, FILEMODE, 1)) == SEM_FAILED)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
+            munmap(map_root, image->memsize);
+            close(SM_fd);
             return IMAGESTREAMIO_SEMINIT;
         }
         else

@@ -45,7 +45,7 @@ TEST(ImageStreamIOTestCreation, ImageCPUSharedCreation) {
            );
 }
 
-TEST(ImageStreamIOTestCreation, CubeCPUSharedCreationFailureDimension) {
+TEST(ImageStreamIOTestCreation, CubeCPUSharedCreationDimensionFailure) {
 
   EXPECT_EQ(IMAGESTREAMIO_INVALIDARG
            ,ImageStreamIO_createIm_gpu(&circularbufferTest, SHM_NAME_CubeTest
@@ -65,7 +65,7 @@ TEST(ImageStreamIOTestCreation, CubeCPUSharedCreation) {
 
 ////////////////////////////////////////////////////////////////////////
 // ImageStreamIO_OpenIm - opening an existing shmim file 
-// - Use ImageTest from above; assume it has not been destroyed
+// - Use imageTest from above; assume it has not been destroyed
 ////////////////////////////////////////////////////////////////////////
 TEST(ImageStreamIOTestOpen, ImageCPUSharedOpen) {
 
@@ -74,7 +74,7 @@ TEST(ImageStreamIOTestOpen, ImageCPUSharedOpen) {
            );
 }
 
-TEST(ImageStreamIOTestOpen, ImageCPUSharedOpenNotExist) {
+TEST(ImageStreamIOTestOpen, ImageCPUSharedOpenNotExistFailure) {
 
   EXPECT_EQ(IMAGESTREAMIO_FILEOPEN
            ,ImageStreamIO_openIm(&imageTest
@@ -108,9 +108,9 @@ TEST(ImageStreamIOTestRead, CubeCPUSharedNbSlices) {
 }
 
 ////////////////////////////////////////////////////////////////////////
-// Location-related tests
+// Location-related tests:  location is in CPU or GPU; not in filesystem
 ////////////////////////////////////////////////////////////////////////
-TEST(ImageStreamIOTestLocation, BadLocation) {
+TEST(ImageStreamIOTestLocation, BadLocationFailure) {
 
   EXPECT_EQ(IMAGESTREAMIO_FAILURE
            ,ImageStreamIO_createIm_gpu(&imageTest, SHM_NAME_LocnTest
@@ -119,8 +119,11 @@ TEST(ImageStreamIOTestLocation, BadLocation) {
            );
 }
 
-#ifdef HAVE_CUDA
 TEST(ImageStreamIOTestCreation, ImageGPUSharedCreation) {
+
+# ifndef HAVE_CUDA
+  GTEST_SKIP_("Skipped GPU Shared Creation; HAVE_CUDA is undefined");
+# endif
 
   EXPECT_EQ(IMAGESTREAMIO_SUCCESS
            ,ImageStreamIO_createIm_gpu(&imageTest, SHM_NAME_LocnTest
@@ -128,11 +131,11 @@ TEST(ImageStreamIOTestCreation, ImageGPUSharedCreation) {
                                       ,gpuLocn, 1, 10, 10, MATH_DATA,0)
            );
 }
-#endif
 
-// For GPU-based shmim, existing file (ImageTest from above) is an error
-TEST(ImageStreamIOTestLocation, InitCpuLocation) {
+// For GPU-located shmim, creating an existing file is an error
+TEST(ImageStreamIOTestLocation, InitCpuLocationFailure) {
 
+  // Ensure file exists by using CPU Location
   ASSERT_EQ(IMAGESTREAMIO_SUCCESS
            ,ImageStreamIO_createIm_gpu(&imageTest, SHM_NAME_LocnTest
                                       ,2, dims2, _DATATYPE_FLOAT

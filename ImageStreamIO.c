@@ -1092,7 +1092,7 @@ errno_t ImageStreamIO_createIm_gpu(
     strncpy(image->md->name, name, STRINGMAXLEN_IMAGE_NAME);
     // Ensure image and image metadata names are null-terminated
     image->name[STRINGMAXLEN_IMAGE_NAME-1] =
-    image->md->name[STRINGMAXLEN_IMAGE_NAME] = '\0';
+    image->md->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
     for (long i = 0; i < naxis; i++)
     {
         image->md->size[i] = size[i];

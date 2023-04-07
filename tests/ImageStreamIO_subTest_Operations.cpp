@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sys/wait.h>
 #include "ImageStreamIO.h"
+#include "ImageStreamIO_subTest_Operations.hpp"
 
 // A prefix to all names indicating ImageStreamIO Unit Tests
 #define SHM_NAME_PREFIX    "__ISIOUTs__"

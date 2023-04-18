@@ -518,7 +518,13 @@ const char *ImageStreamIO_typename_short(
     case _DATATYPE_INT32:
         return " I32";
     case _DATATYPE_UINT64:
+        ////////////////////////////////////////////////////////////////
+        /// Typo in exising code                                     ///
+        /// Brian T. Carcich drbitboy@github 2023-04-18              ///
+        ////////////////////////////////////////////////////////////////
+        //Uncomment this line; remove next:return "UI64";
         return " UI64";
+        ////////////////////////////////////////////////////////////////
     case _DATATYPE_INT64:
         return " I64";
     case _DATATYPE_HALF:

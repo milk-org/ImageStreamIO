@@ -21,6 +21,206 @@ namespace {
   int8_t badLocn = -2;   // Location of -2 => bad location
 
 ////////////////////////////////////////////////////////////////////////
+// ImageStreamIO utilities
+////////////////////////////////////////////////////////////////////////
+TEST(ImageStreamIOUtilities, Typesize) {
+# ifdef UTSEE
+# undef UTSEE
+# endif
+# define UTSEE(A,B,N) \
+         EXPECT_EQ(A, ImageStreamIO_typesize(B)); \
+         EXPECT_EQ(N, ImageStreamIO_typesize(B))
+  UTSEE(SIZEOF_DATATYPE_UINT8,           _DATATYPE_UINT8,           1);
+  UTSEE(SIZEOF_DATATYPE_INT8,            _DATATYPE_INT8,            1);
+  UTSEE(SIZEOF_DATATYPE_UINT16,          _DATATYPE_UINT16,          2);
+  UTSEE(SIZEOF_DATATYPE_INT16,           _DATATYPE_INT16,           2);
+  UTSEE(SIZEOF_DATATYPE_UINT32,          _DATATYPE_UINT32,          4);
+  UTSEE(SIZEOF_DATATYPE_INT32,           _DATATYPE_INT32,           4);
+  UTSEE(SIZEOF_DATATYPE_UINT64,          _DATATYPE_UINT64,          8);
+  UTSEE(SIZEOF_DATATYPE_INT64,           _DATATYPE_INT64,           8);
+  UTSEE(SIZEOF_DATATYPE_HALF,            _DATATYPE_HALF,            2);
+  UTSEE(SIZEOF_DATATYPE_FLOAT,           _DATATYPE_FLOAT,           4);
+  UTSEE(SIZEOF_DATATYPE_DOUBLE,          _DATATYPE_DOUBLE,          8);
+  UTSEE(SIZEOF_DATATYPE_COMPLEX_FLOAT,   _DATATYPE_COMPLEX_FLOAT,   8);
+  UTSEE(SIZEOF_DATATYPE_COMPLEX_DOUBLE,  _DATATYPE_COMPLEX_DOUBLE, 16);
+  UTSEE(-1,                              255,                      -1);
+# undef UTSEE
+}
+
+TEST(ImageStreamIOUtilities, Typename) {
+# ifdef UTNEE
+# undef UTNEE
+# endif
+# define UTNEE(A,B) \
+         EXPECT_STREQ(A, ImageStreamIO_typename(B))
+  UTNEE("UINT8",   _DATATYPE_UINT8);
+  UTNEE("INT8",    _DATATYPE_INT8);
+  UTNEE("UINT16",  _DATATYPE_UINT16);
+  UTNEE("INT16",   _DATATYPE_INT16);
+  UTNEE("UINT32",  _DATATYPE_UINT32);
+  UTNEE("INT32",   _DATATYPE_INT32);
+  UTNEE("UINT64",  _DATATYPE_UINT64);
+  UTNEE("INT64",   _DATATYPE_INT64);
+  UTNEE("FLT16",   _DATATYPE_HALF);
+  UTNEE("FLT32",   _DATATYPE_FLOAT);
+  UTNEE("FLT64",   _DATATYPE_DOUBLE);
+  UTNEE("CPLX32",  _DATATYPE_COMPLEX_FLOAT);
+  UTNEE("CPLX64",  _DATATYPE_COMPLEX_DOUBLE);
+  UTNEE("unknown", 255);
+# undef UTNEE
+}
+
+TEST(ImageStreamIOUtilities, Typename_7) {
+# ifdef UT7EE
+# undef UT7EE
+# endif
+# define UT7EE(A,B) \
+         EXPECT_STREQ(A, ImageStreamIO_typename_7(B))
+  UT7EE("UINT8  ",  _DATATYPE_UINT8);
+  UT7EE("INT8   ",  _DATATYPE_INT8);
+  UT7EE("UINT16 ",  _DATATYPE_UINT16);
+  UT7EE("INT16  ",  _DATATYPE_INT16);
+  UT7EE("UINT32 ",  _DATATYPE_UINT32);
+  UT7EE("INT32  ",  _DATATYPE_INT32);
+  UT7EE("UINT64 ",  _DATATYPE_UINT64);
+  UT7EE("INT64  ",  _DATATYPE_INT64);
+  UT7EE("FLT16  ",  _DATATYPE_HALF);
+  UT7EE("FLOAT  ",  _DATATYPE_FLOAT);
+  UT7EE("DOUBLE ",  _DATATYPE_DOUBLE);
+  UT7EE("CFLOAT ",  _DATATYPE_COMPLEX_FLOAT);
+  UT7EE("CDOUBLE",  _DATATYPE_COMPLEX_DOUBLE);
+  UT7EE("unknown", 255);
+# undef UT7EE
+}
+
+TEST(ImageStreamIOUtilities, TypenameShort) {
+# ifdef UTSEE
+# undef UTSEE
+# endif
+# define UTSEE(A,B) \
+         EXPECT_STREQ(A, ImageStreamIO_typename_short(B))
+  UTSEE(" UI8",  _DATATYPE_UINT8);
+  UTSEE("  I8",  _DATATYPE_INT8);
+  UTSEE("UI16",  _DATATYPE_UINT16);
+  UTSEE(" I16",  _DATATYPE_INT16);
+  UTSEE("UI32",  _DATATYPE_UINT32);
+  UTSEE(" I32",  _DATATYPE_INT32);
+  //////////////////////////////////////////////////////////////////////
+  /// Bug in existing code; remove these comments when it is removed ///
+  /// BTCarcich drbitbyu@github.com ca. 2023-04-18                   ///
+  //////////////////////////////////////////////////////////////////////
+  //Uncomment this line; remove next:UTSEE("UI64",  _DATATYPE_UINT64);
+  UTSEE(" UI64",  _DATATYPE_UINT64);  /// REMOVE THIS LINE AFTER FIX ///
+  //////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////
+  UTSEE(" I64",  _DATATYPE_INT64);
+  UTSEE(" F16",  _DATATYPE_HALF);
+  UTSEE(" FLT",  _DATATYPE_FLOAT);
+  UTSEE(" DBL",  _DATATYPE_DOUBLE);
+  UTSEE("CFLT",  _DATATYPE_COMPLEX_FLOAT);
+  UTSEE("CDBL",  _DATATYPE_COMPLEX_DOUBLE);
+  UTSEE(" ???", 255);
+# undef UTSEE
+}
+
+TEST(ImageStreamIOUtilities, Checktype) {
+# ifdef UCTEE
+# undef UCTEE
+# endif
+# define UCTEE(A,B,C) \
+         EXPECT_EQ(A, ImageStreamIO_checktype(B,0)); \
+         EXPECT_EQ(C, ImageStreamIO_checktype(B,1))
+  UCTEE( 0,  _DATATYPE_UINT8,           0);
+  UCTEE( 0,  _DATATYPE_INT8,            0);
+  UCTEE( 0,  _DATATYPE_UINT16,          0);
+  UCTEE( 0,  _DATATYPE_INT16,           0);
+  UCTEE( 0,  _DATATYPE_UINT32,          0);
+  UCTEE( 0,  _DATATYPE_INT32,           0);
+  UCTEE( 0,  _DATATYPE_UINT64,          0);
+  UCTEE( 0,  _DATATYPE_INT64,           0);
+  UCTEE( 0,  _DATATYPE_HALF,            0);
+  UCTEE( 0,  _DATATYPE_FLOAT,           0);
+  UCTEE( 0,  _DATATYPE_DOUBLE,          0);
+  UCTEE(-1,  _DATATYPE_COMPLEX_FLOAT,   0);
+  UCTEE(-1,  _DATATYPE_COMPLEX_DOUBLE,  0);
+  UCTEE(-1,  255,                      -1);
+# undef UCTEE
+}
+
+TEST(ImageStreamIOUtilities, Floattype) {
+# ifdef UFTEE
+# undef UFTEE
+# endif
+# define UFTEE(A,B) \
+         EXPECT_EQ(A, ImageStreamIO_floattype(B))
+  UFTEE(_DATATYPE_FLOAT,          _DATATYPE_UINT8);
+  UFTEE(_DATATYPE_FLOAT,          _DATATYPE_INT8);
+  UFTEE(_DATATYPE_FLOAT,          _DATATYPE_UINT16);
+  UFTEE(_DATATYPE_FLOAT,          _DATATYPE_INT16);
+  UFTEE(_DATATYPE_FLOAT,          _DATATYPE_UINT32);
+  UFTEE(_DATATYPE_FLOAT,          _DATATYPE_INT32);
+  UFTEE(_DATATYPE_DOUBLE,         _DATATYPE_UINT64);
+  UFTEE(_DATATYPE_DOUBLE,         _DATATYPE_INT64);
+  UFTEE(_DATATYPE_HALF,           _DATATYPE_HALF);
+  UFTEE(_DATATYPE_FLOAT,          _DATATYPE_FLOAT);
+  UFTEE(_DATATYPE_DOUBLE,         _DATATYPE_DOUBLE);
+  UFTEE(_DATATYPE_COMPLEX_FLOAT,  _DATATYPE_COMPLEX_FLOAT);
+  UFTEE(_DATATYPE_COMPLEX_DOUBLE, _DATATYPE_COMPLEX_DOUBLE);
+  UFTEE(-1,                       255);
+# undef UFTEE
+}
+
+TEST(ImageStreamIOUtilities, FITSIOdatatype) {
+# ifdef UFDEE
+# undef UFDEE
+# endif
+# define UFDEE(A,B) \
+         EXPECT_EQ(A, ImageStreamIO_FITSIOdatatype(B))
+# ifndef USE_CFITSIO
+  UFDEE(TBYTE,   _DATATYPE_UINT8);
+  UFDEE(TSBYTE,  _DATATYPE_INT8);
+  UFDEE(TUSHORT, _DATATYPE_UINT16);
+  UFDEE(TSHORT,  _DATATYPE_INT16);
+  UFDEE(TUINT,   _DATATYPE_UINT32);
+  UFDEE(TINT,    _DATATYPE_INT32);
+  UFDEE(TULONG,  _DATATYPE_UINT64);
+  UFDEE(TLONG,   _DATATYPE_INT64);
+  UFDEE(TFLOAT,  _DATATYPE_FLOAT);
+  UFDEE(TDOUBLE, _DATATYPE_DOUBLE);
+#endif//USE_CFITSIO
+  UFDEE(-1,      _DATATYPE_HALF);
+  UFDEE(-1,      _DATATYPE_COMPLEX_FLOAT);
+  UFDEE(-1,      _DATATYPE_COMPLEX_DOUBLE);
+  UFDEE(-1,      255);
+# undef UFDEE
+}
+
+TEST(ImageStreamIOUtilities, FITSIObitpix) {
+# ifdef UFBEE
+# undef UFBEE
+# endif
+# define UFBEE(A,B) \
+         EXPECT_EQ(A, ImageStreamIO_FITSIObitpix(B))
+# ifndef USE_CFITSIO
+  UFBEE(BYTE_IMG,      _DATATYPE_UINT8);
+  UFBEE(SBYTE_IMG,     _DATATYPE_INT8);
+  UFBEE(USHORT_IMG,    _DATATYPE_UINT16);
+  UFBEE(SHORT_IMG,     _DATATYPE_INT16);
+  UFBEE(ULONG_IMG,     _DATATYPE_UINT32);
+  UFBEE(LONG_IMG,      _DATATYPE_INT32);
+  UFBEE(ULONGLONG_IMG, _DATATYPE_UINT64);
+  UFBEE(LONGLONG_IMG,  _DATATYPE_INT64);
+  UFBEE(FLOAT_IMG,     _DATATYPE_FLOAT);
+  UFBEE(DOUBLE_IMG,    _DATATYPE_DOUBLE);
+#endif//USE_CFITSIO
+  UFBEE(-1,            _DATATYPE_HALF);
+  UFBEE(-1,            _DATATYPE_COMPLEX_FLOAT);
+  UFBEE(-1,            _DATATYPE_COMPLEX_DOUBLE);
+  UFBEE(-1,            255);
+# undef UFBEE
+}
+
+////////////////////////////////////////////////////////////////////////
 // ImageStreamIO_creatIM_gpu - create  a shmim file 
 ////////////////////////////////////////////////////////////////////////
 TEST(ImageStreamIOTestCreation, ImageCPUCreation) {

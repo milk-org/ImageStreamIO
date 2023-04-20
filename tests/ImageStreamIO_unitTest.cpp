@@ -1,7 +1,10 @@
+//#include <limits.h>
+# ifdef USE_CFITSIO
+#include <fitsio.h>
+#endif//USE_CFITSIO
 #include "ImageStreamIO.h"
 #include "ImageStreamIO_subTest_Operations.hpp"
 #include "gtest/gtest.h"
-#include <limits.h>
 
 /* A prefix to all names indicating ImageStreamIO Unit Tests */
 #define SHM_NAME_PREFIX    "__ISIOUTs__"
@@ -176,7 +179,7 @@ TEST(ImageStreamIOUtilities, FITSIOdatatype) {
 # endif
 # define UFDEE(A,B) \
          EXPECT_EQ(A, ImageStreamIO_FITSIOdatatype(B))
-# ifndef USE_CFITSIO
+# ifdef USE_CFITSIO
   UFDEE(TBYTE,   _DATATYPE_UINT8);
   UFDEE(TSBYTE,  _DATATYPE_INT8);
   UFDEE(TUSHORT, _DATATYPE_UINT16);
@@ -187,6 +190,17 @@ TEST(ImageStreamIOUtilities, FITSIOdatatype) {
   UFDEE(TLONG,   _DATATYPE_INT64);
   UFDEE(TFLOAT,  _DATATYPE_FLOAT);
   UFDEE(TDOUBLE, _DATATYPE_DOUBLE);
+#else//USE_CFITSIO
+  UFDEE(-1,      _DATATYPE_UINT8);
+  UFDEE(-1,      _DATATYPE_INT8);
+  UFDEE(-1,      _DATATYPE_UINT16);
+  UFDEE(-1,      _DATATYPE_INT16);
+  UFDEE(-1,      _DATATYPE_UINT32);
+  UFDEE(-1,      _DATATYPE_INT32);
+  UFDEE(-1,      _DATATYPE_UINT64);
+  UFDEE(-1,      _DATATYPE_INT64);
+  UFDEE(-1,      _DATATYPE_FLOAT);
+  UFDEE(-1,      _DATATYPE_DOUBLE);
 #endif//USE_CFITSIO
   UFDEE(-1,      _DATATYPE_HALF);
   UFDEE(-1,      _DATATYPE_COMPLEX_FLOAT);
@@ -201,7 +215,7 @@ TEST(ImageStreamIOUtilities, FITSIObitpix) {
 # endif
 # define UFBEE(A,B) \
          EXPECT_EQ(A, ImageStreamIO_FITSIObitpix(B))
-# ifndef USE_CFITSIO
+# ifdef USE_CFITSIO
   UFBEE(BYTE_IMG,      _DATATYPE_UINT8);
   UFBEE(SBYTE_IMG,     _DATATYPE_INT8);
   UFBEE(USHORT_IMG,    _DATATYPE_UINT16);
@@ -212,6 +226,17 @@ TEST(ImageStreamIOUtilities, FITSIObitpix) {
   UFBEE(LONGLONG_IMG,  _DATATYPE_INT64);
   UFBEE(FLOAT_IMG,     _DATATYPE_FLOAT);
   UFBEE(DOUBLE_IMG,    _DATATYPE_DOUBLE);
+#else//USE_CFITSIO
+  UFBEE(-1,            _DATATYPE_UINT8);
+  UFBEE(-1,            _DATATYPE_INT8);
+  UFBEE(-1,            _DATATYPE_UINT16);
+  UFBEE(-1,            _DATATYPE_INT16);
+  UFBEE(-1,            _DATATYPE_UINT32);
+  UFBEE(-1,            _DATATYPE_INT32);
+  UFBEE(-1,            _DATATYPE_UINT64);
+  UFBEE(-1,            _DATATYPE_INT64);
+  UFBEE(-1,            _DATATYPE_FLOAT);
+  UFBEE(-1,            _DATATYPE_DOUBLE);
 #endif//USE_CFITSIO
   UFBEE(-1,            _DATATYPE_HALF);
   UFBEE(-1,            _DATATYPE_COMPLEX_FLOAT);

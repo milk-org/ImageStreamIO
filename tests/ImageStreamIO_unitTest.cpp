@@ -46,6 +46,7 @@ TEST(ImageStreamIOUtilities, Typesize) {
   UTSEE(SIZEOF_DATATYPE_DOUBLE,          _DATATYPE_DOUBLE,          8);
   UTSEE(SIZEOF_DATATYPE_COMPLEX_FLOAT,   _DATATYPE_COMPLEX_FLOAT,   8);
   UTSEE(SIZEOF_DATATYPE_COMPLEX_DOUBLE,  _DATATYPE_COMPLEX_DOUBLE, 16);
+  UTSEE(-1,                              _DATATYPE_UNINITIALIZED,  -1);
   UTSEE(-1,                              255,                      -1);
 # undef UTSEE
 }
@@ -69,6 +70,7 @@ TEST(ImageStreamIOUtilities, Typename) {
   UTNEE("FLT64",   _DATATYPE_DOUBLE);
   UTNEE("CPLX32",  _DATATYPE_COMPLEX_FLOAT);
   UTNEE("CPLX64",  _DATATYPE_COMPLEX_DOUBLE);
+  UTNEE("unknown", _DATATYPE_UNINITIALIZED);
   UTNEE("unknown", 255);
 # undef UTNEE
 }
@@ -92,7 +94,8 @@ TEST(ImageStreamIOUtilities, Typename_7) {
   UT7EE("DOUBLE ",  _DATATYPE_DOUBLE);
   UT7EE("CFLOAT ",  _DATATYPE_COMPLEX_FLOAT);
   UT7EE("CDOUBLE",  _DATATYPE_COMPLEX_DOUBLE);
-  UT7EE("unknown", 255);
+  UT7EE("unknown",  _DATATYPE_UNINITIALIZED);
+  UT7EE("unknown",  255);
 # undef UT7EE
 }
 
@@ -122,7 +125,8 @@ TEST(ImageStreamIOUtilities, TypenameShort) {
   UTSEE(" DBL",  _DATATYPE_DOUBLE);
   UTSEE("CFLT",  _DATATYPE_COMPLEX_FLOAT);
   UTSEE("CDBL",  _DATATYPE_COMPLEX_DOUBLE);
-  UTSEE(" ???", 255);
+  UTSEE(" ???",  _DATATYPE_UNINITIALIZED);
+  UTSEE(" ???",  255);
 # undef UTSEE
 }
 
@@ -146,6 +150,7 @@ TEST(ImageStreamIOUtilities, Checktype) {
   UCTEE( 0,  _DATATYPE_DOUBLE,          0);
   UCTEE(-1,  _DATATYPE_COMPLEX_FLOAT,   0);
   UCTEE(-1,  _DATATYPE_COMPLEX_DOUBLE,  0);
+  UCTEE(-1,  _DATATYPE_UNINITIALIZED,  -1);
   UCTEE(-1,  255,                      -1);
 # undef UCTEE
 }
@@ -169,6 +174,7 @@ TEST(ImageStreamIOUtilities, Floattype) {
   UFTEE(_DATATYPE_DOUBLE,         _DATATYPE_DOUBLE);
   UFTEE(_DATATYPE_COMPLEX_FLOAT,  _DATATYPE_COMPLEX_FLOAT);
   UFTEE(_DATATYPE_COMPLEX_DOUBLE, _DATATYPE_COMPLEX_DOUBLE);
+  UFTEE(-1,                       _DATATYPE_UNINITIALIZED);
   UFTEE(-1,                       255);
 # undef UFTEE
 }
@@ -190,7 +196,7 @@ TEST(ImageStreamIOUtilities, FITSIOdatatype) {
   UFDEE(TLONG,   _DATATYPE_INT64);
   UFDEE(TFLOAT,  _DATATYPE_FLOAT);
   UFDEE(TDOUBLE, _DATATYPE_DOUBLE);
-#else//USE_CFITSIO
+# else//USE_CFITSIO
   UFDEE(-1,      _DATATYPE_UINT8);
   UFDEE(-1,      _DATATYPE_INT8);
   UFDEE(-1,      _DATATYPE_UINT16);
@@ -201,10 +207,11 @@ TEST(ImageStreamIOUtilities, FITSIOdatatype) {
   UFDEE(-1,      _DATATYPE_INT64);
   UFDEE(-1,      _DATATYPE_FLOAT);
   UFDEE(-1,      _DATATYPE_DOUBLE);
-#endif//USE_CFITSIO
+# endif//USE_CFITSIO
   UFDEE(-1,      _DATATYPE_HALF);
   UFDEE(-1,      _DATATYPE_COMPLEX_FLOAT);
   UFDEE(-1,      _DATATYPE_COMPLEX_DOUBLE);
+  UFDEE(-1,      _DATATYPE_UNINITIALIZED);
   UFDEE(-1,      255);
 # undef UFDEE
 }
@@ -226,7 +233,7 @@ TEST(ImageStreamIOUtilities, FITSIObitpix) {
   UFBEE(LONGLONG_IMG,  _DATATYPE_INT64);
   UFBEE(FLOAT_IMG,     _DATATYPE_FLOAT);
   UFBEE(DOUBLE_IMG,    _DATATYPE_DOUBLE);
-#else//USE_CFITSIO
+# else//USE_CFITSIO
   UFBEE(-1,            _DATATYPE_UINT8);
   UFBEE(-1,            _DATATYPE_INT8);
   UFBEE(-1,            _DATATYPE_UINT16);
@@ -237,10 +244,11 @@ TEST(ImageStreamIOUtilities, FITSIObitpix) {
   UFBEE(-1,            _DATATYPE_INT64);
   UFBEE(-1,            _DATATYPE_FLOAT);
   UFBEE(-1,            _DATATYPE_DOUBLE);
-#endif//USE_CFITSIO
+# endif//USE_CFITSIO
   UFBEE(-1,            _DATATYPE_HALF);
   UFBEE(-1,            _DATATYPE_COMPLEX_FLOAT);
   UFBEE(-1,            _DATATYPE_COMPLEX_DOUBLE);
+  UFBEE(-1,            _DATATYPE_UNINITIALIZED);
   UFBEE(-1,            255);
 # undef UFBEE
 }

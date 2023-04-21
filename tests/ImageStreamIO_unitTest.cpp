@@ -37,9 +37,9 @@ TEST(ImageStreamIOUtilities, SlicesAndIndices) {
   image.md = &md;
 
   // - Put dummy values in width and height sizes; 300 in slice size
-  md.size[0] = -100;
-  md.size[1] = -200;
-  md.size[2] = 300;
+  md.size[0] = 10;
+  md.size[1] = 20;
+  md.size[2] = 30;
 
   // - Assume last-written slice was slice 5
   md.cnt1 = 5;
@@ -58,15 +58,15 @@ TEST(ImageStreamIOUtilities, SlicesAndIndices) {
 
   // - 3 axes:  md.size[2] and .cnt1(5) are used in slice calculations
   md.naxis = 3;
-  EXPECT_EQ(300, ImageStreamIO_nbSlices(&image));
+  EXPECT_EQ(30, ImageStreamIO_nbSlices(&image));
   EXPECT_EQ(5, ImageStreamIO_readLastWroteIndex(&image));
   EXPECT_EQ(6, ImageStreamIO_writeIndex(&image));
 
   // - 3 axes with md.size[2]=300, and .cnt1 == 299:  299 is last slice;
   //   299+1 = 300 is the next slice, but it rolls over to 0
-  md.cnt1 = 299;
-  EXPECT_EQ(300, ImageStreamIO_nbSlices(&image));
-  EXPECT_EQ(299, ImageStreamIO_readLastWroteIndex(&image));
+  md.cnt1 = 29;
+  EXPECT_EQ(30, ImageStreamIO_nbSlices(&image));
+  EXPECT_EQ(29, ImageStreamIO_readLastWroteIndex(&image));
   EXPECT_EQ(0, ImageStreamIO_writeIndex(&image));
 }
 

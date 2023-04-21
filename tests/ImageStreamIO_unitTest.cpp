@@ -26,6 +26,50 @@ namespace {
 ////////////////////////////////////////////////////////////////////////
 // ImageStreamIO utilities
 ////////////////////////////////////////////////////////////////////////
+TEST(ImageStreamIOUtilities, SlicesAndIndices) {
+
+  // Calculations related to the number of slices
+  // - Use local memory for IMAGE and IMAGE_METADATA structures
+  IMAGE image { 0 };
+  IMAGE_METADATA md { 0 };
+
+  // - Make IMAGE metadata pointer point to METADATA structure
+  image.md = &md;
+
+  // - Put dummy values in width and height sizes; 300 in slice size
+  md.size[0] = -100;
+  md.size[1] = -200;
+  md.size[2] = 300;
+
+  // - Assume last-written slice was slice 5
+  md.cnt1 = 5;
+
+  // - 1 axis:  md.size[2] and .cnt1 are ignored; number of slices is 1
+  md.naxis = 1;
+  EXPECT_EQ(1, ImageStreamIO_nbSlices(&image));
+  EXPECT_EQ(0, ImageStreamIO_readLastWroteIndex(&image));
+  EXPECT_EQ(0, ImageStreamIO_writeIndex(&image));
+
+  // - 2 axes:  md.size[2] and .cnt1 are ignored; number of slices is 1
+  md.naxis = 2;
+  EXPECT_EQ(1, ImageStreamIO_nbSlices(&image));
+  EXPECT_EQ(0, ImageStreamIO_readLastWroteIndex(&image));
+  EXPECT_EQ(0, ImageStreamIO_writeIndex(&image));
+
+  // - 3 axes:  md.size[2] and .cnt1(5) are used in slice calculations
+  md.naxis = 3;
+  EXPECT_EQ(300, ImageStreamIO_nbSlices(&image));
+  EXPECT_EQ(5, ImageStreamIO_readLastWroteIndex(&image));
+  EXPECT_EQ(6, ImageStreamIO_writeIndex(&image));
+
+  // - 3 axes with md.size[2]=300, and .cnt1 == 299:  299 is last slice;
+  //   299+1 = 300 is the next slice, but it rolls over to 0
+  md.cnt1 = 299;
+  EXPECT_EQ(300, ImageStreamIO_nbSlices(&image));
+  EXPECT_EQ(299, ImageStreamIO_readLastWroteIndex(&image));
+  EXPECT_EQ(0, ImageStreamIO_writeIndex(&image));
+}
+
 TEST(ImageStreamIOUtilities, Typesize) {
 # ifdef UTSEE
 # undef UTSEE
@@ -112,7 +156,7 @@ TEST(ImageStreamIOUtilities, TypenameShort) {
   UTSEE("UI32",  _DATATYPE_UINT32);
   UTSEE(" I32",  _DATATYPE_INT32);
   //////////////////////////////////////////////////////////////////////
-  /// Bug in existing code; remove these comments when it is removed ///
+  /// Bug in existing code; remove these comments when it's resolved ///
   /// BTCarcich drbitbyu@github.com ca. 2023-04-18                   ///
   //////////////////////////////////////////////////////////////////////
   //Uncomment this line; remove next:UTSEE("UI64",  _DATATYPE_UINT64);

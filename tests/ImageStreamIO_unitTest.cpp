@@ -1,4 +1,7 @@
 //#include <limits.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 # ifdef USE_CFITSIO
 #include <fitsio.h>
 #endif//USE_CFITSIO
@@ -33,6 +36,9 @@ namespace {
 //    - CircularWroteBufferAddresses
 //    - NonCircularWriteBufferAddresses
 //    - CircularWriteBufferAddresses
+// - Building the shmim filename
+//    - FilenameFailure
+//    - FilenameSuccess
 // - Data type information (convert to size, name, CFITSIO type, etc.)
 //    - Typesize
 //    - Typename
@@ -363,6 +369,104 @@ TEST(ImageStreamIOUtilities, CircularWriteBufferAddresses) {
   EXPECT_EQ(IMAGESTREAMIO_SUCCESS
            , ImageStreamIO_writeBuffer(&image,&p.raw));
   EXPECT_EQ(image.array.UI8+slice_size,p.UI8);
+}
+
+// Duplicate ImageStreamIO search for directory to contain shmim file
+char* gtest_shmdirname()
+{
+  const char shmdir_envvar_name[] = { "MILK_SHM_DIR" };
+  static char shmdir_macro[] = { SHAREDMEMDIR };
+  static char slash_tmp[] = { "/tmp" };
+  char* pshmdirname = getenv("MILK_SHM_DIR");
+
+  // If envvar check returned a null pointer, advance to macro
+  if (!pshmdirname) { pshmdirname = shmdir_macro; }
+
+  while (pshmdirname)
+  {
+    struct stat statbuf;
+    if (!lstat(pshmdirname,&statbuf))
+    {
+      if ((statbuf.st_mode & S_IFMT) == S_IFDIR) { return pshmdirname; }
+    }
+    else
+    {
+      errno = 0;
+    }
+
+    // Advance shmdir name pointer to the next string to test
+    // - tmp => NULL (to terminate the search)
+    // - macro => /tmp
+    // - (else) envvar => macro
+    if (pshmdirname==slash_tmp)          { pshmdirname = (char*) NULL; }
+    else if (pshmdirname==shmdir_macro ) { pshmdirname = slash_tmp; }
+    else                                 { pshmdirname = shmdir_macro; }
+  }
+  return pshmdirname;
+}
+
+TEST(ImageStreamIOUtilities, FilenameFailure) {
+  char file_name[256];
+  char* pshmdirname = gtest_shmdirname();
+  const char gtest_name[] { "g" };
+
+  // Get minimum length of shmim file path (/dir/name.im.shm)
+  size_t toosmall{ (pshmdirname ? strlen(pshmdirname) : 0)
+                 + strlen("/")
+                 + strlen(gtest_name)
+                 + strlen(".im.shm")
+                 };
+
+  if(!pshmdirname)
+  {
+    GTEST_SKIP_("Skipped filename tests; no directory is available");
+  }
+
+  EXPECT_LT(toosmall,sizeof file_name);
+
+  // One character too small (inadeqquat space for terminating null)
+  EXPECT_EQ(IMAGESTREAMIO_FAILURE
+           ,ImageStreamIO_filename(file_name,toosmall,gtest_name));
+}
+
+TEST(ImageStreamIOUtilities, FilenameSuccess) {
+  char file_name[256];
+  char* pfile_name{0};
+  char* pshmdirname = gtest_shmdirname();
+  const char gtest_name[] { "g" };
+
+  // Get minimum length of shmim file path (/dir/name.im.shm)
+  size_t toosmall{ (pshmdirname ? strlen(pshmdirname) : 0)
+                 + strlen("/")
+                 + strlen(gtest_name)
+                 + strlen(".im.shm")
+                 };
+
+  if(!pshmdirname)
+  {
+    GTEST_SKIP_("Skipped filename tests; no directory is available");
+  }
+
+  EXPECT_LT(toosmall,sizeof file_name);
+
+  // Barely enough
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           ,ImageStreamIO_filename(file_name,toosmall+1,gtest_name));
+
+  EXPECT_EQ(strlen(file_name),toosmall);
+
+  pfile_name = file_name;
+
+  EXPECT_EQ(0,strncmp(pfile_name,pshmdirname,strlen(pshmdirname)));
+  pfile_name += strlen(pshmdirname);
+
+  EXPECT_EQ('/',*pfile_name);
+  ++pfile_name;
+
+  EXPECT_EQ(0,strncmp(pfile_name,gtest_name,strlen(gtest_name)));
+  pfile_name += strlen(gtest_name);
+
+  EXPECT_EQ(0,strcmp(pfile_name,".im.shm"));
 }
 
 TEST(ImageStreamIOUtilities, Typesize) {

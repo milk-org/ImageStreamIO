@@ -70,6 +70,108 @@ TEST(ImageStreamIOUtilities, SlicesAndIndices) {
   EXPECT_EQ(0, ImageStreamIO_writeIndex(&image));
 }
 
+TEST(ImageStreamIOUtilities, NonCircularReadBufferAddresses) {
+
+  // Calculations related to the number of slices
+  // - Use local memory for IMAGE and IMAGE_METADATA structures
+  IMAGE image { 0 };
+  IMAGE_METADATA md { 0 };
+  uint8_t* pui8 { 0 };
+  union
+  {
+    void* raw;
+    uint8_t* UI8;
+  } p;
+
+  // - Make IMAGE metadata pointer point to METADATA structure
+  image.md = &md;
+
+  // - Put dummy values in width and height sizes; 300 in slice size
+  // - Choose 16-byte data elements
+  md.size[0] = 10;
+  md.size[1] = 20;
+  md.size[2] = 30;
+  md.naxis = 3;
+  md.datatype = _DATATYPE_COMPLEX_DOUBLE;
+
+  // - Offset data by one IMAGE_METADATA from md
+  image.array.UI8 = pui8 = ((uint8_t*)image.md) + (sizeof md);
+
+  // - Configure buffer as non-circular
+  md.imagetype &= ~CIRCULAR_BUFFER;
+
+  // - Result from ImageStreamIO_readBufferAt will always be the same
+  p.raw = 0;
+  EXPECT_EQ(p.UI8,(uint8_t*)NULL);
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readBufferAt(&image,0,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  p.raw = 0;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readBufferAt(&image,1,&p.raw));
+  EXPECT_NE(p.UI8,(uint8_t*)NULL);
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  p.raw = 0;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readBufferAt(&image,30,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+}
+
+TEST(ImageStreamIOUtilities, CircularReadBufferAddresses) {
+
+  // Calculations related to the number of slices
+  // - Use local memory for IMAGE and IMAGE_METADATA structures
+  IMAGE image { 0 };
+  IMAGE_METADATA md { 0 };
+  uint8_t* pui8 { 0 };
+  union
+  {
+    void* raw;
+    uint8_t* UI8;
+  } p;
+  uint64_t slice_size {0 };
+
+  // - Make IMAGE metadata pointer point to METADATA structure
+  image.md = &md;
+
+  // - Put dummy values in width and height sizes; 300 in slice size
+  // - Choose 16-byte data elements, calculate slice size
+  md.size[0] = 10;
+  md.size[1] = 20;
+  md.size[2] = 30;
+  md.naxis = 3;
+  md.datatype = _DATATYPE_COMPLEX_DOUBLE;
+  slice_size = md.size[0];
+  slice_size *= md.size[1];
+  slice_size *= 16;
+
+  // - Offset data by one IMAGE_METADATA from md
+  image.array.UI8 = pui8 = ((uint8_t*)image.md) + (sizeof md);
+
+  // - Configure buffer as circular
+  md.imagetype |= CIRCULAR_BUFFER;
+
+  // - Test at start of circular buffer
+  p.raw = 0;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readBufferAt(&image,0,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  // - Test at end of circular buffer
+  p.raw = 0;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readBufferAt(&image,29,&p.raw));
+  EXPECT_EQ(image.array.UI8+(29*slice_size),p.UI8);
+
+  // - Test past end of circular buffer (failure)
+  EXPECT_EQ(IMAGESTREAMIO_FAILURE
+           , ImageStreamIO_readBufferAt(&image,30,&p.raw));
+  EXPECT_EQ(p.UI8,(uint8_t*)NULL);
+
+}
+
 TEST(ImageStreamIOUtilities, Typesize) {
 # ifdef UTSEE
 # undef UTSEE

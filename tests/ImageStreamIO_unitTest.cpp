@@ -25,6 +25,23 @@ namespace {
 
 ////////////////////////////////////////////////////////////////////////
 // ImageStreamIO utilities
+// - Finding the address of the start of data of interest
+//    - SlicesAndIndices
+//    - NonCircularReadBufferAddresses
+//    - CircularReadBufferAddresses
+//    - NonCircularWroteBufferAddresses
+//    - CircularWroteBufferAddresses
+//    - NonCircularWriteBufferAddresses
+//    - CircularWriteBufferAddresses
+// - Data type information (convert to size, name, CFITSIO type, etc.)
+//    - Typesize
+//    - Typename
+//    - Typename_7
+//    - TypenameShort
+//    - Checktype
+//    - Floattype
+//    - FITSIOdatatype
+//    - FITSIObitpix
 ////////////////////////////////////////////////////////////////////////
 TEST(ImageStreamIOUtilities, SlicesAndIndices) {
 
@@ -36,7 +53,7 @@ TEST(ImageStreamIOUtilities, SlicesAndIndices) {
   // - Make IMAGE metadata pointer point to METADATA structure
   image.md = &md;
 
-  // - Put dummy values in width and height sizes; 300 in slice size
+  // - Put values in width and height sizes; 30 as slice count
   md.size[0] = 10;
   md.size[1] = 20;
   md.size[2] = 30;
@@ -45,6 +62,7 @@ TEST(ImageStreamIOUtilities, SlicesAndIndices) {
   md.cnt1 = 5;
 
   // - 1 axis:  md.size[2] and .cnt1 are ignored; number of slices is 1
+  md.imagetype &= ~CIRCULAR_BUFFER;
   md.naxis = 1;
   EXPECT_EQ(1, ImageStreamIO_nbSlices(&image));
   EXPECT_EQ(0, ImageStreamIO_readLastWroteIndex(&image));
@@ -57,6 +75,7 @@ TEST(ImageStreamIOUtilities, SlicesAndIndices) {
   EXPECT_EQ(0, ImageStreamIO_writeIndex(&image));
 
   // - 3 axes:  md.size[2] and .cnt1(5) are used in slice calculations
+  md.imagetype |= CIRCULAR_BUFFER;
   md.naxis = 3;
   EXPECT_EQ(30, ImageStreamIO_nbSlices(&image));
   EXPECT_EQ(5, ImageStreamIO_readLastWroteIndex(&image));
@@ -77,30 +96,24 @@ TEST(ImageStreamIOUtilities, NonCircularReadBufferAddresses) {
   IMAGE image { 0 };
   IMAGE_METADATA md { 0 };
   uint8_t* pui8 { 0 };
-  union
-  {
-    void* raw;
-    uint8_t* UI8;
-  } p;
+  union { void* raw; uint8_t* UI8; } p;
 
   // - Make IMAGE metadata pointer point to METADATA structure
   image.md = &md;
 
-  // - Put dummy values in width and height sizes; 300 in slice size
+  // - Put values in width and height sizes; 30 as slice count
   // - Choose 16-byte data elements
   md.size[0] = 10;
   md.size[1] = 20;
   md.size[2] = 30;
-  md.naxis = 3;
   md.datatype = _DATATYPE_COMPLEX_DOUBLE;
 
-  // - Offset data by one IMAGE_METADATA from md
+  // - Place data buffer at end of md, configure buffer as non-circular
   image.array.UI8 = pui8 = ((uint8_t*)image.md) + (sizeof md);
-
-  // - Configure buffer as non-circular
+  md.naxis = 1;
   md.imagetype &= ~CIRCULAR_BUFFER;
 
-  // - Result from ImageStreamIO_readBufferAt will always be the same
+  // - Result from ImageStreamIO_readBufferAt will be constant
   p.raw = 0;
   EXPECT_EQ(p.UI8,(uint8_t*)NULL);
   EXPECT_EQ(IMAGESTREAMIO_SUCCESS
@@ -109,8 +122,7 @@ TEST(ImageStreamIOUtilities, NonCircularReadBufferAddresses) {
 
   p.raw = 0;
   EXPECT_EQ(IMAGESTREAMIO_SUCCESS
-           , ImageStreamIO_readBufferAt(&image,1,&p.raw));
-  EXPECT_NE(p.UI8,(uint8_t*)NULL);
+           , ImageStreamIO_readBufferAt(&image,29,&p.raw));
   EXPECT_EQ(image.array.UI8,p.UI8);
 
   p.raw = 0;
@@ -126,31 +138,25 @@ TEST(ImageStreamIOUtilities, CircularReadBufferAddresses) {
   IMAGE image { 0 };
   IMAGE_METADATA md { 0 };
   uint8_t* pui8 { 0 };
-  union
-  {
-    void* raw;
-    uint8_t* UI8;
-  } p;
+  union { void* raw; uint8_t* UI8; } p;
   uint64_t slice_size {0 };
 
   // - Make IMAGE metadata pointer point to METADATA structure
   image.md = &md;
 
-  // - Put dummy values in width and height sizes; 300 in slice size
+  // - Put values in width and height sizes; 30 as slice count
   // - Choose 16-byte data elements, calculate slice size
   md.size[0] = 10;
   md.size[1] = 20;
   md.size[2] = 30;
-  md.naxis = 3;
   md.datatype = _DATATYPE_COMPLEX_DOUBLE;
   slice_size = md.size[0];
   slice_size *= md.size[1];
   slice_size *= 16;
 
-  // - Offset data by one IMAGE_METADATA from md
+  // - Place data buffer at end of md, configure buffer as circular
   image.array.UI8 = pui8 = ((uint8_t*)image.md) + (sizeof md);
-
-  // - Configure buffer as circular
+  md.naxis = 3;
   md.imagetype |= CIRCULAR_BUFFER;
 
   // - Test at start of circular buffer
@@ -169,7 +175,194 @@ TEST(ImageStreamIOUtilities, CircularReadBufferAddresses) {
   EXPECT_EQ(IMAGESTREAMIO_FAILURE
            , ImageStreamIO_readBufferAt(&image,30,&p.raw));
   EXPECT_EQ(p.UI8,(uint8_t*)NULL);
+}
 
+TEST(ImageStreamIOUtilities, NonCircularWroteBufferAddresses) {
+
+  // Calculations related to the number of slices
+  // - Use local memory for IMAGE and IMAGE_METADATA structures
+  IMAGE image { 0 };
+  IMAGE_METADATA md { 0 };
+  uint8_t* pui8 { 0 };
+  union { void* raw; uint8_t* UI8; } p;
+
+  // - Make IMAGE metadata pointer point to METADATA structure
+  image.md = &md;
+
+  // - Put values in width and height sizes; 30 as slice count
+  // - Choose 16-byte data elements
+  md.size[0] = 10;
+  md.size[1] = 20;
+  md.size[2] = 30;
+  md.datatype = _DATATYPE_COMPLEX_DOUBLE;
+
+  // - Place data buffer at end of md, configure buffer as non-circular
+  image.array.UI8 = pui8 = ((uint8_t*)image.md) + (sizeof md);
+  md.naxis = 1;
+  md.imagetype &= ~CIRCULAR_BUFFER;
+
+  // - Result from ImageStreamIO_readLastWroteBuffer will be constant
+  p.raw = 0;
+  md.cnt1 = 0;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readLastWroteBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  p.raw = 0;
+  md.cnt1 = 29;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readLastWroteBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  p.raw = 0;
+  md.cnt1 = 30;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readLastWroteBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+}
+
+TEST(ImageStreamIOUtilities, CircularWroteBufferAddresses) {
+
+  // Calculations related to the number of slices
+  // - Use local memory for IMAGE and IMAGE_METADATA structures
+  IMAGE image { 0 };
+  IMAGE_METADATA md { 0 };
+  uint8_t* pui8 { 0 };
+  union { void* raw; uint8_t* UI8; } p;
+  uint64_t slice_size {0 };
+
+  // - Make IMAGE metadata pointer point to METADATA structure
+  image.md = &md;
+
+  // - Put values in width and height sizes; 30 as slice count
+  // - Choose 16-byte data elements, calculate slice size
+  md.size[0] = 10;
+  md.size[1] = 20;
+  md.size[2] = 30;
+  md.datatype = _DATATYPE_COMPLEX_DOUBLE;
+  slice_size = md.size[0];
+  slice_size *= md.size[1];
+  slice_size *= 16;
+
+  // - Place data buffer at end of md, configure buffer as circular
+  image.array.UI8 = pui8 = ((uint8_t*)image.md) + (sizeof md);
+  md.naxis = 3;
+  md.imagetype |= CIRCULAR_BUFFER;
+
+  // - Test at start of circular buffer
+  p.raw = 0;
+  md.cnt1 = 0;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readLastWroteBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  // - Test at end of circular buffer
+  p.raw = 0;
+  md.cnt1 = 29;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_readLastWroteBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8+(29*slice_size),p.UI8);
+
+  // - Test past end of circular buffer (failure)
+  p.raw = 0;
+  md.cnt1 = 30;
+  EXPECT_EQ(IMAGESTREAMIO_FAILURE
+           , ImageStreamIO_readLastWroteBuffer(&image,&p.raw));
+  EXPECT_EQ(p.UI8,(uint8_t*)NULL);
+}
+
+TEST(ImageStreamIOUtilities, NonCircularWriteBufferAddresses) {
+
+  // Calculations related to the number of slices
+  // - Use local memory for IMAGE and IMAGE_METADATA structures
+  IMAGE image { 0 };
+  IMAGE_METADATA md { 0 };
+  uint8_t* pui8 { 0 };
+  union { void* raw; uint8_t* UI8; } p;
+
+  // - Make IMAGE metadata pointer point to METADATA structure
+  image.md = &md;
+
+  // - Put values in width and height sizes; 30 as slice count
+  // - Choose 16-byte data elements
+  md.size[0] = 10;
+  md.size[1] = 20;
+  md.size[2] = 30;
+  md.datatype = _DATATYPE_COMPLEX_DOUBLE;
+
+  // - Place data buffer at end of md, configure buffer as non-circular
+  image.array.UI8 = pui8 = ((uint8_t*)image.md) + (sizeof md);
+  md.naxis = 1;
+  md.imagetype &= ~CIRCULAR_BUFFER;
+
+  // - Result from ImageStreamIO_writeBuffer will be constant
+  p.raw = 0;
+  md.cnt1 = 0;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_writeBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  p.raw = 0;
+  md.cnt1 = 29;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_writeBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  p.raw = 0;
+  md.cnt1 = 30;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_writeBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+}
+
+TEST(ImageStreamIOUtilities, CircularWriteBufferAddresses) {
+
+  // Calculations related to the number of slices
+  // - Use local memory for IMAGE and IMAGE_METADATA structures
+  IMAGE image { 0 };
+  IMAGE_METADATA md { 0 };
+  uint8_t* pui8 { 0 };
+  union { void* raw; uint8_t* UI8; } p;
+  uint64_t slice_size {0 };
+
+  // - Make IMAGE metadata pointer point to METADATA structure
+  image.md = &md;
+
+  // - Put values in width and height sizes; 30 as slice count
+  // - Choose 16-byte data elements, calculate slice size
+  md.size[0] = 10;
+  md.size[1] = 20;
+  md.size[2] = 30;
+  md.datatype = _DATATYPE_COMPLEX_DOUBLE;
+  slice_size = md.size[0];
+  slice_size *= md.size[1];
+  slice_size *= 16;
+
+  // - Place data buffer at end of md, configure buffer as circular
+  image.array.UI8 = pui8 = ((uint8_t*)image.md) + (sizeof md);
+  md.naxis = 3;
+  md.imagetype |= CIRCULAR_BUFFER;
+
+  // - Test at start of circular buffer
+  p.raw = 0;
+  md.cnt1 = 0;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_writeBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8+slice_size,p.UI8);
+
+  // - Test at end of circular buffer
+  p.raw = 0;
+  md.cnt1 = 29;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_writeBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8,p.UI8);
+
+  // - Test past end of circular buffer; modulo prevents failure
+  p.raw = 0;
+  md.cnt1 = 30;
+  EXPECT_EQ(IMAGESTREAMIO_SUCCESS
+           , ImageStreamIO_writeBuffer(&image,&p.raw));
+  EXPECT_EQ(image.array.UI8+slice_size,p.UI8);
 }
 
 TEST(ImageStreamIOUtilities, Typesize) {

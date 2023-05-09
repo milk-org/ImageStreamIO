@@ -318,45 +318,6 @@ errno_t ImageStreamIO_closeIm(IMAGE
 /* =============================================================================================== */
 
 
-/** @brief Destroy shmim semaphores
- *
- * ## Purpose
- *
- * Destroy semaphore of a shmim
- *
- * ## Arguments
- *
- * @param[in]
- * image	IMAGE*
- * 			pointer to shmim
- */
-
-int ImageStreamIO_destroysem(
-    IMAGE *image  ///< [in] the name of the shared memory file
-);
-
-/** @brief Create shmim semaphores
- *
- * ## Purpose
- *
- * Create semaphore of a shmim
- *
- * ## Arguments
- *
- * @param[in]
- * image	IMAGE*
- * 			pointer to shmim
- *
- * @param[in]
- * NBsem    number of semaphores to be created
- */
-int ImageStreamIO_createsem(
-    IMAGE *image,  ///< [in] the name of the shared memory file
-    long NBsem     ///< [in] number of semaphores to be created
-);
-
-
-
 /** @brief Post all shmim semaphores
  *
  * ## Purpose

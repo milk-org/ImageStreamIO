@@ -672,21 +672,6 @@ errno_t ImageStreamIO_createIm_gpu(
     uint8_t *map;
 
     int kw;
-
-    // Get shm directory name (only on first call to this function)
-    static char shmdirname[200];
-    static int initSHAREDMEMDIR = 0;
-    if (initSHAREDMEMDIR == 0)
-    {
-        ImageStreamIO_shmdirname(shmdirname);
-        for (unsigned int stri = 0; stri < strlen(shmdirname); stri++)
-            if (shmdirname[stri] == '/') // replace '/' by '.'
-            {
-                shmdirname[stri] = '.';
-            }
-        initSHAREDMEMDIR = 1;
-    }
-
     int NBproctrace = IMAGE_NB_PROCTRACE;
 
     nelement = 1;
@@ -708,39 +693,8 @@ errno_t ImageStreamIO_createIm_gpu(
     // compute total size to be allocated
     if (shared == 1)
     {
-        char semlogname[200];
-
-        // create semlog
-        size_t sharedsize = 0;     // shared memory size in bytes
-        size_t datasharedsize = 0; // shared memory size in bytes used by the data
-
-        char lclname[STRINGMAXLEN_IMAGE_NAME];
-        strncpy(lclname, name, STRINGMAXLEN_IMAGE_NAME);
-        lclname[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
-
-        char shmdirnamepfx[sizeof(semlogname) - 7 - sizeof(lclname)];
-        strncpy(shmdirnamepfx, shmdirname, sizeof(shmdirnamepfx));
-        shmdirnamepfx[sizeof(shmdirnamepfx)-1] = '\0';
-
-        snprintf(semlogname, sizeof(semlogname), "%s.%s_semlog", shmdirnamepfx, lclname);
-        remove(semlogname);
-        image->semlog = NULL;
-
-        umask(0);
-        if ((image->semlog = sem_open(semlogname, O_CREAT, FILEMODE, 1)) == SEM_FAILED)
-        {
-            fprintf(stderr, "Semaphore log %s :", semlogname);
-            ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT,
-                                     "semaphore creation / initialization");
-        }
-        else
-        {
-            sem_init(
-                image->semlog, 1,
-                SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
-        }
-        sharedsize = sizeof(IMAGE_METADATA);
-        datasharedsize = imdatamemsize;
+        size_t sharedsize = sizeof(IMAGE_METADATA);
+        size_t datasharedsize = imdatamemsize;
 
         if (location == -1)
         {
@@ -764,6 +718,8 @@ errno_t ImageStreamIO_createIm_gpu(
 
 
         sharedsize += sizeof(SEMFILEDATA) * NBsem;
+
+        sharedsize += sizeof(sem_t); // for semlog
 
         // one read PID array, one write PID array
         sharedsize += 2 * NBsem * sizeof(pid_t);
@@ -885,6 +841,12 @@ errno_t ImageStreamIO_createIm_gpu(
 
         image->semfile = (SEMFILEDATA*)(map);
         map += sizeof(SEMFILEDATA) * NBsem;
+
+        image->semlog = (sem_t *)(map);
+        map += sizeof(sem_t);
+        sem_init(
+            image->semlog, 1,
+            SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
 
         image->semReadPID = (pid_t *)(map);
         map += sizeof(pid_t) * NBsem;
@@ -1009,12 +971,19 @@ errno_t ImageStreamIO_createIm_gpu(
 
     if (shared == 1)
     {
-        ImageStreamIO_createsem(image, NBsem); // IMAGE_NB_SEMAPHORE
-        // defined in ImageStruct.h
-
+        image->semptr = (sem_t **)malloc(sizeof(sem_t **) * NBsem);
+        if (image->semptr == NULL)
+        {
+            printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+            abort();
+        }
         int semindex;
         for (semindex = 0; semindex < NBsem; semindex++)
         {
+            image->semptr[semindex] = &image->semfile[semindex].semdata;
+            sem_init(
+                image->semptr[semindex], 1,
+                SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
             image->semReadPID[semindex] = -1;
             image->semWritePID[semindex] = -1;
             image->semctrl[semindex] = 0;
@@ -1059,38 +1028,24 @@ errno_t ImageStreamIO_destroyIm(
 {
     if(image->used == 1)
     {
-        // Get shm directory name (only on first call to this function)
-        static char shmdirname[200];
-        static int initSHAREDMEMDIR = 0;
-        if (initSHAREDMEMDIR == 0)
+        if (image->semptr)
         {
-            unsigned int stri;
-
-            ImageStreamIO_shmdirname(shmdirname);
-            for (stri = 0; stri < strlen(shmdirname); stri++)
-                if (shmdirname[stri] == '/') // replace leading '/' by '.'
-                {
-                    shmdirname[stri] = '.';
-                }
-            initSHAREDMEMDIR = 1;
+            for (int s=0; s<image->md->sem; ++s)
+            {
+                sem_destroy(image->semptr[s]);
+            }
+            free(image->semptr);
+            image->semptr = NULL;
         }
-
-        char fname[512];
-
-        // close and remove semlog
-        sem_close(image->semlog);
-        snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_semlog", shmdirname,
-                 image->md->name);
-        sem_unlink(fname);
-        image->semlog = NULL;
-        remove(fname);
-
-        // close and remove all semaphores
-        ImageStreamIO_destroysem(image);
-        image->semptr = NULL;
+        if (image->semlog)
+        {
+            sem_destroy(image->semlog);
+            image->semlog = NULL;
+        }
 
         if (image->memsize > 0)
         {
+            char fname[512];
             close(image->shmfd);
             // Get this before unmapping.
             ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
@@ -1185,41 +1140,16 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         image->used = 0;
         char wmsg[250];
-        snprintf(wmsg, sizeof(wmsg), "Cannot open shm file \"%s\"\n", SM_fname);
+        snprintf(wmsg, sizeof wmsg, "Cannot open shm file \"%s\"\n", SM_fname);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
     // open() was successful. We'll need to close SM_fd for any failed exit
 
-    char sname[200] = {0};
     uint8_t *map = NULL;
     uint8_t *map_root = NULL;
     long s;
     struct stat file_stat = {0};
-
-    int snb = 0;
-    int sOK = 1;
-
-    // Get shm directory name (only on first call to this function)
-    static char shmdirname[200];
-    static int initSHAREDMEMDIR = 0;
-    static char shmdirnamepfx[sizeof(sname) - 14 - sizeof(image->md->name)];
-    if (initSHAREDMEMDIR == 0)
-    {
-        unsigned int stri;
-
-        ImageStreamIO_shmdirname(shmdirname);
-        for (stri = 0; stri < strlen(shmdirname); stri++)
-        {
-            if (shmdirname[stri] == '/') // replace leading '/' by '.'
-            {
-                shmdirname[stri] = '.';
-            }
-        }
-        strncpy(shmdirnamepfx, shmdirname, sizeof(shmdirnamepfx));
-        shmdirnamepfx[sizeof(shmdirnamepfx)-1] = '\0';
-        initSHAREDMEMDIR = 1;
-    }
 
     fstat(SM_fd, &file_stat);
 
@@ -1238,7 +1168,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     image->memsize = file_stat.st_size;
     image->shmfd = SM_fd;
     image->md = (IMAGE_METADATA *)map;
-    image->md->shared = 1;
 
     if (strcmp(image->md->version, IMAGESTRUCT_VERSION))
     {
@@ -1319,6 +1248,9 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     image->semfile = (SEMFILEDATA *)(map);
     map += sizeof(SEMFILEDATA) * image->md->sem;
 
+    image->semlog = (sem_t *)(map);
+    map += sizeof(sem_t);
+
     image->semReadPID = (pid_t *)(map);
     map += sizeof(pid_t) * image->md->sem;
 
@@ -1369,27 +1301,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 #endif
 
     strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME - 1);
-
-    // looking for semaphores
-    // printf("Looking for semaphores\n"); fflush(stdout); //TEST
-    while (sOK == 1)
-    {
-        snprintf(sname, sizeof(sname), "%s.%s_sem%02d", shmdirnamepfx
-                , image->md->name, snb);
-        sem_t *stest;
-        umask(0);
-        if ((stest = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
-        {
-            sOK = 0; // not an error here
-        }
-        else
-        {
-            sem_close(stest);
-            snb++;
-        }
-    }
-
-    //        image->md->sem = snb;
     image->semptr = (sem_t **)malloc(sizeof(sem_t *) * image->md->sem);
     if (image->semptr == NULL)
     {
@@ -1398,73 +1309,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     }
     for (s = 0; s < image->md->sem; s++)
     {
-        snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirnamepfx
-                , image->md->name, s);
-        umask(0);
-        if ((image->semptr[s] = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
-        {
-            // printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
-            //        sname);
-
-            if ((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 1)) ==
-                    SEM_FAILED)
-            {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
-                munmap(map_root, image->memsize);
-                close(SM_fd);
-                return IMAGESTREAMIO_SEMINIT;
-            }
-            else
-            {
-                sem_init(
-                    image->semptr[s], 1,
-                    SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
-            }
-
-
-            // get semaphore inode
-            {
-                struct stat file_stat;
-                int ret;
-                char fullsname[13 + sizeof(sname)];
-
-                snprintf(fullsname, sizeof(fullsname), "/dev/shm/sem.%s", sname);
-
-
-                int fd = open(fullsname, O_RDONLY);
-                ret = fstat (fd, &file_stat);
-                if (ret < 0) {
-                    // error getting file stat
-                }
-                //snprintf(image->semfile[s].fname, STRINGMAXLEN_SEMFILENAME, "%s", sname);
-                strncpy(image->semfile[s].fname, sname, STRINGMAXLEN_SEMFILENAME);
-                image->semfile[s].fname[STRINGMAXLEN_SEMFILENAME-1] = '\0';
-
-                image->semfile[s].inode = file_stat.st_ino;
-                close(fd);
-            }
-        }
-    }
-
-    snprintf(sname, sizeof(sname), "%s.%s_semlog", shmdirnamepfx, image->md->name);
-    umask(0);
-    if ((image->semlog = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
-    {
-        // printf("ERROR: could not open semaphore %s -> (re-)CREATING semaphore\n",
-        //        sname);
-        if ((image->semlog = sem_open(sname, O_CREAT, FILEMODE, 1)) == SEM_FAILED)
-        {
-            ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
-            munmap(map_root, image->memsize);
-            close(SM_fd);
-            return IMAGESTREAMIO_SEMINIT;
-        }
-        else
-        {
-            sem_init(
-                image->semlog, 1,
-                SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
-        }
+        image->semptr[s] = &image->semfile[s].semdata;
     }
 
     return IMAGESTREAMIO_SUCCESS;
@@ -1480,16 +1325,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 errno_t ImageStreamIO_closeIm(
     IMAGE *image)
 {
-    long s;
-
-    for (s = 0; s < image->md->sem; s++)
-    {
-        sem_close(image->semptr[s]);
-    }
-
     free(image->semptr);
-
-    sem_close(image->semlog);
 
     if (munmap(image->md, image->memsize) != 0)
     {
@@ -1511,173 +1347,6 @@ errno_t ImageStreamIO_closeIm(
  */
 /* ===============================================================================================
  */
-
-/**
- * ## Purpose
- *
- * Destroy semaphore of a shmim
- *
- * ## Arguments
- *
- * @param[in]
- * image	IMAGE*
- * 			pointer to shmim
- **/
-
-errno_t ImageStreamIO_destroysem(
-    IMAGE *image)
-{
-    // Get shm directory name (only on first call to this function)
-    static char shmdirname[200];
-    static int initSHAREDMEMDIR = 0;
-    if (initSHAREDMEMDIR == 0)
-    {
-        unsigned int stri;
-
-        ImageStreamIO_shmdirname(shmdirname);
-        for (stri = 0; stri < strlen(shmdirname); stri++)
-            if (shmdirname[stri] == '/') // replace leading '/' by '.'
-            {
-                shmdirname[stri] = '.';
-            }
-        initSHAREDMEMDIR = 1;
-    }
-
-    // Remove semaphores if any
-    if (image->md->sem > 0)
-    {
-        // Close existing semaphores ...
-        for (int s = 0; s < image->md->sem; s++)
-        {
-            if ((image->semptr != NULL) && (image->semptr[s] != NULL))
-            {
-                sem_close(image->semptr[s]);
-            }
-
-            // ... and remove associated files
-            char fname[302];
-            snprintf(fname, sizeof(fname), "/dev/shm/sem.%s.%s_sem%02d", shmdirname,
-                     image->md->name, s);
-            sem_unlink(fname);   // if this is right, then ...
-            remove(fname);       // ... this is not right, or vice vera!
-        }
-        image->md->sem = 0;
-    }
-
-    if (image->semptr != NULL)
-    {
-        free(image->semptr);
-        image->semptr = NULL;
-    }
-
-    return (IMAGESTREAMIO_SUCCESS);
-}
-
-/**
- * ## Purpose
- *
- * Create semaphore of a shmim
- *
- * ## Arguments
- *
- * @param[in]
- * image	IMAGE*
- * 			pointer to shmim
- *
- * @param[in]
- * NBsem    number of semaphores to be created
- **/
-
-int ImageStreamIO_createsem(
-    IMAGE *image,
-    long NBsem)
-{
-    // printf("Creating %ld semaphores\n", NBsem);
-
-    // Get shm directory name (only on first call to this function)
-    static char shmdirname[200];
-    static int initSHAREDMEMDIR = 0;
-
-    if (initSHAREDMEMDIR == 0)
-    {
-        unsigned int stri;
-
-        ImageStreamIO_shmdirname(shmdirname);
-        for (stri = 0; stri < strlen(shmdirname); stri++)
-            if (shmdirname[stri] == '/') // replace leading '/' by '.'
-            {
-                shmdirname[stri] = '.';
-            }
-        initSHAREDMEMDIR = 1;
-    }
-
-    // Remove pre-existing semaphores if any
-    // ImageStreamIO_destroysem(image);
-
-    // printf("malloc semptr %ld entries\n", NBsem);
-    image->semptr = (sem_t **)malloc(sizeof(sem_t **) * NBsem);
-    if (image->semptr == NULL)
-    {
-        printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
-        abort();
-    }
-
-    for (int s = 0; s < NBsem; s++)
-    {
-        char sname[200];
-        char shmdirnamepfx[sizeof(sname) - 15 + sizeof(image->md->name)];
-        strncpy(shmdirnamepfx, shmdirname, sizeof(shmdirnamepfx));
-        shmdirnamepfx[sizeof(shmdirnamepfx) -1] = '\0';
-        snprintf(sname, sizeof(sname), "%s.%s_sem%02d", shmdirnamepfx, image->md->name,
-                 s);
-        umask(0);
-        if((image->semptr[s] = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
-        {
-            if ((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 0)) == SEM_FAILED)
-            {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
-            }
-            else
-            {
-                sem_init(
-                    image->semptr[s], 1,
-                    SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
-            }
-        }
-
-        // get semaphore inode
-        {
-            struct stat file_stat;
-            int ret;
-            char fullsname[13 + sizeof(sname)];
-
-            snprintf(fullsname, sizeof(fullsname), "/dev/shm/sem.%s", sname);
-
-
-            int fd = open(fullsname, O_RDONLY);
-            ret = fstat (fd, &file_stat);
-            if (ret < 0) {
-                // error getting file stat
-            }
-            //snprintf(image->semfile[s].fname, STRINGMAXLEN_SEMFILENAME, "%s", sname);
-            strncpy(image->semfile[s].fname, sname, STRINGMAXLEN_SEMFILENAME);
-            image->semfile[s].fname[STRINGMAXLEN_SEMFILENAME-1] = '\0';
-
-            image->semfile[s].inode = file_stat.st_ino;
-            close(fd);
-        }
-
-
-        // Do this last so nobody accesses before init is done.
-        image->md->sem = NBsem;
-    }
-
-    return IMAGESTREAMIO_SUCCESS;
-}
-
-
-
-
 
 /**
  * ## Purpose

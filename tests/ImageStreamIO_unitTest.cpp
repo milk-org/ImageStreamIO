@@ -1,4 +1,5 @@
 #include "ImageStreamIO.h"
+#include "ImageStreamIO_subTest_Operations.hpp"
 #include "gtest/gtest.h"
 #include <limits.h>
 
@@ -147,6 +148,15 @@ TEST(ImageStreamIOTestLocation, InitCpuLocationFailure) {
                                       ,2, dims2, _DATATYPE_FLOAT
                                       ,gpuLocn, 1, 10, 10, MATH_DATA,0)
            );
+}
+
+// Operational test:  child process writes to shmim; parent reads
+TEST(ImageStreamIOTestOperations, OperationsTest) {
+
+  int success_count;
+  int test_count;
+  ImageStreamIO_subTest_Operations(test_count, success_count);
+  ASSERT_EQ(success_count, test_count);
 }
 
 } // namespace

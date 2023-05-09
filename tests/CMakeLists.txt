@@ -4,6 +4,7 @@ find_package(GTest REQUIRED)
 
 add_executable(ImageStreamIOTest
 ImageStreamIO_unitTest.cpp
+    ImageStreamIO_subTest_Operations.cpp
 )
 
 target_link_libraries(ImageStreamIOTest

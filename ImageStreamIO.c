@@ -240,7 +240,7 @@ errno_t ImageStreamIO_printWARNING(
 
 
 
-/* ============================================================================================================================================================================================== */
+/* =========================================================================================================================================================================================== */
 /* @name 0. Utilities */
 /* ============================================================================================================================================================================================== */
 
@@ -825,9 +825,9 @@ errno_t ImageStreamIO_createIm_gpu(
         strncpy(lclname, name, STRINGMAXLEN_IMAGE_NAME);
         lclname[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
 
-        char shmdirnamepfx[(sizeof semlogname) - (7 + sizeof lclname)];
-        strncpy(shmdirnamepfx, shmdirname, sizeof shmdirnamepfx);
-        shmdirnamepfx[(sizeof shmdirnamepfx)-1] = '\0';
+        char shmdirnamepfx[sizeof(semlogname) - 7 - sizeof(lclname)];
+        strncpy(shmdirnamepfx, shmdirname, sizeof(shmdirnamepfx));
+        shmdirnamepfx[sizeof(shmdirnamepfx)-1] = '\0';
 
         snprintf(semlogname, sizeof(semlogname), "%s.%s_semlog", shmdirnamepfx, lclname);
         remove(semlogname);
@@ -1292,7 +1292,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         image->used = 0;
         char wmsg[250];
-        snprintf(wmsg, sizeof wmsg, "Cannot open shm file \"%s\"\n", SM_fname);
+        snprintf(wmsg, sizeof(wmsg), "Cannot open shm file \"%s\"\n", SM_fname);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
@@ -1310,7 +1310,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     // Get shm directory name (only on first call to this function)
     static char shmdirname[200];
     static int initSHAREDMEMDIR = 0;
-    static char shmdirnamepfx[(sizeof sname) - (14 + sizeof image->md->name)];
+    static char shmdirnamepfx[sizeof(sname) - 14 - sizeof(image->md->name)];
     if (initSHAREDMEMDIR == 0)
     {
         unsigned int stri;
@@ -1323,8 +1323,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
                 shmdirname[stri] = '.';
             }
         }
-        strncpy(shmdirnamepfx, shmdirname, sizeof shmdirnamepfx);
-        shmdirnamepfx[(sizeof shmdirnamepfx)-1] = '\0';
+        strncpy(shmdirnamepfx, shmdirname, sizeof(shmdirnamepfx));
+        shmdirnamepfx[sizeof(shmdirnamepfx)-1] = '\0';
         initSHAREDMEMDIR = 1;
     }
 
@@ -1505,7 +1505,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     }
     for (s = 0; s < image->md->sem; s++)
     {
-        snprintf(sname, sizeof sname, "%s.%s_sem%02ld", shmdirnamepfx
+        snprintf(sname, sizeof(sname), "%s.%s_sem%02ld", shmdirnamepfx
                 , image->md->name, s);
         umask(0);
         if ((image->semptr[s] = sem_open(sname, 0, FILEMODE, 0)) == SEM_FAILED)
@@ -1533,7 +1533,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
             {
                 struct stat file_stat;
                 int ret;
-                char fullsname[13 + sizeof sname];
+                char fullsname[13 + sizeof(sname)];
 
                 snprintf(fullsname, sizeof(fullsname), "/dev/shm/sem.%s", sname);
 
@@ -1732,9 +1732,9 @@ int ImageStreamIO_createsem(
     for (int s = 0; s < NBsem; s++)
     {
         char sname[200];
-        char shmdirnamepfx[(sizeof sname) - (15+sizeof image->md->name)];
-        strncpy(shmdirnamepfx, shmdirname, sizeof shmdirnamepfx);
-        shmdirnamepfx[(sizeof shmdirnamepfx) -1] = '\0';
+        char shmdirnamepfx[sizeof(sname) - 15 + sizeof(image->md->name)];
+        strncpy(shmdirnamepfx, shmdirname, sizeof(shmdirnamepfx));
+        shmdirnamepfx[sizeof(shmdirnamepfx) -1] = '\0';
         snprintf(sname, sizeof(sname), "%s.%s_sem%02d", shmdirnamepfx, image->md->name,
                  s);
         umask(0);
@@ -1756,9 +1756,9 @@ int ImageStreamIO_createsem(
         {
             struct stat file_stat;
             int ret;
-            char fullsname[13 + sizeof sname];
+            char fullsname[13 + sizeof(sname)];
 
-            snprintf(fullsname, sizeof fullsname, "/dev/shm/sem.%s", sname);
+            snprintf(fullsname, sizeof(fullsname), "/dev/shm/sem.%s", sname);
 
 
             int fd = open(fullsname, O_RDONLY);

@@ -554,14 +554,7 @@ TEST(ImageStreamIOUtilities, TypenameShort) {
   UTSEE(" I16",  _DATATYPE_INT16);
   UTSEE("UI32",  _DATATYPE_UINT32);
   UTSEE(" I32",  _DATATYPE_INT32);
-  //////////////////////////////////////////////////////////////////////
-  /// Bug in existing code; remove these comments when it's resolved ///
-  /// BTCarcich drbitbyu@github.com ca. 2023-04-18                   ///
-  //////////////////////////////////////////////////////////////////////
-  //Uncomment this line; remove next:UTSEE("UI64",  _DATATYPE_UINT64);
-  UTSEE(" UI64",  _DATATYPE_UINT64);  /// REMOVE THIS LINE AFTER FIX ///
-  //////////////////////////////////////////////////////////////////////
-  //////////////////////////////////////////////////////////////////////
+  UTSEE("UI64",  _DATATYPE_UINT64);
   UTSEE(" I64",  _DATATYPE_INT64);
   UTSEE(" F16",  _DATATYPE_HALF);
   UTSEE(" FLT",  _DATATYPE_FLOAT);

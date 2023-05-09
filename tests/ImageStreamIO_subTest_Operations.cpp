@@ -54,6 +54,24 @@ install_sigchld_handler()
     return 0;
 }
 
+#   define WAIT_AS_ns 100000000
+#   define WAIT_LIMIT_ns (1000000000 - WAIT_AS_ns)
+
+int
+clock_gettime_future(struct timespec& ts)
+{
+    if (clock_gettime(CLOCK_REALTIME,&ts)) { return -1; }
+    if (ts.tv_nsec < WAIT_LIMIT_ns) {
+        ts.tv_nsec += WAIT_AS_ns;
+    }
+    else
+    {
+        ts.tv_nsec -= WAIT_LIMIT_ns;
+        ++ts.tv_sec;
+    }
+    return 0;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // Operational test of ImageStreamIO library
@@ -205,8 +223,6 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
 
 #   define SEM_TO_CHILD 0
 #   define SEM_TO_PARENT 1
-#   define WAIT_AS_ns 100000000
-#   define WAIT_LIMIT_ns (1000000000 - WAIT_AS_ns)
 
     if (i_am_parent)
     {
@@ -227,18 +243,10 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
             // - Wait for child to update shmim and post other semaphore
             ++test_count;
             struct timespec ts;
-            if (clock_gettime(CLOCK_REALTIME,&ts))
+            if (clock_gettime_future(ts))
             {
                 perror("Parent clock_gettime failed");
                 return;
-            }
-            if (ts.tv_nsec < WAIT_LIMIT_ns) {
-                ts.tv_nsec += WAIT_AS_ns;
-            }
-            else
-            {
-                ts.tv_nsec -= WAIT_LIMIT_ns;
-                ++ts.tv_sec;
             }
             if (ImageStreamIO_semtimedwait(&parent_image,SEM_TO_PARENT,&ts))
             {
@@ -246,6 +254,27 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
                 return;
             }
             ++success_count;
+
+            // - Test semlog (posted to by ImageStreamIO_sempost(...))
+            if (!ipass)
+            {
+                // - On first pass by here, both parent and child ...
+                int sval = 0;
+                ++test_count;
+                if (sem_getvalue(parent_image.semlog,&sval))
+                {
+                    perror("Parent sem_getvalue[semlog]");
+                    return;
+                }
+                //   ... will have each posted once to semlog:
+                if (sval != 2)
+                {
+                    errno = EINVAL;
+                    perror("Parent semlog value is not 1");
+                    return;
+                }
+                ++success_count;
+            }
 
             // - Read shmim
             uint32_t* pui32 = parent_image.array.UI32;
@@ -267,18 +296,10 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
         {
             // - Wait for parent to trigger this pass via semaphore
             struct timespec ts;
-            if (clock_gettime(CLOCK_REALTIME,&ts) == -1)
+            if (clock_gettime_future(ts))
             {
-                perror("Child gettime");
-                exit(100);
-            }
-            if (ts.tv_nsec < WAIT_LIMIT_ns) {
-                ts.tv_nsec += WAIT_AS_ns;
-            }
-            else
-            {
-                ts.tv_nsec -= WAIT_LIMIT_ns;
-                ++ts.tv_sec;
+                perror("Parent clock_gettime failed");
+                return;
             }
             if (ImageStreamIO_semtimedwait(&child_image,SEM_TO_CHILD,&ts))
             {
@@ -342,6 +363,25 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
     return;
 }
 
+/*
+ * Build standalone from source in this repo:
+ *
+ *   g++ -D__ISIOUT_OPS_TEST_MAIN__=main      \
+ *       -I..                                 \
+ *       ImageStreamIO_subTest_Operations.cpp \
+ *       ../ImageStreamIO.c                   \
+ *       -pthread                             \
+ k       -o ImageStreamIO_subTest_Operations
+ *
+ * Build standalone against ImageStreamIO shared library and header file
+ * under /usr/local/:
+ *
+ *   g++ -D__ISIOUT_OPS_TEST_MAIN__=main      \
+ *       -I/usr/local/include/ImageStreamIO   \
+ *       ImageStreamIO_subTest_Operations.cpp \
+ *       -lImageStreamIO -pthread             \
+ *       -o ImageStreamIO_subTest_Operations
+ */
 int
 __ISIOUT_OPS_TEST_MAIN__(int argc, char** argv)
 {

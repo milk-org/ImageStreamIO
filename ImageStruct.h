@@ -413,8 +413,7 @@ typedef struct
 #define STRINGMAXLEN_SEMFILENAME 200
 typedef struct
 {
-    ino_t inode;
-    char  fname[STRINGMAXLEN_SEMFILENAME];
+    sem_t semdata;
 } SEMFILEDATA;
 
 

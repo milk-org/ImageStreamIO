@@ -10,6 +10,8 @@
 #ifndef _IMAGESTREAMIO_H
 #define _IMAGESTREAMIO_H
 
+#define CLOCK_ISIO CLOCK_TAI
+
 #ifdef __cplusplus
 extern "C"
 {

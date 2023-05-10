@@ -139,7 +139,7 @@ int main()
 			}
 		imarray.md->cnt1 = index;
 		imarray.md->cnt0++;
-		clock_gettime(CLOCK_REALTIME, &imarray.md[0].lastaccesstime);
+		clock_gettime(CLOCK_ISIO, &imarray.md[0].lastaccesstime);
 
 		// POST ALL SEMAPHORES
 		ImageStreamIO_sempost(&imarray, -1);

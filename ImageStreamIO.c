@@ -144,7 +144,7 @@ errno_t ImageStreamIO_write_process_log(
     {
         struct timespec tnow;
         //        time_t now;
-        clock_gettime(CLOCK_REALTIME, &tnow);
+        clock_gettime(CLOCK_ISIO, &tnow);
         tvsec0 = tnow.tv_sec;
         uttime = gmtime(&tvsec0);
         fprintf(fplog, "%04d%02d%02dT%02d%02d%02d.%09ld %s\n",
@@ -1104,8 +1104,8 @@ errno_t ImageStreamIO_createIm_gpu(
 
     ImageStreamIO_initialize_buffer(image);
 
-    clock_gettime(CLOCK_REALTIME, &image->md->lastaccesstime);
-    clock_gettime(CLOCK_REALTIME, &image->md->creationtime);
+    clock_gettime(CLOCK_ISIO, &image->md->lastaccesstime);
+    clock_gettime(CLOCK_ISIO, &image->md->creationtime);
     // image->md->lastaccesstime =
     //     1.0 * timenow.tv_sec + 0.000000001 * timenow.tv_nsec;
     // image->md->creationtime = image->md->lastaccesstime;
@@ -2185,7 +2185,7 @@ long ImageStreamIO_UpdateIm(
         }
         {
             struct timespec ts;
-            if(clock_gettime(CLOCK_REALTIME, &ts) == -1)
+            if(clock_gettime(CLOCK_ISIO, &ts) == -1)
             {
                 perror("clock_gettime");
                 exit(EXIT_FAILURE);

@@ -104,7 +104,7 @@ errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
 
 #define ImageStreamIO_printERROR(code, msg) \
     if (internal_printError)                \
-        internal_printError(__FILE__, __func__, __LINE__, code, msg);
+        internal_printError(__FILE__, __func__, __LINE__, code, (char*)msg);
 
 #ifdef HAVE_CUDA
 void check(cudaError_t result, char const *const func, const char *const file,
@@ -338,7 +338,7 @@ errno_t ImageStreamIO_filename(
     else
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE,
-                                 (char*)"string not large enough for file name");
+                                 "string not large enough for file name");
         return IMAGESTREAMIO_FAILURE;
     }
 }
@@ -364,7 +364,7 @@ int ImageStreamIO_typesize(
     case _DATATYPE_COMPLEX_DOUBLE:return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
     default:                      break;
     }
-    ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, (char*)"invalid type code");
+    ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
     return -1; // This is an in-band error code, so can't be > 0.
 }
 
@@ -434,7 +434,7 @@ int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed)
 
     default:                        break;
     }
-    ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, (char*)"invalid type code");
+    ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
     return -1; // This is an in-band error code, so can't be > 0.
 }
 
@@ -481,7 +481,7 @@ int ImageStreamIO_floattype(
     case _DATATYPE_COMPLEX_DOUBLE: return _DATATYPE_COMPLEX_DOUBLE;
     default:                       break;
     }
-    ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, (char*)"invalid type code");
+    ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
     return -1; // This is an in-band error code, so can't be > 0.
 }
 
@@ -504,7 +504,7 @@ int ImageStreamIO_FITSIOdatatype(uint8_t datatype)
     default:               break;
     }
     ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
-                             (char*)"bitpix not implemented for type");
+                             "bitpix not implemented for type");
     return -1; // This is an in-band error code, must be unique from valid BITPIX values.
 }
 
@@ -528,7 +528,7 @@ int ImageStreamIO_FITSIObitpix(
     default:               break;
     }
     ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
-                             (char*)"bitpix not implemented for type");
+                             "bitpix not implemented for type");
     return -1; // This is an in-band error code, must be unique from valid BITPIX values.
 }
 
@@ -579,7 +579,7 @@ uint64_t ImageStreamIO_initialize_buffer(
             image->array.raw = calloc((size_t)image->md->nelement, size_element);
             if (image->array.raw == NULL)
             {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC, (char*)"memory allocation failed");
+                ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC, "memory allocation failed");
                 fprintf(stderr, "%c[%d;%dm", (char)27, 1, 31);
                 fprintf(stderr, "Image name = %s\n", image->name);
                 fprintf(stderr, "Image size = ");
@@ -611,7 +611,7 @@ uint64_t ImageStreamIO_initialize_buffer(
         }
 #else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
-                                 (char*)"unsupported location, milk needs to be compiled with -DUSE_CUDA=ON"); ///\todo should this return an error?
+                                 "unsupported location, milk needs to be compiled with -DUSE_CUDA=ON"); ///\todo should this return an error?
 #endif
     }
 
@@ -700,7 +700,7 @@ errno_t ImageStreamIO_createIm_gpu(
             (naxis != 3))
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
-                                 (char*)"Error calling ImageStreamIO_createIm_gpu, "
+                                 "Error calling ImageStreamIO_createIm_gpu, "
                                  "temporal circular buffer needs 3 dimensions");
         return IMAGESTREAMIO_INVALIDARG;
     }
@@ -731,7 +731,7 @@ errno_t ImageStreamIO_createIm_gpu(
         {
             fprintf(stderr, "Semaphore log %s :", semlogname);
             ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT,
-                                     (char*)"semaphore creation / initialization");
+                                     "semaphore creation / initialization");
         }
         else
         {
@@ -756,7 +756,7 @@ errno_t ImageStreamIO_createIm_gpu(
         }
         else
         {
-            ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, (char*)"Error location unknown");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "Error location unknown");
             return IMAGESTREAMIO_FAILURE;
         }
 
@@ -801,7 +801,7 @@ errno_t ImageStreamIO_createIm_gpu(
         if ((stat(SM_fname, &buffer) == 0) && (location > -1))
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEEXISTS,
-                                     (char*)"Error creating GPU SHM buffer on an existing file");
+                                     "Error creating GPU SHM buffer on an existing file");
             return IMAGESTREAMIO_FILEEXISTS;
         }
 
@@ -811,7 +811,7 @@ errno_t ImageStreamIO_createIm_gpu(
         if (SM_fd == -1)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,
-                                     (char*)"Error opening file for writing");
+                                     "Error opening file for writing");
             return IMAGESTREAMIO_FILEOPEN;
         }
 
@@ -824,7 +824,7 @@ errno_t ImageStreamIO_createIm_gpu(
         {
             close(SM_fd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILESEEK,
-                                     (char*)"Error calling lseek() to 'stretch' the file");
+                                     "Error calling lseek() to 'stretch' the file");
             return IMAGESTREAMIO_FILESEEK;
         }
 
@@ -833,7 +833,7 @@ errno_t ImageStreamIO_createIm_gpu(
         {
             close(SM_fd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEWRITE,
-                                     (char*)"Error writing last byte of the file");
+                                     "Error writing last byte of the file");
             return IMAGESTREAMIO_FILEWRITE;
         }
 
@@ -842,7 +842,7 @@ errno_t ImageStreamIO_createIm_gpu(
         if (map == MAP_FAILED)
         {
             close(SM_fd);
-            ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, (char*)"Error mmapping the file");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
             return IMAGESTREAMIO_MMAP;
         }
 
@@ -859,7 +859,7 @@ errno_t ImageStreamIO_createIm_gpu(
             ret = fstat(SM_fd, &file_stat);
             if (ret < 0)
             {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, (char*)"Error getting inode");
+                ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
                 return IMAGESTREAMIO_INODE;
             }
             image->md->inode =
@@ -1148,14 +1148,14 @@ void *ImageStreamIO_get_image_d_ptr(
                                              cudaIpcMemLazyEnablePeerAccess));
 #else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
-                                 (char*)"Error calling ImageStreamIO_get_image_d_ptr(), CACAO needs to be "
+                                 "Error calling ImageStreamIO_get_image_d_ptr(), CACAO needs to be "
                                  "compiled with -DUSE_CUDA=ON"); ///\todo should this return a NULL?
 #endif
     }
     else
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
-                                 (char*)"Error calling ImageStreamIO_get_image_d_ptr(), wrong location"); ///\todo should this return a NULL?
+                                 "Error calling ImageStreamIO_get_image_d_ptr(), wrong location"); ///\todo should this return a NULL?
     }
     return d_ptr;
 }
@@ -1231,7 +1231,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     if (map_root == MAP_FAILED)
     {
         close(SM_fd);
-        ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, (char*)"Error mmapping the file");
+        ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
         return IMAGESTREAMIO_MMAP;
     }
 
@@ -1409,7 +1409,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
             if ((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 1)) ==
                     SEM_FAILED)
             {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, (char*)"semaphore initialization");
+                ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
                 munmap(map_root, image->memsize);
                 close(SM_fd);
                 return IMAGESTREAMIO_SEMINIT;
@@ -1454,7 +1454,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         //        sname);
         if ((image->semlog = sem_open(sname, O_CREAT, FILEMODE, 1)) == SEM_FAILED)
         {
-            ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, (char*)"semaphore initialization");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
             munmap(map_root, image->memsize);
             close(SM_fd);
             return IMAGESTREAMIO_SEMINIT;
@@ -1493,7 +1493,7 @@ errno_t ImageStreamIO_closeIm(
 
     if (munmap(image->md, image->memsize) != 0)
     {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, (char*)"error unmapping memory");
+        ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "error unmapping memory");
         return IMAGESTREAMIO_MMAP;
     }
 
@@ -1635,7 +1635,7 @@ int ImageStreamIO_createsem(
         {
             if ((image->semptr[s] = sem_open(sname, O_CREAT, FILEMODE, 0)) == SEM_FAILED)
             {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, (char*)"semaphore initialization");
+                ImageStreamIO_printERROR(IMAGESTREAMIO_SEMINIT, "semaphore initialization");
             }
             else
             {

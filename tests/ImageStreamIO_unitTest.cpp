@@ -6,6 +6,7 @@
 #endif//USE_CFITSIO
 #include "ImageStreamIO.h"
 #include "ImageStreamIO_subTest_Operations.hpp"
+#include "ImageStreamIO_cleanupTest.hpp"
 #include "gtest/gtest.h"
 
 /* A prefix to all names indicating ImageStreamIO Unit Tests */
@@ -825,6 +826,44 @@ TEST(ImageStreamIOTestOperations, OperationsTest) {
   int test_count;
   ImageStreamIO_subTest_Operations(test_count, success_count);
   ASSERT_EQ(success_count, test_count);
+}
+
+// Operational test:  child process writes to shmim; parent reads
+TEST(ImageStreamIOTestOperations, CleanupTest) {
+
+  bool kill_child{false};
+  std::string sOK{"OK"};
+
+  ISIO_CLEANUP isio_cleanup{ISIO_CLEANUP()};
+
+  EXPECT_EQ(sOK, isio_cleanup.rm_shmim_filepath_01());
+  EXPECT_EQ(sOK, isio_cleanup.block_SIGUSR2_02(true));
+  EXPECT_EQ(sOK, isio_cleanup.fork_child_03());
+  EXPECT_EQ(sOK, isio_cleanup.wait_for_SIGUSR2_04());
+  EXPECT_EQ(sOK, isio_cleanup.open_shmim_05());
+  EXPECT_EQ(sOK, isio_cleanup.check_for_semfiles_06());
+  EXPECT_EQ(sOK, isio_cleanup.release_the_child_07());
+  EXPECT_EQ(sOK, isio_cleanup.wait_for_sem_08(kill_child));
+  EXPECT_EQ(sOK, isio_cleanup.close_shmim_09());
+  EXPECT_EQ(sOK, isio_cleanup.wait_for_child_10(kill_child));
+  EXPECT_EQ(sOK, isio_cleanup.file_cleanup_11(kill_child));
+
+  isio_cleanup._destructor();
+  isio_cleanup._constructor();
+
+  kill_child = true;
+
+  EXPECT_EQ(sOK, isio_cleanup.rm_shmim_filepath_01());
+  EXPECT_EQ(sOK, isio_cleanup.block_SIGUSR2_02(true));
+  EXPECT_EQ(sOK, isio_cleanup.fork_child_03());
+  EXPECT_EQ(sOK, isio_cleanup.wait_for_SIGUSR2_04());
+  EXPECT_EQ(sOK, isio_cleanup.open_shmim_05());
+  EXPECT_EQ(sOK, isio_cleanup.check_for_semfiles_06());
+  EXPECT_EQ(sOK, isio_cleanup.release_the_child_07());
+  EXPECT_EQ(sOK, isio_cleanup.wait_for_sem_08(kill_child));
+  EXPECT_EQ(sOK, isio_cleanup.close_shmim_09());
+  EXPECT_EQ(sOK, isio_cleanup.wait_for_child_10(kill_child));
+  EXPECT_EQ(sOK, isio_cleanup.file_cleanup_11(kill_child));
 }
 
 } // namespace

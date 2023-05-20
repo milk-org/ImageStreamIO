@@ -50,7 +50,7 @@ Check for semaphore (sem) files
     |
     v
 
-Post semptr[0]        >=========>  Wait for semptr[0]
+Post semptr[0]        >=========>  Do timed wait for semptr[0]
 
                                       |
                                       v
@@ -67,7 +67,7 @@ EITHER kill CHILD     >=========>  EITHER child process dies when killed
   (kill -9   )
 
 OR do timed wait      >=========>  OR watch semptr[1] to detect
-  for semptr[1]                       when its value becomes 1
+  for semptr[1]                       when its value becomes 0
 
                                       |
                                       v

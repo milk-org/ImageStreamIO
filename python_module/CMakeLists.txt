@@ -10,7 +10,7 @@ find_package(pybind11)
 if(NOT TARGET pybind11)
   execute_process(COMMAND bash -c "${PYTHON_EXECUTABLE} -m pybind11 --includes"
                   OUTPUT_VARIABLE pybind11_inc)
-  execute_process(COMMAND bash -c "${PYTHON_EXECUTABLE} -c 'import sysconfig; print(sysconfig.get_config_var(\'EXT_SUFFIX\'))'"
+  execute_process(COMMAND bash -c "${PYTHON_EXECUTABLE} -c 'import sysconfig; print(sysconfig.get_config_var(\"EXT_SUFFIX\"))'"
                   OUTPUT_VARIABLE PYTHON_MODULE_EXTENSION)
   string(REPLACE "-I" "" pybind11_inc ${pybind11_inc})
   string(REPLACE " " ";" pybind11_inc ${pybind11_inc})

@@ -1356,6 +1356,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         map += sizeof(CBFRAMEMD) * image->md->CBsize;
 
         image->CBimdata = map;
+        map += ImageStreamIO_offset_data(image, map) * image->md->CBsize;
     }
     else
     {

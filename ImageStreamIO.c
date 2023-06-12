@@ -571,8 +571,6 @@ uint64_t ImageStreamIO_initialize_buffer(
         if (image->md->shared == 1)
         {
             memset(image->array.raw, 0, image->md->nelement * size_element);
-            // memset takes an int source value
-            //memset(image->array.raw, '\0', image->md->nelement * size_element);
         }
         else
         {
@@ -874,7 +872,10 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
     image->md->NBproctrace = NBproctrace;
 
     image->md->nelement = image->md->size[0];
-    for (long i = 1; i < image->md->naxis; ++i) { image->md->nelement *= image->md->size[i]; }
+    for (long i = 1; i < image->md->naxis; ++i)
+    {
+        image->md->nelement *= image->md->size[i];
+    }
 
     image->md->imdatamemsize = ImageStreamIO_typesize(image->md->datatype)
                                * image->md->nelement;
@@ -891,7 +892,7 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
     }
 
     return ImageStreamIO_image_sizing(image, map);
-} // errno_t ImageStreamIO_image_sizing_from_scratch
+} // errno_t ImageStreamIO_image_sizing_from_scratch(...)
 
 
 
@@ -909,92 +910,31 @@ errno_t ImageStreamIO_createIm_gpu(
     uint32_t CBsize // circular buffer size (if shared), 0 if not used
 )
 {
-    long nelement;
-
     uint8_t *map;
-
-    int kw;
-    int NBproctrace = IMAGE_NB_PROCTRACE;
-
-    nelement = 1;
-    for (long i = 0; i < naxis; i++)
-    {
-        nelement *= size[i];
-    }
-    uint64_t imdatamemsize = ImageStreamIO_typesize(datatype) * nelement;
-
-    if (((imagetype & 0xF000F) == CIRCULAR_BUFFER) &&
-            (naxis != 3))
-    {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
-                                 "Error calling ImageStreamIO_createIm_gpu, "
-                                 "temporal circular buffer needs 3 dimensions");
-        return IMAGESTREAMIO_INVALIDARG;
-    }
 
     // compute total size to be allocated
     if (shared == 1)
     {
-        size_t sharedsize = sizeof(IMAGE_METADATA);
-        size_t datasharedsize = imdatamemsize;
 
-        if (location == -1)
-        {
-            // image on CPU
-            // printf("shared memory space in CPU RAM = %ud bytes\n", sharedsize);
-            sharedsize += datasharedsize;
-        }
-        else if (location >= 0)
-        {
-            // image on GPU
-            // printf("shared memory space in GPU%d RAM= %ud bytes\n", location,
-            // sharedsize); //TEST
-        }
-        else
-        {
-            ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "Error location unknown");
-            return IMAGESTREAMIO_FAILURE;
-        }
+        ////////////////////////////////////////////////////////////////
+        // Calculate the size of the shmim file
+        ////////////////////////////////////////////////////////////////
 
-        sharedsize += sizeof(IMAGE_KEYWORD) * NBkw;
+        errno_t return_errno = ImageStreamIO_image_sizing_from_scratch(
+                                 image, name, naxis, size, datatype
+                               , location, shared, NBsem, NBkw
+                               , imagetype, CBsize, (uint8_t*) NULL
+                               );
+        if (return_errno != IMAGESTREAMIO_SUCCESS) { return return_errno; }
 
-
-        sharedsize += sizeof(SEMFILEDATA) * NBsem;
-
-        sharedsize += sizeof(sem_t); // for semlog
-
-        // one read PID array, one write PID array
-        sharedsize += 2 * NBsem * sizeof(pid_t);
-
-        // semctrl
-        sharedsize += sizeof(uint32_t) * NBsem;
-
-        // semstatus
-        sharedsize += sizeof(uint32_t) * NBsem;
-
-        sharedsize += sizeof(STREAM_PROC_TRACE) * NBproctrace;
-
-        if ((imagetype & 0xF000F) ==
-                (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // Circular buffer
-        {
-            // room for atimearray, writetimearray and cntarray
-            sharedsize += size[2] * (2 * sizeof(struct timespec) + sizeof(uint64_t));
-        }
-
-        // fast circular buffer metadata
-        sharedsize += sizeof(CBFRAMEMD) * CBsize;
-
-        // fast circular buffer data buffer
-        sharedsize += datasharedsize * CBsize;
-
-#ifdef IMAGESTRUCT_WRITEHISTORY
-        // write time buffer
-        sharedsize += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
-#endif
+        ////////////////////////////////////////////////////////////////
+        // Open and map shmim file of the calculated size image->memsize
+        ////////////////////////////////////////////////////////////////
 
         char SM_fname[200];
         ImageStreamIO_filename(SM_fname, 200, name);
 
+        // - Ensure GPU SHM buffer file does not exist
         struct stat buffer;
         if ((stat(SM_fname, &buffer) == 0) && (location > -1))
         {
@@ -1003,142 +943,77 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FILEEXISTS;
         }
 
-        int SM_fd; // shared memory file descriptor
+        // - Open shmim file as an empty (truncated)
+        // image->shmfd is the shared memory file descriptor
         umask(0);
-        SM_fd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)FILEMODE);
-        if (SM_fd == -1)
+        image->shmfd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)FILEMODE);
+        if (image->shmfd == -1)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,
                                      "Error opening file for writing");
             return IMAGESTREAMIO_FILEOPEN;
         }
 
-        image->shmfd = SM_fd;
-        image->memsize = sharedsize;
+        // - Retrieve the inode of the shmim flle
+        struct stat file_stat;
+        if (fstat(image->shmfd, &file_stat) < 0)
+        {
+            close(image->shmfd);
+            ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
+            return IMAGESTREAMIO_INODE;
+        }
+        // - Save inode as metadata, which metadata are also in the file
+        image->md->inode = file_stat.st_ino;
 
+        // - Seek to the end of the shmim file
         int result;
-        result = lseek(SM_fd, sharedsize - 1, SEEK_SET);
+        result = lseek(image->shmfd, image->memsize - 1, SEEK_SET);
         if (result == -1)
         {
-            close(SM_fd);
+            close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILESEEK,
                                      "Error calling lseek() to 'stretch' the file");
             return IMAGESTREAMIO_FILESEEK;
         }
 
-        result = write(SM_fd, "", 1);
+        // - Write a null at that sought position of the empty file
+        result = write(image->shmfd, "", 1);
         if (result != 1)
         {
-            close(SM_fd);
+            close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEWRITE,
                                      "Error writing last byte of the file");
             return IMAGESTREAMIO_FILEWRITE;
         }
 
-        map = (uint8_t *)mmap(0, sharedsize, PROT_READ | PROT_WRITE, MAP_SHARED,
-                              SM_fd, 0);
+        // - Map the file into memory' address will be pointed to by map
+        map = (uint8_t *)mmap(0, image->memsize, PROT_READ | PROT_WRITE, MAP_SHARED,
+                              image->shmfd, 0);
         if (map == MAP_FAILED)
         {
-            close(SM_fd);
+            close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
             return IMAGESTREAMIO_MMAP;
         }
 
+        ////////////////////////////////////////////////////////////////
+        // Load IMAGE_METADATA struct at address map with all parameters
+        // and calculates sizes and address image-> pointers
+        ////////////////////////////////////////////////////////////////
         image->md = (IMAGE_METADATA *)map;
-        image->md->shared = 1;
+        return_errno = ImageStreamIO_image_sizing_from_scratch(
+                         image, name, naxis, size, datatype
+                       , location, shared, NBsem, NBkw
+                       , imagetype, CBsize, map
+                       );
+
         image->md->creatorPID = getpid();
         image->md->ownerPID = 0; // default value, indicates unset
-        image->md->sem = NBsem;
-        image->md->NBproctrace = NBproctrace;
 
-        {
-            struct stat file_stat;
-            int ret;
-            ret = fstat(SM_fd, &file_stat);
-            if (ret < 0)
-            {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
-                return IMAGESTREAMIO_INODE;
-            }
-            image->md->inode =
-                file_stat.st_ino; // inode now contains inode number of the file with descriptor fd
-        }
-
-        map += sizeof(IMAGE_METADATA);
-
-        if (location == -1)
-        {
-            // CPU
-            image->array.raw = map;
-            map += datasharedsize;
-        }
-        else
-        {
-            // GPU
-            image->array.raw = NULL;
-        }
-
-        image->kw = (IMAGE_KEYWORD *)(map);
-        map += sizeof(IMAGE_KEYWORD) * NBkw;
-
-        image->semfile = (SEMFILEDATA*)(map);
-        map += sizeof(SEMFILEDATA) * NBsem;
-
-        image->semlog = (sem_t *)(map);
-        map += sizeof(sem_t);
-        sem_init(
-            image->semlog, 1,
-            SEMAPHORE_INITVAL); // SEMAPHORE_INITVAL defined in ImageStruct.h
-
-        image->semReadPID = (pid_t *)(map);
-        map += sizeof(pid_t) * NBsem;
-
-        image->semWritePID = (pid_t *)(map);
-        map += sizeof(pid_t) * NBsem;
-
-        image->semctrl = (uint32_t *)(map);
-        map += sizeof(uint32_t) * NBsem;
-
-        image->semstatus = (uint32_t *)(map);
-        map += sizeof(uint32_t) * NBsem;
-
-        image->streamproctrace = (STREAM_PROC_TRACE *)(map);
-        map += sizeof(STREAM_PROC_TRACE) * NBproctrace;
-
-        if ((imagetype & 0xF000F) ==
-                (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // If main image is circular buffer
-        {
-            image->atimearray = (struct timespec *)(map);
-            map += sizeof(struct timespec) * size[2];
-
-            image->writetimearray = (struct timespec *)(map);
-            map += sizeof(struct timespec) * size[2];
-
-            image->cntarray = (uint64_t *)(map);
-            map += sizeof(uint64_t) * size[2];
-        }
-
-        image->CircBuff_md = (CBFRAMEMD *)(map);
-        map += sizeof(CBFRAMEMD) * CBsize;
-
-        if (CBsize > 0)
-        {
-            image->CBimdata = map;
-        }
-        else
-        {
-            image->CBimdata = NULL;
-        }
-        map += datasharedsize * CBsize;
-        image->md->CBsize = CBsize;
         image->md->CBindex = 0;
         image->md->CBcycle = 0;
 
-
 #ifdef IMAGESTRUCT_WRITEHISTORY
-        image->writehist = (FRAMEWRITEMD *)(map);
-        map += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
-
         image->md->wCBindex = 0;
         image->md->wCBcycle = 0;
 #endif
@@ -1181,31 +1056,14 @@ errno_t ImageStreamIO_createIm_gpu(
     }
 
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
-    image->md->imagetype = imagetype; // Image is mathematical vector or matrix
-    image->md->location = location;
-    image->md->datatype = datatype;
-    image->md->naxis = naxis;
-    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME); // local name
-    strncpy(image->md->name, name, STRINGMAXLEN_IMAGE_NAME);
+    strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
     // Ensure image and image metadata names are null-terminated
-    image->name[STRINGMAXLEN_IMAGE_NAME-1] =
-    image->md->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
-    for (long i = 0; i < naxis; i++)
-    {
-        image->md->size[i] = size[i];
-    }
-    image->md->nelement = nelement;
-    image->md->imdatamemsize = imdatamemsize;
-
-    image->md->NBkw = NBkw;
+    image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
 
     ImageStreamIO_initialize_buffer(image);
 
     clock_gettime(CLOCK_ISIO, &image->md->lastaccesstime);
     clock_gettime(CLOCK_ISIO, &image->md->creationtime);
-    // image->md->lastaccesstime =
-    //     1.0 * timenow.tv_sec + 0.000000001 * timenow.tv_nsec;
-    // image->md->creationtime = image->md->lastaccesstime;
 
     image->md->write = 0;
     image->md->cnt0 = 0;
@@ -1232,7 +1090,7 @@ errno_t ImageStreamIO_createIm_gpu(
             image->semstatus[semindex] = 0;
         }
 
-        for (int proctraceindex = 0; proctraceindex < NBproctrace; proctraceindex++)
+        for (int proctraceindex = 0; proctraceindex < image->md->NBproctrace; proctraceindex++)
         {
             image->streamproctrace[proctraceindex].procwrite_PID = 0;
             image->streamproctrace[proctraceindex].trigger_inode = 0;
@@ -1250,7 +1108,7 @@ errno_t ImageStreamIO_createIm_gpu(
     }
 
     // initialize keywords
-    for (kw = 0; kw < image->md->NBkw; kw++)
+    for (int kw = 0; kw < image->md->NBkw; kw++)
     {
         image->kw[kw].type = 'N';
     }
@@ -1261,7 +1119,7 @@ errno_t ImageStreamIO_createIm_gpu(
     // DEBUG_TRACEPOINT_LOG("%s %d NBsem = %d", __FILE__, __LINE__, image->md->sem);
 
     return IMAGESTREAMIO_SUCCESS;
-}
+} // errno_t ImageStreamIO_createIm_gpu(...)
 
 
 
@@ -1471,21 +1329,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     image->kw = (IMAGE_KEYWORD *)(map);
     map += sizeof(IMAGE_KEYWORD) * image->md->NBkw;
-    ///<\todo can the following code be deleted?
-    /*
-      int kw;
-      for (kw = 0; kw < image->md->NBkw; kw++) {
-        if (image->kw[kw].type == 'L')
-          printf("%d  %s %ld %s\n", kw, image->kw[kw].name,
-                 image->kw[kw].value.numl, image->kw[kw].comment);
-        if (image->kw[kw].type == 'D')
-          printf("%d  %s %lf %s\n", kw, image->kw[kw].name,
-                 image->kw[kw].value.numf, image->kw[kw].comment);
-        if (image->kw[kw].type == 'S')
-          printf("%d  %s %s %s\n", kw, image->kw[kw].name,
-                 image->kw[kw].value.valstr, image->kw[kw].comment);
-      }
-    */
 
     image->semfile = (SEMFILEDATA *)(map);
     map += sizeof(SEMFILEDATA) * image->md->sem;

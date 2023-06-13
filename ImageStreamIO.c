@@ -614,7 +614,7 @@ uint64_t ImageStreamIO_initialize_buffer(
     }
 
     return ImageStreamIO_offset_data(image, image->array.raw);
-}
+} // uint64_t ImageStreamIO_initialize_buffer(IMAGE *image)
 
 
 
@@ -651,8 +651,7 @@ errno_t ImageStreamIO_createIm(
 
 errno_t ImageStreamIO_image_sizing(
     IMAGE *image,
-    uint8_t* map
-)
+    uint8_t* map)
 {
     // Error checking
     if (!image)
@@ -753,9 +752,13 @@ errno_t ImageStreamIO_image_sizing(
         }
         else
         {
-            // GPU
+            // GPU - array pointer will be assigned later via ImageStreamIO_get_img_d_ptr(...)
             image->array.raw = NULL;
         }
+
+        strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
+        // Ensure image and image metadata names are null-terminated
+        image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
 
         image->kw       = (IMAGE_KEYWORD *)(map);
         map            += sizeof(IMAGE_KEYWORD) * image->md->NBkw;
@@ -851,8 +854,7 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
     int NBkw,
     uint64_t imagetype,
     uint32_t CBsize, // circular buffer size (if shared), 0 if not used
-    uint8_t* map
-)
+    uint8_t* map)
 {
     int NBproctrace = IMAGE_NB_PROCTRACE;
     IMAGE_METADATA local_metadata = { 0 };
@@ -907,8 +909,7 @@ errno_t ImageStreamIO_createIm_gpu(
     int NBsem,
     int NBkw,
     uint64_t imagetype,
-    uint32_t CBsize // circular buffer size (if shared), 0 if not used
-)
+    uint32_t CBsize) // circular buffer size (if shared), 0 if not used
 {
     uint8_t *map;
 
@@ -1032,9 +1033,9 @@ errno_t ImageStreamIO_createIm_gpu(
         }
         image->md->shared = 0;
         image->md->inode = 0;
-        if (NBkw > 0)
+        if (image->md->NBkw > 0)
         {
-            image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * NBkw);
+            image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * image->md->NBkw);
             if (image->kw == NULL)
             {
                 printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
@@ -1056,9 +1057,6 @@ errno_t ImageStreamIO_createIm_gpu(
     }
 
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
-    strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
-    // Ensure image and image metadata names are null-terminated
-    image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
 
     ImageStreamIO_initialize_buffer(image);
 
@@ -1071,14 +1069,13 @@ errno_t ImageStreamIO_createIm_gpu(
 
     if (shared == 1)
     {
-        image->semptr = (sem_t **)malloc(sizeof(sem_t **) * NBsem);
+        image->semptr = (sem_t **)malloc(sizeof(sem_t **) * image->md->sem);
         if (image->semptr == NULL)
         {
             printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
             abort();
         }
-        int semindex;
-        for (semindex = 0; semindex < NBsem; semindex++)
+        for (int semindex = 0; semindex < image->md->sem; semindex++)
         {
             image->semptr[semindex] = &image->semfile[semindex].semdata;
             sem_init(
@@ -1116,7 +1113,7 @@ errno_t ImageStreamIO_createIm_gpu(
     image->used = 1;
     image->createcnt++;
 
-    // DEBUG_TRACEPOINT_LOG("%s %d NBsem = %d", __FILE__, __LINE__, image->md->sem);
+    // DEBUG_TRACEPOINT_LOG("%s %d image->md->sem = %d", __FILE__, __LINE__, image->md->sem);
 
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_createIm_gpu(...)
@@ -1130,9 +1127,9 @@ errno_t ImageStreamIO_destroyIm(
     {
         if (image->semptr)
         {
-            for (int s=0; s<image->md->sem; ++s)
+            for (int semindex=0; semindex<image->md->sem; ++semindex)
             {
-                sem_destroy(image->semptr[s]);
+                sem_destroy(image->semptr[semindex]);
             }
             free(image->semptr);
             image->semptr = NULL;
@@ -1218,7 +1215,7 @@ void *ImageStreamIO_get_image_d_ptr(
 /**
  * ## Purpose
  *
- * Read shared memory image\n
+ * Open existing shared memory image\n
  *
  *
  *
@@ -1233,173 +1230,123 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     int SM_fd;
     char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
 
-    ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name);
+    // Build the shmim pathname
+    errno_t ierrno;
+    ierrno = ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name);
+    if (IMAGESTREAMIO_SUCCESS != ierrno)
+    {
+        image->used = 0;
+        char wmsg[STRINGMAXLEN_IMAGE_NAME+50];
+        snprintf(wmsg, sizeof(wmsg), "Cannot build file name from \"%s\"\n", name);
+        ImageStreamIO_printWARNING(wmsg);
+        return IMAGESTREAMIO_FILEOPEN;
+    }
 
+    // Open the shmim file
     SM_fd = open(SM_fname, O_RDWR);
     if (SM_fd == -1)
     {
         image->used = 0;
-        char wmsg[250];
+        char wmsg[STRINGMAXLEN_FILE_NAME+50];
         snprintf(wmsg, sizeof(wmsg), "Cannot open shm file \"%s\"\n", SM_fname);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
     // open() was successful. We'll need to close SM_fd for any failed exit
 
-    uint8_t *map = NULL;
     uint8_t *map_root = NULL;
-    long s;
     struct stat file_stat = {0};
+    int tenths_timeout = 0;
 
-    fstat(SM_fd, &file_stat);
+    do // ensure shmim file size is adequate (greater than size of IMAGE_METADATA)
+    {
+        if (tenths_timeout > 99) // Fail after 100 tries (~10s)
+        {
+            close(SM_fd);
+            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file (too small)");
+            return IMAGESTREAMIO_FILEOPEN;
+        }
+        if (tenths_timeout++) { usleep(100000); } // wait 0.1s
+        file_stat.st_size = 0;
+        fstat(SM_fd, &file_stat);
+    } while (file_stat.st_size <= sizeof(IMAGE_METADATA));
 
     // printf("File %s size: %zd\n", SM_fname, file_stat.st_size); fflush(stdout); //TEST
 
     map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
                           MAP_SHARED, SM_fd, 0);
-    map = map_root;
     if (map_root == MAP_FAILED)
     {
-        close(SM_fd);
         ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
+        close(SM_fd);
         return IMAGESTREAMIO_MMAP;
     }
+    // mmap() was successful. We'll need to unmap image->md for any failed exit
 
-    image->memsize = file_stat.st_size;
+    image->md = (IMAGE_METADATA *)map_root;
+
+    ierrno = ImageStreamIO_image_sizing(image, map_root);
+    if (IMAGESTREAMIO_SUCCESS != ierrno || image->memsize != file_stat.st_size)
+    {
+        ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file");
+        munmap(image->md, file_stat.st_size);
+        close(SM_fd);
+        return IMAGESTREAMIO_FILEOPEN;
+    }
+
     image->shmfd = SM_fd;
-    image->md = (IMAGE_METADATA *)map;
 
+    // Check the shmim version
     if (strcmp(image->md->version, IMAGESTRUCT_VERSION))
     {
         char errmsg[200];
         snprintf(errmsg, 200, "Stream %s corrupted, or incompatible version. Should be %s",
                  name, IMAGESTRUCT_VERSION);
         ImageStreamIO_printERROR(IMAGESTREAMIO_VERSION, errmsg);
-        munmap(map_root, image->memsize);
-        close(SM_fd);
+        munmap(image->md, image->memsize);
+        close(image->shmfd);
         return IMAGESTREAMIO_VERSION;
     }
 
-    uint64_t size = 1;
-    uint8_t axis;
-    for (axis = 0; axis < image->md->naxis; ++axis)
-    {
-        size *= image->md->size[axis];
-    }
-
     // some verification
-    if (size > 10000000000)
+    if (image->md->nelement > 10000000000)
     {
-        printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", name);
+        printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", image->md->name);
         fflush(stdout);
-        munmap(map_root, image->memsize);
-        close(SM_fd);
+        munmap(image->md, image->memsize);
+        close(image->shmfd);
         return IMAGESTREAMIO_FAILURE;
     }
-    for (axis = 0; axis < image->md->naxis; ++axis)
-    {
-        if (image->md->size[axis] < 1)
-        {
-            printf("IMAGE \"%s\" AXIS %d SIZE < 1... NOT LOADING\n", name, axis);
-            fflush(stdout);
-            munmap(map_root, image->memsize);
-            close(SM_fd);
-            return IMAGESTREAMIO_FAILURE;
-        }
-    }
-
-    map += sizeof(IMAGE_METADATA);
 
     // gain image data array pointer
     if (image->md->location >= 0)
     {
-        image->array.raw = NULL;
+        ImageStreamIO_offset_data(image, image->array.raw);
     }
-    map += ImageStreamIO_offset_data(image, map);
     if (image->array.raw == NULL)
     {
         printf("Fail to retrieve data pointer\n");
         fflush(stdout);
-        munmap(map_root, image->memsize);
+        munmap(image->md, image->memsize);
         close(SM_fd);
         return IMAGESTREAMIO_FAILURE;
     }
 
-    // printf("%ld keywords\n", (long)image->md->NBkw); fflush(stdout); //TEST
-
-    image->kw = (IMAGE_KEYWORD *)(map);
-    map += sizeof(IMAGE_KEYWORD) * image->md->NBkw;
-
-    image->semfile = (SEMFILEDATA *)(map);
-    map += sizeof(SEMFILEDATA) * image->md->sem;
-
-    image->semlog = (sem_t *)(map);
-    map += sizeof(sem_t);
-
-    image->semReadPID = (pid_t *)(map);
-    map += sizeof(pid_t) * image->md->sem;
-
-    image->semWritePID = (pid_t *)(map);
-    map += sizeof(pid_t) * image->md->sem;
-
-    image->semctrl = (uint32_t *)(map);
-    map += sizeof(uint32_t) * image->md->sem;
-
-    image->semstatus = (uint32_t *)(map);
-    map += sizeof(uint32_t) * image->md->sem;
-
-    image->streamproctrace = (STREAM_PROC_TRACE *)(map);
-    map += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
-
-    if ((image->md->imagetype & 0xF000F) ==
-            (CIRCULAR_BUFFER | ZAXIS_TEMPORAL))
-    {
-        // printf("circuar buffer\n"); fflush(stdout); //TEST
-
-        // Circular buffer
-        image->atimearray = (struct timespec *)(map);
-        map += sizeof(struct timespec) * image->md->size[2];
-
-        image->writetimearray = (struct timespec *)(map);
-        map += sizeof(struct timespec) * image->md->size[2];
-
-        image->cntarray = (uint64_t *)(map);
-        map += sizeof(uint64_t) * image->md->size[2];
-    }
-
-    if (image->md->CBsize > 0)
-    {
-        image->CircBuff_md = (CBFRAMEMD *)map;
-        map += sizeof(CBFRAMEMD) * image->md->CBsize;
-
-        image->CBimdata = map;
-        map += ImageStreamIO_offset_data(image, map) * image->md->CBsize;
-    }
-    else
-    {
-        image->CircBuff_md = NULL;
-        image->CBimdata = NULL;
-    }
-
-#ifdef IMAGESTRUCT_WRITEHISTORY
-    image->writehist = (FRAMEWRITEMD *)map;
-    map += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
-#endif
-
-    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME - 1);
-    image->semptr = (sem_t **)malloc(sizeof(sem_t *) * image->md->sem);
+    image->semptr = (sem_t **)malloc(sizeof(sem_t **) * image->md->sem);
     if (image->semptr == NULL)
     {
         printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+        munmap(image->md, image->memsize);
+        close(SM_fd);
         abort();
     }
-    for (s = 0; s < image->md->sem; s++)
+    for (long semindex = 0; semindex < image->md->sem; semindex++)
     {
-        image->semptr[s] = &image->semfile[s].semdata;
+        image->semptr[semindex] = &image->semfile[semindex].semdata;
     }
 
     return IMAGESTREAMIO_SUCCESS;
-}
+} // errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
 
 
 
@@ -1461,18 +1408,18 @@ long ImageStreamIO_sempost(
 
     if (index < 0)
     {
-        long s;
+        long semindex;
 
-        for (s = 0; s < image->md->sem; s++)
+        for (semindex = 0; semindex < image->md->sem; semindex++)
         {
             int semval;
 
-            image->semWritePID[s] = writeProcessPID;
+            image->semWritePID[semindex] = writeProcessPID;
 
-            sem_getvalue(image->semptr[s], &semval);
+            sem_getvalue(image->semptr[semindex], &semval);
             if (semval < SEMAPHORE_MAXVAL)
             {
-                sem_post(image->semptr[s]);
+                sem_post(image->semptr[semindex]);
             }
         }
     }
@@ -1527,23 +1474,23 @@ long ImageStreamIO_sempost_excl(
     IMAGE *image,
     long index)
 {
-    long s;
+    long semindex;
 
     pid_t writeProcessPID;
 
     writeProcessPID = getpid();
 
-    for (s = 0; s < image->md->sem; s++)
+    for (semindex = 0; semindex < image->md->sem; semindex++)
     {
-        if (s != index)
+        if (semindex != index)
         {
             int semval;
 
-            sem_getvalue(image->semptr[s], &semval);
+            sem_getvalue(image->semptr[semindex], &semval);
             if (semval < SEMAPHORE_MAXVAL)
             {
-                sem_post(image->semptr[s]);
-                image->semWritePID[s] = writeProcessPID;
+                sem_post(image->semptr[semindex]);
+                image->semWritePID[semindex] = writeProcessPID;
             }
         }
     }
@@ -1644,7 +1591,7 @@ int ImageStreamIO_getsemwaitindex(
         }
     }
 
-    // if not, look for available semindex
+    // if not, look for available s
 
     for (int semindex = 0; semindex < image->md->sem; ++semindex)
     {
@@ -1737,17 +1684,17 @@ long ImageStreamIO_semflush(
 {
     if (index < 0)
     {
-        long s;
+        long semindex;
 
-        for (s = 0; s < image->md->sem; s++)
+        for (semindex = 0; semindex < image->md->sem; semindex++)
         {
             int semval;
             int i;
 
-            sem_getvalue(image->semptr[s], &semval);
+            sem_getvalue(image->semptr[semindex], &semval);
             for (i = 0; i < semval; i++)
             {
-                sem_trywait(image->semptr[s]);
+                sem_trywait(image->semptr[semindex]);
             }
         }
     }
@@ -1758,15 +1705,15 @@ long ImageStreamIO_semflush(
                    image->md->name, index);
         else
         {
-            long s;
+            long semindex;
             int semval;
             int i;
 
-            s = index;
-            sem_getvalue(image->semptr[s], &semval);
+            semindex = index;
+            sem_getvalue(image->semptr[semindex], &semval);
             for (i = 0; i < semval; i++)
             {
-                sem_trywait(image->semptr[s]);
+                sem_trywait(image->semptr[semindex]);
             }
         }
     }

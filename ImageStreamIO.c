@@ -333,14 +333,13 @@ errno_t ImageStreamIO_filename(
     if (rv < 0)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, strerror(errno));
-        return IMAGESTREAMIO_FAILURE;
     }
     else
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE,
                                  "string not large enough for file name");
-        return IMAGESTREAMIO_FAILURE;
     }
+    return IMAGESTREAMIO_FAILURE;
 }
 
 
@@ -618,6 +617,56 @@ uint64_t ImageStreamIO_initialize_buffer(
 
 
 
+/**
+ * @brief Get inode using shmim file descriptor, write inode to IMAGE
+ *
+ *
+ */
+errno_t
+ImageStreamIO_store_image_inode(IMAGE* image)
+{
+    // - Retrieve status of file referenced by FD; close file on error
+    struct stat file_stat;
+    if (fstat(image->shmfd, &file_stat) < 0)
+    {
+        close(image->shmfd);
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
+        return IMAGESTREAMIO_INODE;
+    }
+    // - Save inode as metadata, which metadata are also in the file
+    image->md->inode = file_stat.st_ino;
+    return IMAGESTREAMIO_SUCCESS;
+}
+
+
+
+/**
+ * @brief Check image->md->inode against inode from shmimname
+ *
+ *
+ */
+errno_t
+ImageStreamIO_check_image_inode(IMAGE* image)
+{
+    // - Build filename from shmim name image->md->name
+    char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
+    if (IMAGESTREAMIO_SUCCESS
+       != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), image->md->name))
+    {
+        return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
+    }
+
+    // - Retrieve status of file referencedy by SM_fname
+    struct stat file_stat;
+    if (fstat(image->shmfd, &file_stat) < 0)
+    {
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
+        return IMAGESTREAMIO_INODE;
+    }
+
+    // - Return success or failure if inode matches or not, respectively
+    return image->md->inode == file_stat.st_ino ? IMAGESTREAMIO_SUCCESS : IMAGESTREAMIO_INODE;
+}
 
 
 
@@ -918,22 +967,26 @@ errno_t ImageStreamIO_createIm_gpu(
     {
 
         ////////////////////////////////////////////////////////////////
-        // Calculate the size of the shmim file
+        // Calculate the size of the shmim file (image->memsize)
         ////////////////////////////////////////////////////////////////
 
-        errno_t return_errno = ImageStreamIO_image_sizing_from_scratch(
-                                 image, name, naxis, size, datatype
-                               , location, shared, NBsem, NBkw
-                               , imagetype, CBsize, (uint8_t*) NULL
-                               );
-        if (return_errno != IMAGESTREAMIO_SUCCESS) { return return_errno; }
+        errno_t ierrno = ImageStreamIO_image_sizing_from_scratch(
+                           image, name, naxis, size, datatype
+                         , location, shared, NBsem, NBkw
+                         , imagetype, CBsize, (uint8_t*) NULL
+                         );
+        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
 
         ////////////////////////////////////////////////////////////////
         // Open and map shmim file of the calculated size image->memsize
         ////////////////////////////////////////////////////////////////
 
-        char SM_fname[200];
-        ImageStreamIO_filename(SM_fname, 200, name);
+        char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
+        if (IMAGESTREAMIO_SUCCESS
+           != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name))
+        {
+            return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
+        }
 
         // - Ensure GPU SHM buffer file does not exist
         struct stat buffer;
@@ -944,10 +997,25 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FILEEXISTS;
         }
 
-        // - Open shmim file as an empty (truncated)
-        // image->shmfd is the shared memory file descriptor
+        // - Create and open shmim file as a new, empty (truncated) file
+        //   - image->shmfd stores the shared memory file descriptor
         umask(0);
-        image->shmfd = open(SM_fname, O_RDWR | O_CREAT | O_TRUNC, (mode_t)FILEMODE);
+        errno = 0;
+        image->shmfd = open(SM_fname
+                           // (O_CREAT|O_EXCL) flags force new file
+                           , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
+                           , (mode_t)FILEMODE
+                           );
+        if (image->shmfd == -1 && errno == EEXIST)
+        {
+            // - File was not created:  a file exists at path SM_fname;
+            unlink(SM_fname);  // - unlink that file from its directory;
+            errno = 0;         // - ignore any error from unlink;
+            image->shmfd = open(SM_fname  // - and try again ...
+                               , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
+                               , (mode_t)FILEMODE
+                               );
+        }
         if (image->shmfd == -1)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,
@@ -955,21 +1023,14 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FILEOPEN;
         }
 
-        // - Retrieve the inode of the shmim flle
-        struct stat file_stat;
-        if (fstat(image->shmfd, &file_stat) < 0)
-        {
-            close(image->shmfd);
-            ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
-            return IMAGESTREAMIO_INODE;
-        }
-        // - Save inode as metadata, which metadata are also in the file
-        image->md->inode = file_stat.st_ino;
+        // - Store the inode of the shmim flle into image->md->inode
+        //   - On error, shmim will have been closed; return
+        ierrno = ImageStreamIO_store_image_inode(image);
+        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
 
-        // - Seek to the end of the shmim file
-        int result;
-        result = lseek(image->shmfd, image->memsize - 1, SEEK_SET);
-        if (result == -1)
+        // - Seek to the end of the currently empty shmim file, ...
+        if (lseek(image->shmfd, image->memsize - 1, SEEK_SET)
+            != (off_t)(image->memsize-1))
         {
             close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILESEEK,
@@ -977,9 +1038,8 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FILESEEK;
         }
 
-        // - Write a null at that sought position of the empty file
-        result = write(image->shmfd, "", 1);
-        if (result != 1)
+        // - ... then write a null at that sought position
+        if (write(image->shmfd, "", 1) != (ssize_t)1)
         {
             close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEWRITE,
@@ -987,7 +1047,7 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FILEWRITE;
         }
 
-        // - Map the file into memory' address will be pointed to by map
+        // - Map the file into memory, address will be pointed to by map
         map = (uint8_t *)mmap(0, image->memsize, PROT_READ | PROT_WRITE, MAP_SHARED,
                               image->shmfd, 0);
         if (map == MAP_FAILED)
@@ -999,14 +1059,14 @@ errno_t ImageStreamIO_createIm_gpu(
 
         ////////////////////////////////////////////////////////////////
         // Load IMAGE_METADATA struct at address map with all parameters
-        // and calculates sizes and address image-> pointers
+        // and calculate sizes and address image-> pointers
         ////////////////////////////////////////////////////////////////
         image->md = (IMAGE_METADATA *)map;
-        return_errno = ImageStreamIO_image_sizing_from_scratch(
-                         image, name, naxis, size, datatype
-                       , location, shared, NBsem, NBkw
-                       , imagetype, CBsize, map
-                       );
+        ierrno = ImageStreamIO_image_sizing_from_scratch(
+                   image, name, naxis, size, datatype
+                 , location, shared, NBsem, NBkw
+                 , imagetype, CBsize, map
+                 );
 
         image->md->creatorPID = getpid();
         image->md->ownerPID = 0; // default value, indicates unset
@@ -1069,12 +1129,16 @@ errno_t ImageStreamIO_createIm_gpu(
 
     if (shared == 1)
     {
+        // - Allocate space for semaphore pointers;
+        //   semaphore data are in the shmim
         image->semptr = (sem_t **)malloc(sizeof(sem_t **) * image->md->sem);
         if (image->semptr == NULL)
         {
             printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
             abort();
         }
+
+        // - Assign pointers; initialize the semphores and their data
         for (int semindex = 0; semindex < image->md->sem; semindex++)
         {
             image->semptr[semindex] = &image->semfile[semindex].semdata;
@@ -1101,7 +1165,7 @@ errno_t ImageStreamIO_createIm_gpu(
     }
     else
     {
-        image->md->sem = 0; // no semaphores
+        image->md->sem = 0; // no shmim => semaphores
     }
 
     // initialize keywords
@@ -1254,7 +1318,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     }
     // open() was successful. We'll need to close SM_fd for any failed exit
 
-    uint8_t *map_root = NULL;
     struct stat file_stat = {0};
     int tenths_timeout = 0;
 
@@ -1273,8 +1336,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     // printf("File %s size: %zd\n", SM_fname, file_stat.st_size); fflush(stdout); //TEST
 
-    map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
-                          MAP_SHARED, SM_fd, 0);
+    uint8_t *map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
+                                        MAP_SHARED, SM_fd, 0);
     if (map_root == MAP_FAILED)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
@@ -1293,8 +1356,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         close(SM_fd);
         return IMAGESTREAMIO_FILEOPEN;
     }
-
-    image->shmfd = SM_fd;
 
     // Check the shmim version
     if (strcmp(image->md->version, IMAGESTRUCT_VERSION))
@@ -1365,6 +1426,8 @@ errno_t ImageStreamIO_closeIm(
         ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "error unmapping memory");
         return IMAGESTREAMIO_MMAP;
     }
+
+    close(image->shmfd);
 
     return IMAGESTREAMIO_SUCCESS;
 }

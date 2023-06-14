@@ -23,7 +23,7 @@ void __attribute__((constructor)) libinit_ImageStreamIO();
 
 
 
-errno_t init_ImageStreamIO();
+error_t init_ImageStreamIO();
 
 /** @brief Set the error reporting function to the default provided by the library.
   *

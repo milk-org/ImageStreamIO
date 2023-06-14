@@ -23,7 +23,7 @@ void __attribute__((constructor)) libinit_ImageStreamIO();
 
 
 
-error_t init_ImageStreamIO();
+errno_t init_ImageStreamIO();
 
 /** @brief Set the error reporting function to the default provided by the library.
   *
@@ -218,7 +218,7 @@ int ImageStreamIO_FITSIObitpix(uint8_t
 
 int ImageStreamIO_FITSIOdatatype(uint8_t datatype);
 
-errno_t ImageStreamIO_check_image_inode(IMAGE* image)
+errno_t ImageStreamIO_check_image_inode(IMAGE* image);
 
 ///@}
 

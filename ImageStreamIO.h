@@ -218,6 +218,8 @@ int ImageStreamIO_FITSIObitpix(uint8_t
 
 int ImageStreamIO_FITSIOdatatype(uint8_t datatype);
 
+errno_t ImageStreamIO_check_image_inode(IMAGE* image)
+
 ///@}
 
 /* =============================================================================================== */

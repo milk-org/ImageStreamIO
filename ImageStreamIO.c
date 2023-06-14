@@ -641,8 +641,11 @@ ImageStreamIO_store_image_inode(IMAGE* image)
 
 
 /**
- * @brief Check image->md->inode against inode from shmimname
+ * @brief Check image->md->inode against inode from shmim name
  *
+ * \returns IMAGESTREAMIO_SUCCESS if ->md->inode matches the shmim inode
+ * \returns _INODE if ->md->inode doesn't match the shmim name inode
+ * \returns _FAILURE if the shmim name inode could not be retrieved
  *
  */
 errno_t
@@ -656,12 +659,12 @@ ImageStreamIO_check_image_inode(IMAGE* image)
         return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
     }
 
-    // - Retrieve status of file referencedy by SM_fname
+    // - Retrieve status of file referenced by SM_fname
     struct stat file_stat;
-    if (fstat(image->shmfd, &file_stat) < 0)
+    if (stat(SM_fname, &file_stat) < 0)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
-        return IMAGESTREAMIO_INODE;
+        return IMAGESTREAMIO_FAILURE;
     }
 
     // - Return success or failure if inode matches or not, respectively

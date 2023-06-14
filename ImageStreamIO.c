@@ -1026,11 +1026,6 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FILEOPEN;
         }
 
-        // - Store the inode of the shmim flle into image->md->inode
-        //   - On error, shmim will have been closed; return
-        ierrno = ImageStreamIO_store_image_inode(image);
-        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
-
         // - Seek to the end of the currently empty shmim file, ...
         if (lseek(image->shmfd, image->memsize - 1, SEEK_SET)
             != (off_t)(image->memsize-1))
@@ -1070,6 +1065,11 @@ errno_t ImageStreamIO_createIm_gpu(
                  , location, shared, NBsem, NBkw
                  , imagetype, CBsize, map
                  );
+
+        // - Store the inode of the shmim flle into image->md->inode
+        //   - On error, shmim will have been closed; return
+        ierrno = ImageStreamIO_store_image_inode(image);
+        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
 
         image->md->creatorPID = getpid();
         image->md->ownerPID = 0; // default value, indicates unset

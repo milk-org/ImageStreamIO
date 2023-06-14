@@ -54,22 +54,33 @@ install_sigchld_handler()
     return 0;
 }
 
+int
+future_ts(struct timespec delta, struct timespec& future)
+{
+  error_t save_err = errno;                                // Save errno
+  errno = EINVAL;                               // Validate input values
+  if (delta.tv_sec < 0) { return -1; }
+  if (delta.tv_nsec < 0) { return -1; }
+  if (delta.tv_nsec > 999999999) { return -1; }
+  if (clock_gettime(CLOCK_TAI, &future) < 0) { return -1; }  // Now time
+  errno = save_err;                                     // Restore errno
+  future.tv_sec += delta.tv_sec; // Increment current time by delta time
+  future.tv_nsec += delta.tv_nsec;
+  while (future.tv_nsec > 999999999)      // Handle nanoseconds overflow
+  {
+    ++future.tv_sec;
+    future.tv_nsec -= 1000000000;
+  }
+  return 0;                                            // Return success
+}
+
 #   define WAIT_AS_ns 100000000
 #   define WAIT_LIMIT_ns (1000000000 - WAIT_AS_ns)
 
 int
 clock_gettime_future(struct timespec& ts)
 {
-    if (clock_gettime(CLOCK_REALTIME,&ts)) { return -1; }
-    if (ts.tv_nsec < WAIT_LIMIT_ns) {
-        ts.tv_nsec += WAIT_AS_ns;
-    }
-    else
-    {
-        ts.tv_nsec -= WAIT_LIMIT_ns;
-        ++ts.tv_sec;
-    }
-    return 0;
+    return future_ts({0,WAIT_AS_ns},ts);
 }
 
 
@@ -151,11 +162,11 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
                                       ,2, dims2, _DATATYPE_UINT32
                                       ,cpuLocn, shared, 10, 10
                                       ,MATH_DATA, 0)) { return; }
+std::cerr<<"Parent inode initial = "<<parent_image.md->inode<<std::endl;
 
         //   - Reset typical error from _createIm_gpu
         if (errno == ENOENT) { errno = 0; }
         ImageStreamIO_semflush(&parent_image, -1);
-
         // - Send a synchronization byte to tell forked child to proceed
         if (write(pipes[1],"",1) != 1) { return; }
 
@@ -199,6 +210,7 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
             perror("Child ImageStreamIO_openIm failed");
             exit(1);
         }
+std::cerr<<"Child inode initial = "<<child_image.md->inode<<std::endl;
 
         // - Reset typical error from _openIm
         if (errno == ENOENT) { errno = 0; }
@@ -230,6 +242,25 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
 
         for (int ipass=0; ipass<4; ++ipass)
         {
+
+            if (ipass==3)
+            {
+                // - Create shmim; ensure all semaphores' values are zero
+                uint32_t dims2[2] = {3, 3};
+                uint8_t cpuLocn = -1;
+                uint8_t shared = 1;
+                if (IMAGESTREAMIO_SUCCESS!=
+                    ImageStreamIO_createIm_gpu(&parent_image, SHM_NAME_OpsTest
+                                              ,2, dims2, _DATATYPE_UINT32
+                                              ,cpuLocn, shared, 10, 10
+                                              ,MATH_DATA, 0)) { return; }
+
+                //   - Reset typical error from _createIm_gpu
+                if (errno == ENOENT) { errno = 0; }
+                ImageStreamIO_semflush(&parent_image, -1);
+std::cerr<<"Parent inode secondary = "<<parent_image.md->inode<<std::endl;
+            }
+
             // - Increment semaphore to trigger child's write pass
             ++test_count;
             if (ImageStreamIO_sempost(&parent_image,SEM_TO_CHILD)
@@ -243,13 +274,15 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
             // - Wait for child to update shmim and post other semaphore
             ++test_count;
             struct timespec ts;
-            if (clock_gettime_future(ts))
+            if (future_ts({0,WAIT_AS_ns<<(ipass==3?2:0)},ts))
             {
                 perror("Parent clock_gettime failed");
                 return;
             }
-            if (ImageStreamIO_semtimedwait(&parent_image,SEM_TO_PARENT,&ts))
+            errno = 0;
+            while (ImageStreamIO_semtimedwait(&parent_image,SEM_TO_PARENT,&ts))
             {
+                if (errno==EINTR) { errno = 0; continue; }
                 perror("Parent semtimedwait");
                 return;
             }
@@ -298,13 +331,41 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
             struct timespec ts;
             if (clock_gettime_future(ts))
             {
-                perror("Parent clock_gettime failed");
-                return;
+                perror("Child clock_gettime failed");
+                exit(101);
             }
             if (ImageStreamIO_semtimedwait(&child_image,SEM_TO_CHILD,&ts))
             {
-                perror("Child semtimedwait");
-                exit(101);
+                if (errno!=ETIMEDOUT
+                 || IMAGESTREAMIO_INODE!=
+                    ImageStreamIO_check_image_inode(&child_image))
+                {
+                    perror("Child semtimedwait");
+                    exit(102);
+                }
+std::cerr<<"Child semtimedwait timed out due to new shmim during ipass = "<<ipass<<std::endl;
+                // - Open the new shmim
+                if (IMAGESTREAMIO_SUCCESS!=
+                    ImageStreamIO_openIm(&child_image, SHM_NAME_OpsTest))
+                {
+                    perror("Child ImageStreamIO_openIm on secondary shmim failed");
+                    exit(103);
+                }
+std::cerr<<"Child inode secondary = "<<child_image.md->inode<<std::endl;
+
+                // - Reset typical error from _openIm
+                if (errno == ENOENT) { errno = 0; }
+
+                if (clock_gettime_future(ts))
+                {
+                    perror("Child clock_gettime failed");
+                    exit(104);
+                }
+                if (ImageStreamIO_semtimedwait(&child_image,SEM_TO_CHILD,&ts))
+                {
+                    perror("Child secondary semtimedwait");
+                    exit(105);
+                }
             }
 
             // - Update shmim
@@ -321,7 +382,7 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
              != IMAGESTREAMIO_SUCCESS)
             {
                 perror("Child sempost to parent");
-                exit(102);
+                exit(105);
             }
         }
     }

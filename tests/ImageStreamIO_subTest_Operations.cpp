@@ -1,4 +1,5 @@
 #include <cerrno>
+#include <cstring>
 #include <fcntl.h>
 #include <iostream>
 #include <sys/wait.h>
@@ -162,7 +163,10 @@ ImageStreamIO_subTest_Operations(int& test_count, int& success_count)
                                       ,2, dims2, _DATATYPE_UINT32
                                       ,cpuLocn, shared, 10, 10
                                       ,MATH_DATA, 0)) { return; }
-std::cerr<<"Parent inode initial = "<<parent_image.md->inode<<std::endl;
+        //std::cerr
+        //<<"Parent inode initial = "
+        //<<parent_image.md->inode
+        //<<std::endl;
 
         //   - Reset typical error from _createIm_gpu
         if (errno == ENOENT) { errno = 0; }
@@ -210,7 +214,10 @@ std::cerr<<"Parent inode initial = "<<parent_image.md->inode<<std::endl;
             perror("Child ImageStreamIO_openIm failed");
             exit(1);
         }
-std::cerr<<"Child inode initial = "<<child_image.md->inode<<std::endl;
+        //std::cerr
+        //<<"Child inode initial = "
+        //<<child_image.md->inode
+        //<<std::endl;
 
         // - Reset typical error from _openIm
         if (errno == ENOENT) { errno = 0; }
@@ -258,7 +265,10 @@ std::cerr<<"Child inode initial = "<<child_image.md->inode<<std::endl;
                 //   - Reset typical error from _createIm_gpu
                 if (errno == ENOENT) { errno = 0; }
                 ImageStreamIO_semflush(&parent_image, -1);
-std::cerr<<"Parent inode secondary = "<<parent_image.md->inode<<std::endl;
+                //std::cerr
+                //<<"Parent inode secondary = "
+                //<<parent_image.md->inode
+                //<<std::endl;
             }
 
             // - Increment semaphore to trigger child's write pass
@@ -318,6 +328,29 @@ std::cerr<<"Parent inode secondary = "<<parent_image.md->inode<<std::endl;
                 parent_seed *= minstd_a;
                 parent_seed %= minstd_m;
             }
+
+            // - Check seed, at end of previous loop above, against
+            //   keyword written by child process
+            ++test_count;
+            if (strcmp(parent_image.kw[ipass].name,"SEED"))
+            {
+                errno = EINVAL;
+                perror("Parent keyword name is not SEED");
+                return;
+            }
+            if ('L' != parent_image.kw[ipass].type)
+            {
+                errno = EINVAL;
+                perror("Parent keyword type is not 'L'");
+                return;
+            }
+            if (parent_image.kw[ipass].value.numl != parent_seed)
+            {
+                errno = EINVAL;
+                perror("Parent keyword value (seed) does not match");
+                return;
+            }
+            ++success_count;
         }
     }
 
@@ -336,6 +369,31 @@ std::cerr<<"Parent inode secondary = "<<parent_image.md->inode<<std::endl;
             }
             if (ImageStreamIO_semtimedwait(&child_image,SEM_TO_CHILD,&ts))
             {
+                // - At this point, the child _semtimedwait failed.
+                //
+                //   Ideally the cause will be that the semtimedwait
+                //   timed out (errno==ETIMEDOUT), becasue the parent
+                //   process has opened a new shmim and posted to that
+                //   new shmim's child semaphore, and the old shmim's
+                //   child semaphore, for which this child was waiting,
+                //   was never posted. 
+                //
+                //   IF THAT IS THE CASE, then
+                //   (1) errno will be ETIMEDOUT, and the child's inode
+                //       for the old shmim, which is stored as
+                //       child_image->md->inode, will no longer be the
+                //       inode associated with the new shmim created by
+                //       the parent,
+                //   AND
+                //   (2) the utility ImageStreamIO_check_image_inode()
+                //       routine will return the error code
+                //         IMAGESTREAMIO_INODE
+                //       instead of either IMAGESTREAMIO_SUCCESS or
+                //       IMAGESTREAMIO_FAILURE.
+                //
+                //    If either of those cases is NOT true, then there
+                //    is some other reason that the _semtimedwait failed
+                //    and the child should exit:
                 if (errno!=ETIMEDOUT
                  || IMAGESTREAMIO_INODE!=
                     ImageStreamIO_check_image_inode(&child_image))
@@ -343,19 +401,28 @@ std::cerr<<"Parent inode secondary = "<<parent_image.md->inode<<std::endl;
                     perror("Child semtimedwait");
                     exit(102);
                 }
-std::cerr<<"Child semtimedwait timed out due to new shmim during ipass = "<<ipass<<std::endl;
-                // - Open the new shmim
+                //std::cerr
+                //<<"Child semtimedwait timed out"
+                //<<" due to new shmim during ipass = "
+                //<<ipass
+                //<<std::endl;
+
+                // - Open the new shmim created by the parent process
                 if (IMAGESTREAMIO_SUCCESS!=
                     ImageStreamIO_openIm(&child_image, SHM_NAME_OpsTest))
                 {
                     perror("Child ImageStreamIO_openIm on secondary shmim failed");
                     exit(103);
                 }
-std::cerr<<"Child inode secondary = "<<child_image.md->inode<<std::endl;
+                //std::cerr
+                //<<"Child inode secondary = "
+                //<<child_image.md->inode
+                //<<std::endl;
 
                 // - Reset typical error from _openIm
                 if (errno == ENOENT) { errno = 0; }
 
+                // - Wait for the new child semaphore
                 if (clock_gettime_future(ts))
                 {
                     perror("Child clock_gettime failed");
@@ -366,7 +433,7 @@ std::cerr<<"Child inode secondary = "<<child_image.md->inode<<std::endl;
                     perror("Child secondary semtimedwait");
                     exit(105);
                 }
-            }
+            } // if (ImageStreamIO_semtimedwait(&child_image,SEM_TO_CHILD,&ts))
 
             // - Update shmim
             uint32_t* pui32 = child_image.array.UI32;
@@ -376,6 +443,11 @@ std::cerr<<"Child inode secondary = "<<child_image.md->inode<<std::endl;
                 child_seed *= minstd_a;
                 child_seed %= minstd_m;
             }
+
+            // - Write seed, at end of previous loop above, to keyword
+            strncpy(child_image.kw[ipass].name,"SEED",5);
+            child_image.kw[ipass].type = 'L';
+            child_image.kw[ipass].value.numl = child_seed;
 
             // - Increment semaphore to trigger parrents's read pass
             if (ImageStreamIO_sempost(&child_image,SEM_TO_PARENT)

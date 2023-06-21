@@ -305,7 +305,9 @@ errno_t ImageStreamIO_shmdirname(
         tmpdir = opendir(shmdname);
     }
     // Failure:  no directories were found that could be opened
-    if (!tmpdir) { exit(EXIT_FAILURE); }
+    if (!tmpdir) {
+        exit(EXIT_FAILURE);
+    }
 
     // Success:  close directory stream; dirname is in shdname
     closedir(tmpdir);
@@ -329,7 +331,9 @@ errno_t ImageStreamIO_filename(
 
     int rv = snprintf(file_name, ssz, "%s/%s.im.shm", shmdirname, im_name);
 
-    if ((rv > 0) && (rv < (int)ssz)) { return IMAGESTREAMIO_SUCCESS; }
+    if ((rv > 0) && (rv < (int)ssz)) {
+        return IMAGESTREAMIO_SUCCESS;
+    }
 
     if (rv < 0)
     {
@@ -349,20 +353,34 @@ int ImageStreamIO_typesize(
 {
     switch (datatype)
     {
-    case _DATATYPE_UINT8:         return SIZEOF_DATATYPE_UINT8;
-    case _DATATYPE_INT8:          return SIZEOF_DATATYPE_INT8;
-    case _DATATYPE_UINT16:        return SIZEOF_DATATYPE_UINT16;
-    case _DATATYPE_INT16:         return SIZEOF_DATATYPE_INT16;
-    case _DATATYPE_UINT32:        return SIZEOF_DATATYPE_UINT32;
-    case _DATATYPE_INT32:         return SIZEOF_DATATYPE_INT32;
-    case _DATATYPE_UINT64:        return SIZEOF_DATATYPE_UINT64;
-    case _DATATYPE_INT64:         return SIZEOF_DATATYPE_INT64;
-    case _DATATYPE_HALF:          return SIZEOF_DATATYPE_HALF;
-    case _DATATYPE_FLOAT:         return SIZEOF_DATATYPE_FLOAT;
-    case _DATATYPE_DOUBLE:        return SIZEOF_DATATYPE_DOUBLE;
-    case _DATATYPE_COMPLEX_FLOAT: return SIZEOF_DATATYPE_COMPLEX_FLOAT;
-    case _DATATYPE_COMPLEX_DOUBLE:return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
-    default:                      break;
+    case _DATATYPE_UINT8:
+        return SIZEOF_DATATYPE_UINT8;
+    case _DATATYPE_INT8:
+        return SIZEOF_DATATYPE_INT8;
+    case _DATATYPE_UINT16:
+        return SIZEOF_DATATYPE_UINT16;
+    case _DATATYPE_INT16:
+        return SIZEOF_DATATYPE_INT16;
+    case _DATATYPE_UINT32:
+        return SIZEOF_DATATYPE_UINT32;
+    case _DATATYPE_INT32:
+        return SIZEOF_DATATYPE_INT32;
+    case _DATATYPE_UINT64:
+        return SIZEOF_DATATYPE_UINT64;
+    case _DATATYPE_INT64:
+        return SIZEOF_DATATYPE_INT64;
+    case _DATATYPE_HALF:
+        return SIZEOF_DATATYPE_HALF;
+    case _DATATYPE_FLOAT:
+        return SIZEOF_DATATYPE_FLOAT;
+    case _DATATYPE_DOUBLE:
+        return SIZEOF_DATATYPE_DOUBLE;
+    case _DATATYPE_COMPLEX_FLOAT:
+        return SIZEOF_DATATYPE_COMPLEX_FLOAT;
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return SIZEOF_DATATYPE_COMPLEX_DOUBLE;
+    default:
+        break;
     }
     ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
     return -1; // This is an in-band error code, so can't be > 0.
@@ -373,20 +391,34 @@ const char *ImageStreamIO_typename(
 {
     switch (datatype)
     {
-    case _DATATYPE_UINT8:          return "UINT8";
-    case _DATATYPE_INT8:           return "INT8";
-    case _DATATYPE_UINT16:         return "UINT16";
-    case _DATATYPE_INT16:          return "INT16";
-    case _DATATYPE_UINT32:         return "UINT32";
-    case _DATATYPE_INT32:          return "INT32";
-    case _DATATYPE_UINT64:         return "UINT64";
-    case _DATATYPE_INT64:          return "INT64";
-    case _DATATYPE_HALF:           return "FLT16";
-    case _DATATYPE_FLOAT:          return "FLT32";
-    case _DATATYPE_DOUBLE:         return "FLT64";
-    case _DATATYPE_COMPLEX_FLOAT:  return "CPLX32";
-    case _DATATYPE_COMPLEX_DOUBLE: return "CPLX64";
-    default:                       break;
+    case _DATATYPE_UINT8:
+        return "UINT8";
+    case _DATATYPE_INT8:
+        return "INT8";
+    case _DATATYPE_UINT16:
+        return "UINT16";
+    case _DATATYPE_INT16:
+        return "INT16";
+    case _DATATYPE_UINT32:
+        return "UINT32";
+    case _DATATYPE_INT32:
+        return "INT32";
+    case _DATATYPE_UINT64:
+        return "UINT64";
+    case _DATATYPE_INT64:
+        return "INT64";
+    case _DATATYPE_HALF:
+        return "FLT16";
+    case _DATATYPE_FLOAT:
+        return "FLT32";
+    case _DATATYPE_DOUBLE:
+        return "FLT64";
+    case _DATATYPE_COMPLEX_FLOAT:
+        return "CPLX32";
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return "CPLX64";
+    default:
+        break;
     }
     return "unknown";
 }
@@ -396,20 +428,34 @@ const char *ImageStreamIO_typename_7(
 {
     switch (datatype)
     {
-    case _DATATYPE_UINT8:          return "UINT8  ";
-    case _DATATYPE_INT8:           return "INT8   ";
-    case _DATATYPE_UINT16:         return "UINT16 ";
-    case _DATATYPE_INT16:          return "INT16  ";
-    case _DATATYPE_UINT32:         return "UINT32 ";
-    case _DATATYPE_INT32:          return "INT32  ";
-    case _DATATYPE_UINT64:         return "UINT64 ";
-    case _DATATYPE_INT64:          return "INT64  ";
-    case _DATATYPE_HALF:           return "FLT16  ";
-    case _DATATYPE_FLOAT:          return "FLOAT  ";
-    case _DATATYPE_DOUBLE:         return "DOUBLE ";
-    case _DATATYPE_COMPLEX_FLOAT:  return "CFLOAT ";
-    case _DATATYPE_COMPLEX_DOUBLE: return "CDOUBLE";
-    default:                       break;
+    case _DATATYPE_UINT8:
+        return "UINT8  ";
+    case _DATATYPE_INT8:
+        return "INT8   ";
+    case _DATATYPE_UINT16:
+        return "UINT16 ";
+    case _DATATYPE_INT16:
+        return "INT16  ";
+    case _DATATYPE_UINT32:
+        return "UINT32 ";
+    case _DATATYPE_INT32:
+        return "INT32  ";
+    case _DATATYPE_UINT64:
+        return "UINT64 ";
+    case _DATATYPE_INT64:
+        return "INT64  ";
+    case _DATATYPE_HALF:
+        return "FLT16  ";
+    case _DATATYPE_FLOAT:
+        return "FLOAT  ";
+    case _DATATYPE_DOUBLE:
+        return "DOUBLE ";
+    case _DATATYPE_COMPLEX_FLOAT:
+        return "CFLOAT ";
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return "CDOUBLE";
+    default:
+        break;
     }
     return "unknown";
 }
@@ -427,12 +473,15 @@ int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed)
     case _DATATYPE_INT64:
     case _DATATYPE_HALF:
     case _DATATYPE_FLOAT:
-    case _DATATYPE_DOUBLE:          return 0;
+    case _DATATYPE_DOUBLE:
+        return 0;
 
     case _DATATYPE_COMPLEX_FLOAT:
-    case _DATATYPE_COMPLEX_DOUBLE:  return complex_allowed ? 0 : -1;
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return complex_allowed ? 0 : -1;
 
-    default:                        break;
+    default:
+        break;
     }
     ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
     return -1; // This is an in-band error code, so can't be > 0.
@@ -443,20 +492,34 @@ const char *ImageStreamIO_typename_short(
 {
     switch (datatype)
     {
-    case _DATATYPE_UINT8:          return " UI8";
-    case _DATATYPE_INT8:           return "  I8";
-    case _DATATYPE_UINT16:         return "UI16";
-    case _DATATYPE_INT16:          return " I16";
-    case _DATATYPE_UINT32:         return "UI32";
-    case _DATATYPE_INT32:          return " I32";
-    case _DATATYPE_UINT64:         return "UI64";
-    case _DATATYPE_INT64:          return " I64";
-    case _DATATYPE_HALF:           return " F16";
-    case _DATATYPE_FLOAT:          return " FLT";
-    case _DATATYPE_DOUBLE:         return " DBL";
-    case _DATATYPE_COMPLEX_FLOAT:  return "CFLT";
-    case _DATATYPE_COMPLEX_DOUBLE: return "CDBL";
-    default:                       break;
+    case _DATATYPE_UINT8:
+        return " UI8";
+    case _DATATYPE_INT8:
+        return "  I8";
+    case _DATATYPE_UINT16:
+        return "UI16";
+    case _DATATYPE_INT16:
+        return " I16";
+    case _DATATYPE_UINT32:
+        return "UI32";
+    case _DATATYPE_INT32:
+        return " I32";
+    case _DATATYPE_UINT64:
+        return "UI64";
+    case _DATATYPE_INT64:
+        return " I64";
+    case _DATATYPE_HALF:
+        return " F16";
+    case _DATATYPE_FLOAT:
+        return " FLT";
+    case _DATATYPE_DOUBLE:
+        return " DBL";
+    case _DATATYPE_COMPLEX_FLOAT:
+        return "CFLT";
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return "CDBL";
+    default:
+        break;
     }
     return " ???";
 }
@@ -466,20 +529,34 @@ int ImageStreamIO_floattype(
 {
     switch (datatype)
     {
-    case _DATATYPE_UINT8:          return _DATATYPE_FLOAT;
-    case _DATATYPE_INT8:           return _DATATYPE_FLOAT;
-    case _DATATYPE_UINT16:         return _DATATYPE_FLOAT;
-    case _DATATYPE_INT16:          return _DATATYPE_FLOAT;
-    case _DATATYPE_UINT32:         return _DATATYPE_FLOAT;
-    case _DATATYPE_INT32:          return _DATATYPE_FLOAT;
-    case _DATATYPE_UINT64:         return _DATATYPE_DOUBLE;
-    case _DATATYPE_INT64:          return _DATATYPE_DOUBLE;
-    case _DATATYPE_HALF:           return _DATATYPE_HALF;
-    case _DATATYPE_FLOAT:          return _DATATYPE_FLOAT;
-    case _DATATYPE_DOUBLE:         return _DATATYPE_DOUBLE;
-    case _DATATYPE_COMPLEX_FLOAT:  return _DATATYPE_COMPLEX_FLOAT;
-    case _DATATYPE_COMPLEX_DOUBLE: return _DATATYPE_COMPLEX_DOUBLE;
-    default:                       break;
+    case _DATATYPE_UINT8:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_INT8:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_UINT16:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_INT16:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_UINT32:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_INT32:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_UINT64:
+        return _DATATYPE_DOUBLE;
+    case _DATATYPE_INT64:
+        return _DATATYPE_DOUBLE;
+    case _DATATYPE_HALF:
+        return _DATATYPE_HALF;
+    case _DATATYPE_FLOAT:
+        return _DATATYPE_FLOAT;
+    case _DATATYPE_DOUBLE:
+        return _DATATYPE_DOUBLE;
+    case _DATATYPE_COMPLEX_FLOAT:
+        return _DATATYPE_COMPLEX_FLOAT;
+    case _DATATYPE_COMPLEX_DOUBLE:
+        return _DATATYPE_COMPLEX_DOUBLE;
+    default:
+        break;
     }
     ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG, "invalid type code");
     return -1; // This is an in-band error code, so can't be > 0.
@@ -490,18 +567,29 @@ int ImageStreamIO_FITSIOdatatype(uint8_t datatype)
     switch (datatype)
     {
 #ifdef USE_CFITSIO
-    case _DATATYPE_UINT8:  return TBYTE;
-    case _DATATYPE_INT8:   return TSBYTE;
-    case _DATATYPE_UINT16: return TUSHORT;
-    case _DATATYPE_INT16:  return TSHORT;
-    case _DATATYPE_UINT32: return TUINT;
-    case _DATATYPE_INT32:  return TINT;
-    case _DATATYPE_UINT64: return TULONG;
-    case _DATATYPE_INT64:  return TLONG;
-    case _DATATYPE_FLOAT:  return TFLOAT;
-    case _DATATYPE_DOUBLE: return TDOUBLE;
+    case _DATATYPE_UINT8:
+        return TBYTE;
+    case _DATATYPE_INT8:
+        return TSBYTE;
+    case _DATATYPE_UINT16:
+        return TUSHORT;
+    case _DATATYPE_INT16:
+        return TSHORT;
+    case _DATATYPE_UINT32:
+        return TUINT;
+    case _DATATYPE_INT32:
+        return TINT;
+    case _DATATYPE_UINT64:
+        return TULONG;
+    case _DATATYPE_INT64:
+        return TLONG;
+    case _DATATYPE_FLOAT:
+        return TFLOAT;
+    case _DATATYPE_DOUBLE:
+        return TDOUBLE;
 #endif
-    default:               break;
+    default:
+        break;
     }
     ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                              "bitpix not implemented for type");
@@ -514,18 +602,29 @@ int ImageStreamIO_FITSIObitpix(
     switch (datatype)
     {
 #ifdef USE_CFITSIO
-    case _DATATYPE_UINT8:  return BYTE_IMG;
-    case _DATATYPE_INT8:   return SBYTE_IMG;
-    case _DATATYPE_UINT16: return USHORT_IMG;
-    case _DATATYPE_INT16:  return SHORT_IMG;
-    case _DATATYPE_UINT32: return ULONG_IMG;
-    case _DATATYPE_INT32:  return LONG_IMG;
-    case _DATATYPE_UINT64: return ULONGLONG_IMG;
-    case _DATATYPE_INT64:  return LONGLONG_IMG;
-    case _DATATYPE_FLOAT:  return FLOAT_IMG;
-    case _DATATYPE_DOUBLE: return DOUBLE_IMG;
+    case _DATATYPE_UINT8:
+        return BYTE_IMG;
+    case _DATATYPE_INT8:
+        return SBYTE_IMG;
+    case _DATATYPE_UINT16:
+        return USHORT_IMG;
+    case _DATATYPE_INT16:
+        return SHORT_IMG;
+    case _DATATYPE_UINT32:
+        return ULONG_IMG;
+    case _DATATYPE_INT32:
+        return LONG_IMG;
+    case _DATATYPE_UINT64:
+        return ULONGLONG_IMG;
+    case _DATATYPE_INT64:
+        return LONGLONG_IMG;
+    case _DATATYPE_FLOAT:
+        return FLOAT_IMG;
+    case _DATATYPE_DOUBLE:
+        return DOUBLE_IMG;
 #endif
-    default:               break;
+    default:
+        break;
     }
     ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                              "bitpix not implemented for type");
@@ -655,7 +754,7 @@ ImageStreamIO_check_image_inode(IMAGE* image)
     // - Build filename from shmim name image->md->name
     char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
     if (IMAGESTREAMIO_SUCCESS
-       != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), image->md->name))
+            != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), image->md->name))
     {
         return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
     }
@@ -734,26 +833,26 @@ errno_t ImageStreamIO_image_sizing(
         if (image->md->size[2] < 1)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
-                                 "Error calling ImageStreamIO_image_sizing, "
-                                 "invalid size of third axis");
+                                     "Error calling ImageStreamIO_image_sizing, "
+                                     "invalid size of third axis");
             return IMAGESTREAMIO_INVALIDARG;
         }
-        // N.B. no break, fall through to previous axis
+    // N.B. no break, fall through to previous axis
     case 2:
         if (image->md->size[1] < 1)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
-                                 "Error calling ImageStreamIO_image_sizing, "
-                                 "invalid size of second axis");
+                                     "Error calling ImageStreamIO_image_sizing, "
+                                     "invalid size of second axis");
             return IMAGESTREAMIO_INVALIDARG;
         }
-        // N.B. no break, fall through to previous axis
+    // N.B. no break, fall through to previous axis
     case 1:
         if (image->md->size[0] < 1)
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
-                                 "Error calling ImageStreamIO_image_sizing, "
-                                 "invalid size of first axis");
+                                     "Error calling ImageStreamIO_image_sizing, "
+                                     "invalid size of first axis");
             return IMAGESTREAMIO_INVALIDARG;
         }
         // N.B. break; all axes indicated by naxis are valid
@@ -964,7 +1063,7 @@ errno_t ImageStreamIO_createIm_gpu(
     uint64_t imagetype,
     uint32_t CBsize) // circular buffer size (if shared), 0 if not used
 {
-    uint8_t *map;
+    uint8_t *map = NULL;
 
     // compute total size to be allocated
     if (shared == 1)
@@ -975,11 +1074,13 @@ errno_t ImageStreamIO_createIm_gpu(
         ////////////////////////////////////////////////////////////////
 
         errno_t ierrno = ImageStreamIO_image_sizing_from_scratch(
-                           image, name, naxis, size, datatype
-                         , location, shared, NBsem, NBkw
-                         , imagetype, CBsize, (uint8_t*) NULL
+                             image, name, naxis, size, datatype
+                             , location, shared, NBsem, NBkw
+                             , imagetype, CBsize, (uint8_t*) NULL
                          );
-        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
+        if (ierrno != IMAGESTREAMIO_SUCCESS) {
+            return ierrno;
+        }
 
         ////////////////////////////////////////////////////////////////
         // Open and map shmim file of the calculated size image->memsize
@@ -987,7 +1088,7 @@ errno_t ImageStreamIO_createIm_gpu(
 
         char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
         if (IMAGESTREAMIO_SUCCESS
-           != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name))
+                != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name))
         {
             return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
         }
@@ -1006,9 +1107,9 @@ errno_t ImageStreamIO_createIm_gpu(
         umask(0);
         errno = 0;
         image->shmfd = open(SM_fname
-                           // (O_CREAT|O_EXCL) flags force new file
-                           , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
-                           , (mode_t)FILEMODE
+                            // (O_CREAT|O_EXCL) flags force new file
+                            , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
+                            , (mode_t)FILEMODE
                            );
         if (image->shmfd == -1 && errno == EEXIST)
         {
@@ -1016,8 +1117,8 @@ errno_t ImageStreamIO_createIm_gpu(
             unlink(SM_fname);  // - unlink that file from its directory;
             errno = 0;         // - ignore any error from unlink;
             image->shmfd = open(SM_fname  // - and try again ...
-                               , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
-                               , (mode_t)FILEMODE
+                                , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
+                                , (mode_t)FILEMODE
                                );
         }
         if (image->shmfd == -1)
@@ -1029,7 +1130,7 @@ errno_t ImageStreamIO_createIm_gpu(
 
         // - Seek to the end of the currently empty shmim file, ...
         if (lseek(image->shmfd, image->memsize - 1, SEEK_SET)
-            != (off_t)(image->memsize-1))
+                != (off_t)(image->memsize-1))
         {
             close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILESEEK,
@@ -1055,33 +1156,7 @@ errno_t ImageStreamIO_createIm_gpu(
             ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
             return IMAGESTREAMIO_MMAP;
         }
-
-        ////////////////////////////////////////////////////////////////
-        // Load IMAGE_METADATA struct at address map with all parameters
-        // and calculate sizes and address image-> pointers
-        ////////////////////////////////////////////////////////////////
         image->md = (IMAGE_METADATA *)map;
-        ierrno = ImageStreamIO_image_sizing_from_scratch(
-                   image, name, naxis, size, datatype
-                 , location, shared, NBsem, NBkw
-                 , imagetype, CBsize, map
-                 );
-
-        // - Store the inode of the shmim flle into image->md->inode
-        //   - On error, shmim will have been closed; return
-        ierrno = ImageStreamIO_store_image_inode(image);
-        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
-
-        image->md->creatorPID = getpid();
-        image->md->ownerPID = 0; // default value, indicates unset
-
-        image->md->CBindex = 0;
-        image->md->CBcycle = 0;
-
-#ifdef IMAGESTRUCT_WRITEHISTORY
-        image->md->wCBindex = 0;
-        image->md->wCBcycle = 0;
-#endif
     }
     else
     {
@@ -1097,28 +1172,70 @@ errno_t ImageStreamIO_createIm_gpu(
         }
         image->md->shared = 0;
         image->md->inode = 0;
-        if (image->md->NBkw > 0)
-        {
-            image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * image->md->NBkw);
-            if (image->kw == NULL)
-            {
-                printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
-                abort();
-            }
+    }
+
+    ////////////////////////////////////////////////////////////////
+    // Load IMAGE_METADATA struct at address map with all parameters
+    // and calculate sizes and address image-> pointers
+    ////////////////////////////////////////////////////////////////
+    errno_t ierrno = ImageStreamIO_image_sizing_from_scratch(
+                         image, name, naxis, size, datatype
+                         , location, shared, NBsem, NBkw
+                         , imagetype, CBsize, map
+                     );
+    if (ierrno != IMAGESTREAMIO_SUCCESS) {
+        return ierrno;
+    }
+
+    if (shared == 1)
+    {
+        // - Store the inode of the shmim flle into image->md->inode
+        //   - On error, shmim will have been closed; return
+        ierrno = ImageStreamIO_store_image_inode(image);
+        if (ierrno != IMAGESTREAMIO_SUCCESS) {
+            return ierrno;
         }
-        else
-        {
-            image->kw = NULL;
-        }
-        image->md->CBsize = 0;
-        image->md->CBindex = 0;
-        image->md->CBcycle = 0;
+    }
+
+    if(shared != 1)
+    {
+        strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
+        // Ensure image and image metadata names are null-terminated
+        image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
+    }
+
+    image->md->creatorPID = getpid();
+    image->md->ownerPID = 0; // default value, indicates unset
+
+    image->md->CBsize = 0;
+    image->md->CBindex = 0;
+    image->md->CBcycle = 0;
 
 #ifdef IMAGESTRUCT_WRITEHISTORY
-        image->md->wCBindex = 0;
-        image->md->wCBcycle = 0;
+    image->md->wCBindex = 0;
+    image->md->wCBcycle = 0;
 #endif
+
+
+
+
+
+    if (image->md->NBkw > 0)
+    {
+        image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * image->md->NBkw);
+        if (image->kw == NULL)
+        {
+            printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+            abort();
+        }
     }
+    else
+    {
+        image->kw = NULL;
+    }
+
+
+
 
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
 
@@ -1172,7 +1289,7 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->sem = 0; // no shmim => semaphores
     }
 
-    // initialize keywords
+// initialize keywords
     for (int kw = 0; kw < image->md->NBkw; kw++)
     {
         image->kw[kw].type = 'N';
@@ -1181,10 +1298,12 @@ errno_t ImageStreamIO_createIm_gpu(
     image->used = 1;
     image->createcnt++;
 
-    // DEBUG_TRACEPOINT_LOG("%s %d image->md->sem = %d", __FILE__, __LINE__, image->md->sem);
+// DEBUG_TRACEPOINT_LOG("%s %d image->md->sem = %d", __FILE__, __LINE__, image->md->sem);
 
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_createIm_gpu(...)
+
+
 
 
 
@@ -1333,7 +1452,9 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file (too small)");
             return IMAGESTREAMIO_FILEOPEN;
         }
-        if (tenths_timeout++) { usleep(100000); } // wait 0.1s
+        if (tenths_timeout++) {
+            usleep(100000);    // wait 0.1s
+        }
         file_stat.st_size = 0;
         fstat(SM_fd, &file_stat);
     } while (file_stat.st_size <= sizeof(IMAGE_METADATA));

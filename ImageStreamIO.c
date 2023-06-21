@@ -60,6 +60,7 @@
 #endif
 
 #include "ImageStreamIO.h"
+#include <stdbool.h>
 
 static int INITSTATUS_ImageStreamIO = 0;
 

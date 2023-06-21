@@ -60,7 +60,6 @@
 #endif
 
 #include "ImageStreamIO.h"
-#include <stdbool.h>
 
 static int INITSTATUS_ImageStreamIO = 0;
 
@@ -786,110 +785,93 @@ ImageStreamIO_check_image_inode(IMAGE* image)
 /* ===============================================================================================
  */
 
-errno_t ImageStreamIO_createIm(
-    IMAGE *image,
-    const char *name,
-    long naxis,
-    uint32_t *size,
-    uint8_t datatype,
-    int shared,
-    int NBkw,
-    int CBsize)
-{
-    return ImageStreamIO_createIm_gpu(image, name, naxis, size, datatype, -1,
-                                      shared, IMAGE_NB_SEMAPHORE, NBkw,
-                                      MATH_DATA, (uint32_t)CBsize);
-}
-
-errno_t ImageStreamIO_image_sizing(
-    IMAGE *image,
-    uint8_t* map)
+errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 {
     // Error checking
     if (!image)
-    {
+    { 
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "null IMAGE pointer");
-        return IMAGESTREAMIO_INVALIDARG;
-    }
+        return IMAGESTREAMIO_INVALIDARG; 
+    } 
     if (!image->md)
-    {
+    { 
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "null IMAGE_METADATA pointer");
-        return IMAGESTREAMIO_INVALIDARG;
-    }
+        return IMAGESTREAMIO_INVALIDARG; 
+    } 
     if (!*image->md->name)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "invalid shmim name, or null pointer to same");
-        return IMAGESTREAMIO_INVALIDARG;
+        return IMAGESTREAMIO_INVALIDARG; 
     }
     switch (image->md->naxis)
     {
     case 3:
         if (image->md->size[2] < 1)
-        {
+        { 
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                      "Error calling ImageStreamIO_image_sizing, "
                                      "invalid size of third axis");
-            return IMAGESTREAMIO_INVALIDARG;
-        }
+            return IMAGESTREAMIO_INVALIDARG; 
+        } 
     // N.B. no break, fall through to previous axis
     case 2:
         if (image->md->size[1] < 1)
-        {
+        { 
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                      "Error calling ImageStreamIO_image_sizing, "
                                      "invalid size of second axis");
-            return IMAGESTREAMIO_INVALIDARG;
-        }
+            return IMAGESTREAMIO_INVALIDARG; 
+        } 
     // N.B. no break, fall through to previous axis
     case 1:
         if (image->md->size[0] < 1)
-        {
+        { 
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                      "Error calling ImageStreamIO_image_sizing, "
                                      "invalid size of first axis");
-            return IMAGESTREAMIO_INVALIDARG;
-        }
+            return IMAGESTREAMIO_INVALIDARG; 
+        } 
         // N.B. break; all axes indicated by naxis are valid
         break;
     default:
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "invalid number of axes");
-        return IMAGESTREAMIO_INVALIDARG;
+        return IMAGESTREAMIO_INVALIDARG; 
     }
     if (image->md->location < -1)
-    {
+    { 
         ///\todo should error code differ between printERROR and return?
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "unknown location");
-        return IMAGESTREAMIO_FAILURE;
-    }
-    if (ImageStreamIO_checktype(image->md->datatype, true))
-    {
+        return IMAGESTREAMIO_FAILURE; 
+    } 
+    if (ImageStreamIO_checktype(image->md->datatype, 1))
+    { 
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "invalid datatype");
-        return IMAGESTREAMIO_INVALIDARG;
-    }
+        return IMAGESTREAMIO_INVALIDARG; 
+    } 
     if (((image->md->imagetype & 0xF000F) == CIRCULAR_BUFFER) &&
             (image->md->naxis != 3))
-    {
+    { 
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "temporal circular buffer needs 3 dimensions");
-        return IMAGESTREAMIO_INVALIDARG;
-    }
+        return IMAGESTREAMIO_INVALIDARG; 
+    } 
 
-    // compute total shared size of shmim from IMAGE_METADATA parameters
+    // Compute total shared size of shmim from IMAGE_METADATA parameters
     if (image->md->shared == 1)
-    {
+    { 
         image->memsize = sizeof(IMAGE_METADATA);
         map += sizeof(IMAGE_METADATA);
         // image->md will be assigned elsewhere
@@ -925,7 +907,7 @@ errno_t ImageStreamIO_image_sizing(
         map            += sizeof(sem_t);
         image->memsize += sizeof(sem_t); // for semlog
 
-        // one read PID array, one write PID array
+        // One read PID array, one write PID array
         image->semReadPID = (pid_t *)(map);
         map            += sizeof(pid_t) * image->md->sem;
         image->memsize += sizeof(pid_t) * image->md->sem;
@@ -934,12 +916,12 @@ errno_t ImageStreamIO_image_sizing(
         map            += sizeof(pid_t) * image->md->sem;
         image->memsize += sizeof(pid_t) * image->md->sem;
 
-        // semctrl
+        // Calculate space for semctrl integers
         image->semctrl  = (uint32_t *)(map);
         map            += sizeof(uint32_t) * image->md->sem;
         image->memsize += sizeof(uint32_t) * image->md->sem;
 
-        // semstatus
+        // Calculate space for semstatus integers
         image->semstatus = (uint32_t *)(map);
         map            += sizeof(uint32_t) * image->md->sem;
         image->memsize += sizeof(uint32_t) * image->md->sem;
@@ -949,7 +931,7 @@ errno_t ImageStreamIO_image_sizing(
         image->memsize += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
 
         if ((image->md->imagetype & 0xF000F) ==
-                (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // Circular buffer
+                (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // Circular Buffer
         {
             image->atimearray = (struct timespec *)(map);
             map            += sizeof(struct timespec) * image->md->size[2];
@@ -964,12 +946,12 @@ errno_t ImageStreamIO_image_sizing(
             image->memsize += sizeof(uint64_t) * image->md->size[2];
         }
 
-        // fast circular buffer metadata
+        // Fast circular buffer metadata
         image->CircBuff_md = (CBFRAMEMD *)(map);
         map            += sizeof(CBFRAMEMD) * image->md->CBsize;
         image->memsize += sizeof(CBFRAMEMD) * image->md->CBsize;
 
-        // fast circular buffer data buffer
+        // Fast circular buffer data buffer
         if (image->md->CBsize > 0)
         {
             image->CBimdata = map;
@@ -982,7 +964,7 @@ errno_t ImageStreamIO_image_sizing(
         }
 
 #ifdef IMAGESTRUCT_WRITEHISTORY
-        // write time buffer
+        // Write time buffer
         image->writehist = (FRAMEWRITEMD *)(map);
         map            += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
         image->memsize += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
@@ -992,7 +974,6 @@ errno_t ImageStreamIO_image_sizing(
 
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
-
 
 errno_t ImageStreamIO_image_sizing_from_scratch(
     IMAGE *image,
@@ -1048,7 +1029,20 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
     return ImageStreamIO_image_sizing(image, map);
 } // errno_t ImageStreamIO_image_sizing_from_scratch(...)
 
-
+errno_t ImageStreamIO_createIm(
+    IMAGE *image,
+    const char *name,
+    long naxis,
+    uint32_t *size,
+    uint8_t datatype,
+    int shared,
+    int NBkw,
+    int CBsize)
+{
+    return ImageStreamIO_createIm_gpu(image, name, naxis, size, datatype, -1,
+                                      shared, IMAGE_NB_SEMAPHORE, NBkw,
+                                      MATH_DATA, (uint32_t)CBsize);
+}
 
 errno_t ImageStreamIO_createIm_gpu(
     IMAGE *image,
@@ -1074,13 +1068,11 @@ errno_t ImageStreamIO_createIm_gpu(
         ////////////////////////////////////////////////////////////////
 
         errno_t ierrno = ImageStreamIO_image_sizing_from_scratch(
-                             image, name, naxis, size, datatype
-                             , location, shared, NBsem, NBkw
-                             , imagetype, CBsize, (uint8_t*) NULL
+                           image, name, naxis, size, datatype
+                         , location, shared, NBsem, NBkw
+                         , imagetype, CBsize, (uint8_t*) NULL
                          );
-        if (ierrno != IMAGESTREAMIO_SUCCESS) {
-            return ierrno;
-        }
+        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
 
         ////////////////////////////////////////////////////////////////
         // Open and map shmim file of the calculated size image->memsize
@@ -1156,7 +1148,34 @@ errno_t ImageStreamIO_createIm_gpu(
             ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
             return IMAGESTREAMIO_MMAP;
         }
+
+        ////////////////////////////////////////////////////////////////
+        // Load IMAGE_METADATA struct at address map with all parameters
+        // and calculate sizes and address image-> pointers
+        ////////////////////////////////////////////////////////////////
         image->md = (IMAGE_METADATA *)map;
+        ierrno = ImageStreamIO_image_sizing_from_scratch(
+                   image, name, naxis, size, datatype
+                 , location, shared, NBsem, NBkw
+                 , imagetype, CBsize, map
+                 );
+        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
+
+        // - Store the inode of the shmim flle into image->md->inode
+        //   - On error, shmim will have been closed; return
+        ierrno = ImageStreamIO_store_image_inode(image);
+        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
+
+        image->md->creatorPID = getpid();
+        image->md->ownerPID = 0; // default value, indicates unset
+
+        image->md->CBindex = 0;
+        image->md->CBcycle = 0;
+
+#ifdef IMAGESTRUCT_WRITEHISTORY
+        image->md->wCBindex = 0;
+        image->md->wCBcycle = 0;
+#endif
     }
     else
     {
@@ -1172,67 +1191,36 @@ errno_t ImageStreamIO_createIm_gpu(
         }
         image->md->shared = 0;
         image->md->inode = 0;
-    }
-
-    ////////////////////////////////////////////////////////////////
-    // Load IMAGE_METADATA struct at address map with all parameters
-    // and calculate sizes and address image-> pointers
-    ////////////////////////////////////////////////////////////////
-    errno_t ierrno = ImageStreamIO_image_sizing_from_scratch(
-                         image, name, naxis, size, datatype
-                         , location, shared, NBsem, NBkw
-                         , imagetype, CBsize, map
-                     );
-    if (ierrno != IMAGESTREAMIO_SUCCESS) {
-        return ierrno;
-    }
-
-    if (shared == 1)
-    {
-        // - Store the inode of the shmim flle into image->md->inode
-        //   - On error, shmim will have been closed; return
-        ierrno = ImageStreamIO_store_image_inode(image);
-        if (ierrno != IMAGESTREAMIO_SUCCESS) {
-            return ierrno;
+        if (image->md->NBkw > 0)
+        {
+            image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * image->md->NBkw);
+            if (image->kw == NULL)
+            {
+                printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+                abort();
+            }
         }
-    }
+        else
+        {
+            image->kw = NULL;
+        }
+        image->md->CBsize = 0;
+        image->md->CBindex = 0;
+        image->md->CBcycle = 0;
 
-    if(shared != 1)
-    {
+#ifdef IMAGESTRUCT_WRITEHISTORY
+        image->md->wCBindex = 0;
+        image->md->wCBcycle = 0;
+#endif
+
         strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
         // Ensure image and image metadata names are null-terminated
         image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
     }
 
-    image->md->creatorPID = getpid();
-    image->md->ownerPID = 0; // default value, indicates unset
-
-    image->md->CBsize = 0;
-    image->md->CBindex = 0;
-    image->md->CBcycle = 0;
-
-#ifdef IMAGESTRUCT_WRITEHISTORY
-    image->md->wCBindex = 0;
-    image->md->wCBcycle = 0;
-#endif
 
 
 
-
-
-    if (image->md->NBkw > 0)
-    {
-        image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * image->md->NBkw);
-        if (image->kw == NULL)
-        {
-            printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
-            abort();
-        }
-    }
-    else
-    {
-        image->kw = NULL;
-    }
 
 
 

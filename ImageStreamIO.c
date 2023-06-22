@@ -304,7 +304,8 @@ errno_t ImageStreamIO_shmdirname(
         tmpdir = opendir(shmdname);
     }
     // Failure:  no directories were found that could be opened
-    if (!tmpdir) {
+    if (!tmpdir)
+    {
         exit(EXIT_FAILURE);
     }
 
@@ -330,7 +331,8 @@ errno_t ImageStreamIO_filename(
 
     int rv = snprintf(file_name, ssz, "%s/%s.im.shm", shmdirname, im_name);
 
-    if ((rv > 0) && (rv < (int)ssz)) {
+    if ((rv > 0) && (rv < (int)ssz))
+    {
         return IMAGESTREAMIO_SUCCESS;
     }
 
@@ -461,7 +463,8 @@ const char *ImageStreamIO_typename_7(
 
 int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed)
 {
-    switch (datatype) {
+    switch (datatype)
+    {
     case _DATATYPE_UINT8:
     case _DATATYPE_INT8:
     case _DATATYPE_UINT16:
@@ -1218,13 +1221,6 @@ errno_t ImageStreamIO_createIm_gpu(
         image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
     }
 
-
-
-
-
-
-
-
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
 
     ImageStreamIO_initialize_buffer(image);
@@ -1290,8 +1286,6 @@ errno_t ImageStreamIO_createIm_gpu(
 
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_createIm_gpu(...)
-
-
 
 
 
@@ -1440,7 +1434,8 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file (too small)");
             return IMAGESTREAMIO_FILEOPEN;
         }
-        if (tenths_timeout++) {
+        if (tenths_timeout++)
+        {
             usleep(100000);    // wait 0.1s
         }
         file_stat.st_size = 0;

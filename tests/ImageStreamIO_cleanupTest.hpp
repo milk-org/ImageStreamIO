@@ -128,7 +128,7 @@ public:
     // Parent routines
     std::string rm_shmim_filepath_01();
     std::string block_SIGUSR2_02(bool);
-    std::string fork_child_03();
+    std::string fork_child_03(int which = 0);
     std::string wait_for_SIGUSR2_04();
     std::string open_shmim_05();
     std::string check_for_semfiles_06();
@@ -139,7 +139,9 @@ public:
     std::string file_cleanup_11(bool);
 
     // Child routines
-    void run_child_sequence();
+    void run_child_sequence(int which);
+    void run_child_sequence_shmim();
+    void run_child_sequence_local();
 
     // Utility routines
     int find_semfiles(std::vector<std::string>&);
@@ -296,7 +298,7 @@ ISIO_CLEANUP::block_SIGUSR2_02(bool block)
 }
 
 std::string
-ISIO_CLEANUP::fork_child_03()
+ISIO_CLEANUP::fork_child_03(int which /* = 0 */)
 {
     if (failed) { return std::string("fork_child_03:  failed a previous step"); }
 
@@ -320,7 +322,7 @@ ISIO_CLEANUP::fork_child_03()
     {
         // This is now the child process
         forked_child_pid = getpid();
-        run_child_sequence();
+        run_child_sequence(which);
         // We should never get to here
         exit(100);
     }
@@ -641,17 +643,39 @@ ISIO_CLEANUP::file_cleanup_11(bool kill_child)
 }
 
 // /////////////////////////////////////////////////////////////////////
-// ISIO_CLEANUP child sequence
+// ISIO_CLEANUP child sequences
 // /////////////////////////////////////////////////////////////////////
 void
-ISIO_CLEANUP::run_child_sequence()
+ISIO_CLEANUP::run_child_sequence(int which)
+{
+    switch (which)
+    {
+        case 0:
+            run_child_sequence_shmim();
+            break;
+        case 1:
+            run_child_sequence_local();
+            break;
+        default:
+            std::cerr
+            << "ISIO_CLEANUP::run_child_sequence:  invalid child sequence{"
+            << strerror(which)
+            << "}"
+            << std::endl;
+            break;
+    }
+}
+
+// - ISIO_CLEANUP child sequence that works with a shmim file
+void
+ISIO_CLEANUP::run_child_sequence_shmim()
 {
     // Clean up any semaphore files
     std::vector<std::string> vsemfiles{};
     if (find_semfiles(vsemfiles))
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  failed to get semaphore filenames{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  failed to get semaphore filenames{"
         << strerror(errno)
         << "}"
         << std::endl;
@@ -668,7 +692,7 @@ ISIO_CLEANUP::run_child_sequence()
     if (fd > -1 || errno != ENOENT)
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  found shmim file that should not exist{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  found shmim file that should not exist{"
         << shmim_filepath
         << "}"
         << std::endl;
@@ -686,7 +710,7 @@ ISIO_CLEANUP::run_child_sequence()
     if (IMAGESTREAMIO_SUCCESS != createIm)
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  failed createIm{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  failed createIm{"
         << std::to_string(createIm)
         << "}"
         << std::endl;
@@ -701,7 +725,7 @@ ISIO_CLEANUP::run_child_sequence()
     if (-1 == kill(parent_pid, SIGUSR2))
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  failed to send SIGUSR2 to parent{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  failed to send SIGUSR2 to parent{"
         << strerror(errno)
         << "}"
         << std::endl;
@@ -713,7 +737,7 @@ ISIO_CLEANUP::run_child_sequence()
     if (clock_gettime(CLOCK_REALTIME, &semwts) == -1)
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  failed to get a time from clock_gettime{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  failed to get a time from clock_gettime{"
         << (errno ? strerror(errno) : "unknown error")
         << "}"
         << std::endl;
@@ -723,7 +747,7 @@ ISIO_CLEANUP::run_child_sequence()
     if (ImageStreamIO_semtimedwait(&image,ISEM_PARENT_TO_CHILD,&semwts))
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  failed to get semaphore from parent{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  failed to get semaphore from parent{"
         << (errno ? strerror(errno) : "unknown error")
         << "}"
         << std::endl;
@@ -734,7 +758,7 @@ ISIO_CLEANUP::run_child_sequence()
     if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_sempost(&image,ISEM_CHILD_TO_PARENT))
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  failed to write semaphore for parent{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  failed to write semaphore for parent{"
         << (errno ? strerror(errno) : "unknown error")
         << "}"
         << std::endl;
@@ -758,7 +782,7 @@ ISIO_CLEANUP::run_child_sequence()
     if (sv)
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  failed to see semaphore for parent drop to 0{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  failed to see semaphore for parent drop to 0{"
         << (errno ? strerror(errno) : "unknown error")
         << "}"
         << std::endl;
@@ -769,13 +793,80 @@ ISIO_CLEANUP::run_child_sequence()
     if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_destroyIm(&image))
     {
         std::cerr
-        << "ISIO_CLEANUP::run_child_sequence:  failed to destroy shmim{"
+        << "ISIO_CLEANUP::run_child_sequence_shmim:  failed to destroy shmim{"
         << (errno ? strerror(errno) : "unknown error")
         << "}"
         << std::endl;
         exit(8);
     }
-    
+
+    exit(0);
+}
+
+// - ISIO_CLEANUP child sequence that works with process-local memory
+void
+ISIO_CLEANUP::run_child_sequence_local()
+{
+    // Create non-shared, process-local IMAGE memory data entity
+    // - location is -9, which would cause an error for a shared shmim
+    // - shared is 0
+    // - NBsem is -99, which would cause an error for a shared shmim
+    // - CBsize is -999, which would cause an error for a shared shmim
+    uint32_t dims[2] = {2,3};
+    errno_t createIm =
+    ImageStreamIO_createIm_gpu(&image, "process-local/shmim"
+                              , (sizeof dims) / (sizeof *dims)
+                              , dims
+                              , _DATATYPE_FLOAT
+                              , -9          // Location
+                              , 0           // Non-shared, process-local
+                              , -99         // NBsem, ignored for local
+                              , 10          // Keywords to be malloced
+                              , MATH_DATA   // Data structure
+                              , -999        // CBsize, ignored for local
+                              );
+    if (IMAGESTREAMIO_SUCCESS != createIm)
+    {
+        std::cerr
+        << "ISIO_CLEANUP::run_child_sequence_local:  failed createIm{"
+        << std::to_string(createIm)
+        << "}"
+        << std::endl;
+        exit(1);
+    }
+
+    // ImageStreamIO_createIm_gpu will have malloc'ed space for keywords
+    if (!image.kw)
+    {
+        std::cerr
+        << "ISIO_CLEANUP::run_child_sequence_local:  keyword pointer is NULL"
+        << std::endl;
+        exit(2);
+    }
+
+    // ImageStreamIO_createIm_gpu will have calloc'ed space for data
+    if (!image.array.raw)
+    {
+        std::cerr
+        << "ISIO_CLEANUP::run_child_sequence_local:  data pointer is NULL"
+        << std::endl;
+        exit(3);
+    }
+
+    // ImageStreamIO_createIm_gpu will have malloc'ed space for metadata
+    if (!image.md)
+    {
+        std::cerr
+        << "ISIO_CLEANUP::run_child_sequence_local:  md pointer is NULL"
+        << std::endl;
+        exit(4);
+    }
+
+    // Calling free(...) on those pointers should not crash this child
+    free(image.kw);
+    free(image.array.raw);
+    free(image.md);
+
     exit(0);
 }
 

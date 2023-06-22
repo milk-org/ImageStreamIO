@@ -109,7 +109,7 @@ private:
     bool failed{true};
     pid_t parent_pid{0};
     pid_t forked_child_pid{0};
-    IMAGE image;
+    IMAGE image{0};
     enum
     { ISEM_PARENT_TO_CHILD = 0
     , ISEM_CHILD_TO_PARENT
@@ -159,6 +159,7 @@ ISIO_CLEANUP::_destructor()
     failed = false;
     block_SIGUSR2_02(false);
     parent_pid = forked_child_pid = 0;
+    memset(&image,0,sizeof image);
     return;
 }
 
@@ -518,7 +519,7 @@ ISIO_CLEANUP::close_shmim_09()
 std::string
 ISIO_CLEANUP::wait_for_child_10(bool kill_child)
 {
-    if (failed) { return std::string("wait_for_child_10:  failed a previous step"); }
+    //if (failed) { return std::string("wait_for_child_10:  failed a previous step"); }
 
     int wp{0};
     int wstatus{0};
@@ -656,7 +657,6 @@ ISIO_CLEANUP::run_child_sequence()
         << std::endl;
         exit(1);
     }
-
     while (!vsemfiles.empty())
     {
         unlink(vsemfiles.back().c_str());

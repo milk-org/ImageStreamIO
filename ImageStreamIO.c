@@ -790,7 +790,9 @@ ImageStreamIO_check_image_inode(IMAGE* image)
 
 errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 {
-    // Error checking
+    // N.B. No METADATA (image->md->...) elements are calculated here
+
+    // Sizing part (i) - validate IMAGE and IMAGE_METADATA
     if (!image)
     { 
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
@@ -822,7 +824,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
                                      "invalid size of third axis");
             return IMAGESTREAMIO_INVALIDARG; 
         } 
-    // N.B. no break, fall through to previous axis
+        // N.B. no break, fall through to previous axis
     case 2:
         if (image->md->size[1] < 1)
         { 
@@ -831,7 +833,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
                                      "invalid size of second axis");
             return IMAGESTREAMIO_INVALIDARG; 
         } 
-    // N.B. no break, fall through to previous axis
+        // N.B. no break, fall through to previous axis
     case 1:
         if (image->md->size[0] < 1)
         { 
@@ -872,7 +874,8 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
         return IMAGESTREAMIO_INVALIDARG; 
     } 
 
-    // Compute total shared size of shmim from IMAGE_METADATA parameters
+    // Sizing part (ii) - calcuate sizes and pointers in IMAGE structure
+    // N.B. No METADATA (image->md->...) elements are calculated here
     if (image->md->shared == 1)
     { 
         image->memsize = sizeof(IMAGE_METADATA);
@@ -883,7 +886,8 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
         {
             // image on CPU
             // printf("shared memory space in CPU RAM = %ud bytes\n", image->memsize);
-            image->array.raw = map;
+            image->
+            array.raw       = map;
             map            += image->md->imdatamemsize;
             image->memsize += image->md->imdatamemsize;
         }
@@ -911,11 +915,13 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
         image->memsize += sizeof(sem_t); // for semlog
 
         // One read PID array, one write PID array
-        image->semReadPID = (pid_t *)(map);
+        image->
+        semReadPID      = (pid_t *)(map);
         map            += sizeof(pid_t) * image->md->sem;
         image->memsize += sizeof(pid_t) * image->md->sem;
 
-        image->semWritePID = (pid_t *)(map);
+        image->
+        semWritePID     = (pid_t *)(map);
         map            += sizeof(pid_t) * image->md->sem;
         image->memsize += sizeof(pid_t) * image->md->sem;
 
@@ -925,22 +931,26 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
         image->memsize += sizeof(uint32_t) * image->md->sem;
 
         // Calculate space for semstatus integers
-        image->semstatus = (uint32_t *)(map);
+        image->
+        semstatus       = (uint32_t *)(map);
         map            += sizeof(uint32_t) * image->md->sem;
         image->memsize += sizeof(uint32_t) * image->md->sem;
 
-        image->streamproctrace = (STREAM_PROC_TRACE *)(map);
+        image->
+        streamproctrace = (STREAM_PROC_TRACE *)(map);
         map            += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
         image->memsize += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
 
         if ((image->md->imagetype & 0xF000F) ==
                 (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // Circular Buffer
         {
-            image->atimearray = (struct timespec *)(map);
+            image->
+            atimearray      = (struct timespec *)(map);
             map            += sizeof(struct timespec) * image->md->size[2];
             image->memsize += sizeof(struct timespec) * image->md->size[2];
 
-            image->writetimearray = (struct timespec *)(map);
+            image->
+            writetimearray  = (struct timespec *)(map);
             map            += sizeof(struct timespec) * image->md->size[2];
             image->memsize += sizeof(struct timespec) * image->md->size[2];
 
@@ -950,7 +960,8 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
         }
 
         // Fast circular buffer metadata
-        image->CircBuff_md = (CBFRAMEMD *)(map);
+        image->
+        CircBuff_md     = (CBFRAMEMD *)(map);
         map            += sizeof(CBFRAMEMD) * image->md->CBsize;
         image->memsize += sizeof(CBFRAMEMD) * image->md->CBsize;
 
@@ -966,12 +977,13 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
             image->CBimdata = NULL;
         }
 
-#ifdef IMAGESTRUCT_WRITEHISTORY
+#       ifdef IMAGESTRUCT_WRITEHISTORY
         // Write time buffer
-        image->writehist = (FRAMEWRITEMD *)(map);
+        image->
+        writehist       = (FRAMEWRITEMD *)(map);
         map            += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
         image->memsize += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
-#endif
+#       endif
 
     } // if (image->md->shared == 1)
 
@@ -993,23 +1005,28 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
     uint8_t* map)
 {
     int NBproctrace = IMAGE_NB_PROCTRACE;
+
     IMAGE_METADATA local_metadata = { 0 };
+
+    // Use local METADATA struct if image->md is NULL
+    // - map will typically be NULL, TBD later
     image->md = image->md ? image->md : &local_metadata;
 
-    image->md->naxis = naxis;
-    image->md->size[0] = naxis>0 ? size[0] : 0;
-    image->md->size[1] = naxis>1 ? size[1] : 0;
-    image->md->size[2] = naxis>2 ? size[2] : 0;
-    image->md->datatype = datatype;
-    image->md->location = location;
-    image->md->shared = shared;
-    image->md->sem = NBsem;
-    image->md->NBkw = NBkw;
-    image->md->imagetype = imagetype;
-    image->md->CBsize = CBsize;
+    image->md->naxis       = naxis;
+    image->md->size[0]     = naxis>0 ? size[0] : 0;
+    image->md->size[1]     = naxis>1 ? size[1] : 0;
+    image->md->size[2]     = naxis>2 ? size[2] : 0;
+    image->md->datatype    = datatype;
+    image->md->imagetype   = imagetype;
+    image->md->NBkw        = NBkw;
     image->md->NBproctrace = NBproctrace;
+    image->md->shared      = shared==1 ? 1 : 0;
+    image->md->location    = image->md->shared==1 ? location : -1;
+    image->md->sem         = image->md->shared==1 ? NBsem : 0; ;
+    image->md->CBsize      = image->md->shared==1 ? CBsize : 0;
 
-    image->md->nelement = image->md->size[0];
+    image->md->nelement    = image->md->size[0];
+
     for (long i = 1; i < image->md->naxis; ++i)
     {
         image->md->nelement *= image->md->size[i];
@@ -1060,22 +1077,45 @@ errno_t ImageStreamIO_createIm_gpu(
     uint64_t imagetype,
     uint32_t CBsize) // circular buffer size (if shared), 0 if not used
 {
+    // The map pointer initially points to the start of the meta-data
     uint8_t *map = NULL;
+    // For shared memory, leave NULL so initial sizing-from-scratch call
+    // uses temporary IMAGE_METADATA in sizing call
 
-    // compute total size to be allocated
+    ////////////////////////////////////////////////////////////////////
+    // For non-shared memory, allocate the meta-data and point map at it
+    ////////////////////////////////////////////////////////////////////
+    if (shared != 1)
+    {
+        map = (uint8_t *)malloc(sizeof(IMAGE_METADATA));
+        if (map == NULL)
+        {
+            printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
+            abort();
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////
+    // Calculate the sizes of, and pointers into, the shared memory file
+    // N.B. for non-shared, non-file memory, this will calculate invalid
+    //      pointers beyond the end of meta-data, which will not be used
+    ////////////////////////////////////////////////////////////////////
+
+    image->md = (IMAGE_METADATA*) map;
+    errno_t ierrno = ImageStreamIO_image_sizing_from_scratch(
+                       image, name, naxis, size, datatype
+                     , location, shared, NBsem, NBkw
+                     , imagetype, CBsize, map
+                     );
+    if (ierrno != IMAGESTREAMIO_SUCCESS)
+    {
+        if (shared != 1) { free(map); }
+        return ierrno;
+    }
+
+    // 
     if (shared == 1)
     {
-
-        ////////////////////////////////////////////////////////////////
-        // Calculate the size of the shmim file (image->memsize)
-        ////////////////////////////////////////////////////////////////
-
-        errno_t ierrno = ImageStreamIO_image_sizing_from_scratch(
-                           image, name, naxis, size, datatype
-                         , location, shared, NBsem, NBkw
-                         , imagetype, CBsize, (uint8_t*) NULL
-                         );
-        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
 
         ////////////////////////////////////////////////////////////////
         // Open and map shmim file of the calculated size image->memsize
@@ -1129,7 +1169,7 @@ errno_t ImageStreamIO_createIm_gpu(
         {
             close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILESEEK,
-                                     "Error calling lseek() to 'stretch' the file");
+                                     "Error calling lseek() to set file size");
             return IMAGESTREAMIO_FILESEEK;
         }
 
@@ -1138,7 +1178,7 @@ errno_t ImageStreamIO_createIm_gpu(
         {
             close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEWRITE,
-                                     "Error writing last byte of the file");
+                                     "Error writing byte to set file size");
             return IMAGESTREAMIO_FILEWRITE;
         }
 
@@ -1172,28 +1212,9 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->creatorPID = getpid();
         image->md->ownerPID = 0; // default value, indicates unset
 
-        image->md->CBindex = 0;
-        image->md->CBcycle = 0;
-
-#ifdef IMAGESTRUCT_WRITEHISTORY
-        image->md->wCBindex = 0;
-        image->md->wCBcycle = 0;
-#endif
     }
     else
     {
-        // not shared memory, local memory only
-        image->shmfd = 0;
-        image->memsize = 0;
-
-        image->md = (IMAGE_METADATA *)malloc(sizeof(IMAGE_METADATA));
-        if (image->md == NULL)
-        {
-            printf("Memory allocation error %s %d\n", __FILE__, __LINE__);
-            abort();
-        }
-        image->md->shared = 0;
-        image->md->inode = 0;
         if (image->md->NBkw > 0)
         {
             image->kw = (IMAGE_KEYWORD *)malloc(sizeof(IMAGE_KEYWORD) * image->md->NBkw);
@@ -1207,19 +1228,26 @@ errno_t ImageStreamIO_createIm_gpu(
         {
             image->kw = NULL;
         }
-        image->md->CBsize = 0;
-        image->md->CBindex = 0;
-        image->md->CBcycle = 0;
-
-#ifdef IMAGESTRUCT_WRITEHISTORY
-        image->md->wCBindex = 0;
-        image->md->wCBcycle = 0;
-#endif
+        // not shared memory, local memory only
+        image->shmfd = 0;
+        image->memsize = 0;
+        image->md->inode = 0;
+        //image->md->shared = 0;
+        //image->md->CBsize = 0;
 
         strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
         // Ensure image and image metadata names are null-terminated
         image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
     }
+
+    // Initialize indices and counters
+    image->md->CBindex = 0;
+    image->md->CBcycle = 0;
+
+#   ifdef IMAGESTRUCT_WRITEHISTORY
+    image->md->wCBindex = 0;
+    image->md->wCBcycle = 0;
+#   endif
 
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
 

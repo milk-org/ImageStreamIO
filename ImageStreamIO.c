@@ -128,6 +128,7 @@ void check(cudaError_t result, char const *const func, const char *const file,
 /**
  * @brief Write entry into debug log
  *
+ * \returns 0
  *
  */
 errno_t ImageStreamIO_write_process_log(
@@ -165,8 +166,9 @@ errno_t ImageStreamIO_write_process_log(
 
 
 /**
- * Print error to stderr
+ * @brief Print error to stderr
  *
+ * \returns IMAGESTREAMIO_SUCCESS
  *
  */
 errno_t ImageStreamIO_printERROR_(
@@ -226,6 +228,7 @@ errno_t ImageStreamIO_printERROR_(
 /**
  * Print warning to stderr
  *
+ * \returns IMAGESTREAMIO_SUCCESS
  *
  */
 errno_t ImageStreamIO_printWARNING(
@@ -274,6 +277,17 @@ errno_t ImageStreamIO_readBufferAt(
 
 
 
+/**
+ * @brief Build directory pathname to use for shared memory files
+ *
+ * \returns IMAGESTREAMIO_SUCCESS, or exits process on failure
+ *
+ * Use the first directory found:
+ * - Run-time override:  environment variable MILK_SHM_DIR
+ * - Primary default:  macro SHAREDMEMDIR macro, typically "/milk/shm"
+ * - Secondary default:  "/tmp"
+ *
+ */
 errno_t ImageStreamIO_shmdirname(
     char *shmdname)
 {
@@ -315,6 +329,15 @@ errno_t ImageStreamIO_shmdirname(
     return IMAGESTREAMIO_SUCCESS;
 }
 
+/**
+ * @brief Build shared memory file pathname
+ *
+ * \returns IMAGESTREAMIO_SUCCESS on success
+ * \returns IMAGESTREAMIO_FAILURE on failure
+ *
+ *   <shmdirname(above)>/<name>.im.shm
+ *
+ */
 errno_t ImageStreamIO_filename(
     char *file_name,
     size_t ssz,
@@ -349,6 +372,13 @@ errno_t ImageStreamIO_filename(
 }
 
 
+/**
+ * @brief Size, in bytes, of datatype _DATATYPE_*
+ *
+ * \returns size in bytes if datatype is a valid data type
+ * \returns -1 if datatype is not a valid data type
+ *
+ */
 int ImageStreamIO_typesize(
     uint8_t datatype)
 {
@@ -387,6 +417,13 @@ int ImageStreamIO_typesize(
     return -1; // This is an in-band error code, so can't be > 0.
 }
 
+/**
+ * @brief Get name of datatype _DATATYPE_*
+ *
+ * \returns char* pointer to name of datatype _DATATYPE_*
+ * \returns "unknown" if datatype is not a valid data type
+ *
+ */
 const char *ImageStreamIO_typename(
     uint8_t datatype)
 {
@@ -424,6 +461,13 @@ const char *ImageStreamIO_typename(
     return "unknown";
 }
 
+/**
+ * @brief Get 7-character name of datatype _DATATYPE_*
+ *
+ * \returns 7-character char* pointer, left-padded with spaces if needed
+ * \returns "unknown" if datatype is not a valid data type
+ *
+ */
 const char *ImageStreamIO_typename_7(
     uint8_t datatype)
 {
@@ -461,6 +505,15 @@ const char *ImageStreamIO_typename_7(
     return "unknown";
 }
 
+/**
+ * @brief Test whether datatype is a valid _DATATYPE_*
+ *
+ * \returns 0 if datatype is a valid non-complex datatype
+ * \returns 0 if datatype is a valid complex datatype and complex_allowed is 1
+ * \returns -1 if datatype is not a valid datatype
+ * \returns -1 if datatype is complex and complex allowed is 0
+ *
+ */
 int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed)
 {
     switch (datatype)
@@ -489,6 +542,14 @@ int ImageStreamIO_checktype(uint8_t datatype, int complex_allowed)
     return -1; // This is an in-band error code, so can't be > 0.
 }
 
+/**
+ * @brief Get 4-character name of datatype _DATATYPE_*
+ * @brief Return
+ *
+ * \returns char* pointer to 4-char name of datatype, Left-padded with spaces
+ * \returns " ???" if datatype is not a valid data type
+ *
+ */
 const char *ImageStreamIO_typename_short(
     uint8_t datatype)
 {
@@ -526,6 +587,14 @@ const char *ImageStreamIO_typename_short(
     return " ???";
 }
 
+/**
+ * @brief Get suitable floating-point data type to hold int datatype value
+ *
+ * \returns floating-point _DATATYPE_* on succes
+ * \returns -1 if datatype is not a valid data type
+ *
+ *
+ */
 int ImageStreamIO_floattype(
     uint8_t datatype)
 {
@@ -564,6 +633,13 @@ int ImageStreamIO_floattype(
     return -1; // This is an in-band error code, so can't be > 0.
 }
 
+/**
+ * @brief Get FITSIO data type matching the ImageStreamIO data type arg
+ *
+ * \returns FITSIO data type (e.g. TBYTE) on success
+ * \returns -1 if datatype is not a valid ImageStreamIO data type
+ *
+ */
 int ImageStreamIO_FITSIOdatatype(uint8_t datatype)
 {
     switch (datatype)
@@ -598,6 +674,13 @@ int ImageStreamIO_FITSIOdatatype(uint8_t datatype)
     return -1; // This is an in-band error code, must be unique from valid BITPIX values.
 }
 
+/**
+ * @brief Get FITSIO bitpix type matching the ImageStreamIO data type arg
+ *
+ * \returns FITSIO bitpix type (e.g. BYTE_IMG) on success
+ * \returns -1 if datatype is invalid or has no matching FITSIO bitpix type
+ *
+ */
 int ImageStreamIO_FITSIObitpix(
     uint8_t datatype)
 {
@@ -635,6 +718,13 @@ int ImageStreamIO_FITSIObitpix(
 
 
 
+/**
+ * @brief Assign map to image->array.raw shmim data ptr, get data size
+ *
+ * \returns size in bytes of CPU-based shmim data area image->array.raw
+ * \returns 0 for GPU-based shmim
+ *
+ */
 uint64_t ImageStreamIO_offset_data(
     IMAGE *image,
     void *map)
@@ -661,6 +751,14 @@ uint64_t ImageStreamIO_offset_data(
 
 
 
+/**
+ * @brief Initialize shmim data, set image->array.raw pointer if needed
+ *
+ * \returns size in bytes of CPU-based shmim data area image->array.raw
+ * \returns 0 for GPU-based shmim
+ * \returns exits process if calloc of non-shared, process-local memory failed
+ *
+ */
 uint64_t ImageStreamIO_initialize_buffer(
     IMAGE *image)
 {
@@ -722,6 +820,8 @@ uint64_t ImageStreamIO_initialize_buffer(
 /**
  * @brief Get inode using shmim file descriptor, write inode to IMAGE
  *
+ * \returns IMAGESTREAMIO_SUCCESS on success
+ * \returns IMAGESTREAMIO_INODE on failure
  *
  */
 errno_t
@@ -746,7 +846,7 @@ ImageStreamIO_store_image_inode(IMAGE* image)
  * @brief Check image->md->inode against inode from shmim name
  *
  * \returns IMAGESTREAMIO_SUCCESS if ->md->inode matches the shmim inode
- * \returns _INODE if ->md->inode doesn't match the shmim name inode
+ * \returns _INODE if ->md->inode does not match the shmim name inode
  * \returns _FAILURE if the shmim name inode could not be retrieved
  *
  */
@@ -789,6 +889,13 @@ ImageStreamIO_check_image_inode(IMAGE* image)
 /* ===============================================================================================
  */
 
+/**
+ * @brief Use metadata to write size and pointer data to IMAGE structure
+ *
+ * \returns IMAGESTREAMIO_SUCCESS on success
+ * \returns IMAGESTREAMIO_INVALIDARG if image->md has any invalid values
+ *
+ */
 errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 {
     // N.B. No METADATA (image->md->...) elements are calculated here
@@ -853,11 +960,10 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
     }
     if (image->md->location < -1)
     { 
-        ///\todo should error code differ between printERROR and return?
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "unknown location");
-        return IMAGESTREAMIO_FAILURE; 
+        return IMAGESTREAMIO_INVALIDARG; 
     } 
     if (ImageStreamIO_checktype(image->md->datatype, 1))
     { 
@@ -882,7 +988,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
         return IMAGESTREAMIO_INVALIDARG; 
     } // if (image->md->shared != 1)
 
-    // Sizing part (ii) - calcuate sizes and pointers in IMAGE structure
+    // Sizing part (ii) - calculate sizes and pointers in IMAGE structure
     // N.B. No METADATA (image->md->...) elements are calculated here
 
     if (image->md->shared == 0)
@@ -1005,6 +1111,14 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 
+
+/**
+ * @brief Initialze metadata, write sizes and pointers to IMAGE struct
+ *
+ * \returns IMAGESTREAMIO_SUCCESS on success
+ * \returns IMAGESTREAMIO_INVALIDARG if image->md has any invalid values
+ *
+ */
 errno_t ImageStreamIO_image_sizing_from_scratch(
     IMAGE *image,
     const char *name,
@@ -1075,6 +1189,14 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
     return ImageStreamIO_image_sizing(image, map);
 } // errno_t ImageStreamIO_image_sizing_from_scratch(...)
 
+
+/**
+ * @brief ImageStreamIO_createIm_gpu wrapper for CPU-based shared shmim 
+ *
+ * \returns IMAGESTREAMIO_SUCCESS on success
+ * \returns IMAGESTREAMIO_INVALIDARG if image->md has any invalid values
+ *
+ */
 errno_t ImageStreamIO_createIm(
     IMAGE *image,
     const char *name,
@@ -1090,6 +1212,15 @@ errno_t ImageStreamIO_createIm(
                                       MATH_DATA, (uint32_t)CBsize);
 }
 
+
+/**
+ * @brief Connect to CPU- or GPU-based shmim
+ *
+ * \returns IMAGESTREAMIO_SUCCESS on success
+ * \returns not IMAGESTREAMIO_SUCCESS on failure
+ * \returns abort on malloc/calloc failure
+ *
+ */
 errno_t ImageStreamIO_createIm_gpu(
     IMAGE *image,
     const char *name,
@@ -1350,6 +1481,12 @@ errno_t ImageStreamIO_createIm_gpu(
 } // errno_t ImageStreamIO_createIm_gpu(...)
 
 
+/**
+ * @brief Unmap and destroy shmim created by ImageStreamIO_createIm_gpu
+ *
+ * \returns IMAGESTREAMIO_SUCCESS
+ *
+ */
 errno_t ImageStreamIO_destroyIm(
     IMAGE *image)
 {
@@ -1406,6 +1543,13 @@ errno_t ImageStreamIO_destroyIm(
 
 
 
+/**
+ * @brief ImageStreamIO_read_sharedmem_image_toIMAGE wrapper
+ *
+ * \returns IMAGESTREAMIO_SUCCESS on success
+ * \returns not IMAGESTREAMIO_SUCCESS on failure
+ *
+ */
 errno_t ImageStreamIO_openIm(
     IMAGE *image,
     const char *name)
@@ -1413,6 +1557,15 @@ errno_t ImageStreamIO_openIm(
     return ImageStreamIO_read_sharedmem_image_toIMAGE(name, image);
 }
 
+
+
+/**
+ * @brief Get the data pointer for a shmim
+ *
+ * \returns pointer to CUDA data for GPU-based shmim
+ * \returns image->array->raw for CPU-based shmim
+ *
+ */
 void *ImageStreamIO_get_image_d_ptr(
     IMAGE *image)
 {
@@ -1969,8 +2122,12 @@ long ImageStreamIO_semvalue(
     return -1; // in-band error bad
 }
 
-// Function to be called each time image content is updated
-// Increments counter, sets write flag to zero etc...
+/**
+ * ## Purpose
+ *
+ * Increment counter, set write flag to zero etc.,
+ * if called each time image content is updated
+ **/
 long ImageStreamIO_UpdateIm(
     IMAGE *image)
 {

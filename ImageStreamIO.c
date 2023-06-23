@@ -234,7 +234,7 @@ errno_t ImageStreamIO_printERROR_(
 errno_t ImageStreamIO_printWARNING(
     char *warnmessage)
 {
-    int fn = fileno(stderr);
+    //int fn = fileno(stderr);
 
     fprintf(stderr, "%c[%d;%dmWARNING   %c[%d;m\n",
             (char)27, 1, 35, (char)27, 0);

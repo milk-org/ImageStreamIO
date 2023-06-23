@@ -866,13 +866,14 @@ TEST(ImageStreamIOTestOperations, CleanupTest) {
   EXPECT_EQ(sOK, isio_cleanup.file_cleanup_11(kill_child));
 }
 
-// Operational test:  child process writes to shmim; parent reads
+// Ops test:  child makes non-shared, process-local shmim; parent waits.
 TEST(ImageStreamIOTestOperations, LocalShmimCleanupTest) {
 
   std::string sOK{"OK"};
 
   ISIO_CLEANUP isio_cleanup{ISIO_CLEANUP()};
 
+  // Arg=1:  child creates non-shared, process-local calloc'ed shmim
   EXPECT_EQ(sOK, isio_cleanup.fork_child_03(1));
   EXPECT_EQ(sOK, isio_cleanup.wait_for_child_10(false));
 }

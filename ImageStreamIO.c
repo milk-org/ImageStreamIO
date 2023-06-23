@@ -877,18 +877,6 @@ ImageStreamIO_check_image_inode(IMAGE* image)
 
 
 
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
-/* @name 1. READ / WRITE STREAM
- *
- */
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
-
 /**
  * @brief Use metadata to write size and pointer data to IMAGE structure
  *
@@ -902,90 +890,90 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 
     // Sizing part (i) - validate IMAGE and IMAGE_METADATA
     if (!image)
-    { 
+    {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "null IMAGE pointer");
-        return IMAGESTREAMIO_INVALIDARG; 
-    } 
+        return IMAGESTREAMIO_INVALIDARG;
+    }
     if (!image->md)
-    { 
+    {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "null IMAGE_METADATA pointer");
-        return IMAGESTREAMIO_INVALIDARG; 
-    } 
+        return IMAGESTREAMIO_INVALIDARG;
+    }
     if (!*image->md->name)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "invalid shmim name, or null pointer to same");
-        return IMAGESTREAMIO_INVALIDARG; 
+        return IMAGESTREAMIO_INVALIDARG;
     }
     switch (image->md->naxis)
     {
     case 3:
         if (image->md->size[2] < 1)
-        { 
+        {
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                      "Error calling ImageStreamIO_image_sizing, "
                                      "invalid size of third axis");
-            return IMAGESTREAMIO_INVALIDARG; 
-        } 
+            return IMAGESTREAMIO_INVALIDARG;
+        }
         // N.B. no break, fall through to previous axis
     case 2:
         if (image->md->size[1] < 1)
-        { 
+        {
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                      "Error calling ImageStreamIO_image_sizing, "
                                      "invalid size of second axis");
-            return IMAGESTREAMIO_INVALIDARG; 
-        } 
+            return IMAGESTREAMIO_INVALIDARG;
+        }
         // N.B. no break, fall through to previous axis
     case 1:
         if (image->md->size[0] < 1)
-        { 
+        {
             ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                      "Error calling ImageStreamIO_image_sizing, "
                                      "invalid size of first axis");
-            return IMAGESTREAMIO_INVALIDARG; 
-        } 
+            return IMAGESTREAMIO_INVALIDARG;
+        }
         // N.B. break; all axes indicated by naxis are valid
         break;
     default:
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "invalid number of axes");
-        return IMAGESTREAMIO_INVALIDARG; 
+        return IMAGESTREAMIO_INVALIDARG;
     }
     if (image->md->location < -1)
-    { 
+    {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "unknown location");
-        return IMAGESTREAMIO_INVALIDARG; 
-    } 
+        return IMAGESTREAMIO_INVALIDARG;
+    }
     if (ImageStreamIO_checktype(image->md->datatype, 1))
-    { 
+    {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "invalid datatype");
-        return IMAGESTREAMIO_INVALIDARG; 
-    } 
+        return IMAGESTREAMIO_INVALIDARG;
+    }
     if (((image->md->imagetype & 0xF000F) == CIRCULAR_BUFFER) &&
             (image->md->naxis != 3))
-    { 
+    {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "temporal circular buffer needs 3 dimensions");
-        return IMAGESTREAMIO_INVALIDARG; 
-    } 
+        return IMAGESTREAMIO_INVALIDARG;
+    }
     if (image->md->shared < 0 || image->md->shared > 1 )
-    { 
+    {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
                                  "invalid [shared] value");
-        return IMAGESTREAMIO_INVALIDARG; 
+        return IMAGESTREAMIO_INVALIDARG;
     } // if (image->md->shared != 1)
 
     // Sizing part (ii) - calculate sizes and pointers in IMAGE structure
@@ -1190,8 +1178,25 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
 } // errno_t ImageStreamIO_image_sizing_from_scratch(...)
 
 
+
+
+
+
+/* ===============================================================================================
+ */
+/* ===============================================================================================
+ */
+/* @name 1. READ / WRITE STREAM
+ *
+ */
+/* ===============================================================================================
+ */
+/* ===============================================================================================
+ */
+
+
 /**
- * @brief ImageStreamIO_createIm_gpu wrapper for CPU-based shared shmim 
+ * @brief ImageStreamIO_createIm_gpu wrapper for CPU-based shared shmim
  *
  * \returns IMAGESTREAMIO_SUCCESS on success
  * \returns IMAGESTREAMIO_INVALIDARG if image->md has any invalid values
@@ -1211,6 +1216,7 @@ errno_t ImageStreamIO_createIm(
                                       shared, IMAGE_NB_SEMAPHORE, NBkw,
                                       MATH_DATA, (uint32_t)CBsize);
 }
+
 
 
 /**
@@ -1270,7 +1276,7 @@ errno_t ImageStreamIO_createIm_gpu(
         return ierrno;
     }
 
-    // 
+    // Shared vs. non-shared logic follows
     if (shared == 1)
     {
 
@@ -1370,7 +1376,7 @@ errno_t ImageStreamIO_createIm_gpu(
         image->md->ownerPID = 0; // default value, indicates unset
 
     }
-    else
+    else // shared != 1
     {
         ////////////////////////////////////////////////////////////////
         // Non-shared, process-local memory only

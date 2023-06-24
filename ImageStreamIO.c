@@ -1125,10 +1125,12 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
     // - map will typically be NULL, TBD later
     image->md = image->md ? image->md : &local_metadata;
 
+    // Invalid value for naxis or size[*] arguments will cause
+    // ImageStreamIO_image_size, called next, to return non-success
     image->md->naxis       = (4 > naxis && naxis > 0) ? naxis : 0;
-    image->md->size[0]     = naxis > 0 ? size[0] : 0;
-    image->md->size[1]     = naxis > 1 ? size[1] : 0;
-    image->md->size[2]     = naxis > 2 ? size[2] : 0;
+    image->md->size[0]     = image->md->naxis > 0 ? size[0] : 0;
+    image->md->size[1]     = image->md->naxis > 1 ? size[1] : 0;
+    image->md->size[2]     = image->md->naxis > 2 ? size[2] : 0;
     image->md->datatype    = datatype;
     image->md->imagetype   = imagetype;
     image->md->NBkw        = NBkw;

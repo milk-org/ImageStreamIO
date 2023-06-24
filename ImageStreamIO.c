@@ -1743,13 +1743,14 @@ errno_t ImageStreamIO_closeIm(
 {
     free(image->semptr);
 
+    // Close file before unmap, in case unmap fails
+    close(image->shmfd);
+
     if (munmap(image->md, image->memsize) != 0)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "error unmapping memory");
         return IMAGESTREAMIO_MMAP;
     }
-
-    close(image->shmfd);
 
     return IMAGESTREAMIO_SUCCESS;
 }
@@ -1948,7 +1949,7 @@ int ImageStreamIO_getsemwaitindex(
         }
     }
 
-    // if not, look for available s
+    // if not, look for available semaphore
 
     for (int semindex = 0; semindex < image->md->sem; ++semindex)
     {
@@ -1983,7 +1984,7 @@ int ImageStreamIO_semwait(
     IMAGE *image,
     int index)
 {
-    if (index > image->md->sem - 1)
+    if (index < 0 || index > image->md->sem - 1)
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);
@@ -1996,7 +1997,7 @@ int ImageStreamIO_semtrywait(
     IMAGE *image,
     int index)
 {
-    if (index > image->md->sem - 1)
+    if (index < 0 || index > image->md->sem - 1)
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);
@@ -2010,7 +2011,7 @@ int ImageStreamIO_semtimedwait(
     int index,
     const struct timespec *semwts)
 {
-    if (index > image->md->sem - 1)
+    if (index < 0 || index > image->md->sem - 1)
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);

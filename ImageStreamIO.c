@@ -732,9 +732,6 @@ uint64_t ImageStreamIO_offset_data(
     uint8_t datatype = image->md->datatype;
     u_int64_t offset = 0;
 
-    // printf("datatype = %d\n", (int)datatype);
-    // fflush(stdout);
-
     if (image->md->location >= 0)
     {
         image->array.raw = ImageStreamIO_get_image_d_ptr(image);
@@ -996,7 +993,6 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
     if (image->md->location == -1)
     {
         // image on CPU
-        // printf("shared memory space in CPU RAM = %ud bytes\n", image->memsize);
         image->
         array.raw       = map;
         map            += image->md->imdatamemsize;
@@ -1662,8 +1658,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         fstat(SM_fd, &file_stat);
     } while (file_stat.st_size <= sizeof(IMAGE_METADATA));
 
-    // printf("File %s size: %zd\n", SM_fname, file_stat.st_size); fflush(stdout); //TEST
-
     uint8_t *map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
                                         MAP_SHARED, SM_fd, 0);
     if (map_root == MAP_FAILED)
@@ -1793,32 +1787,30 @@ long ImageStreamIO_sempost(
     IMAGE *image,
     long index)
 {
-    pid_t writeProcessPID;
-
-    writeProcessPID = getpid();
-
     if (index < 0)
     {
-        long semindex;
+        // Inhibit per-semaphore posts to semlog
+        sem_t* save_semlog = image->semlog;
+        image->semlog = NULL;
 
-        for (semindex = 0; semindex < image->md->sem; semindex++)
+        // Post to all semaphores
+        for (long semindex = 0; semindex < image->md->sem; semindex++)
         {
-            int semval;
-
-            image->semWritePID[semindex] = writeProcessPID;
-
-            sem_getvalue(image->semptr[semindex], &semval);
-            if (semval < SEMAPHORE_MAXVAL)
-            {
-                sem_post(image->semptr[semindex]);
-            }
+            ImageStreamIO_sempost(image, semindex);
         }
+
+        // Restore semlog pointer
+        image->semlog = save_semlog;
     }
     else
     {
+        pid_t writeProcessPID;
+
+        writeProcessPID = getpid();
+
         if (index > image->md->sem - 1)
-            printf("ERROR: image %s semaphore # %ld does no exist\n", image->md->name,
-                   index);
+            printf("ERROR: image %s semaphore # %ld does not exist\n"
+                  , image->md->name, index);
         else
         {
             int semval;
@@ -1865,39 +1857,13 @@ long ImageStreamIO_sempost_excl(
     IMAGE *image,
     long index)
 {
-    long semindex;
-
-    pid_t writeProcessPID;
-
-    writeProcessPID = getpid();
-
-    for (semindex = 0; semindex < image->md->sem; semindex++)
+    for (long semindex = 0; semindex < image->md->sem; semindex++)
     {
         if (semindex != index)
         {
-            int semval;
-
-            sem_getvalue(image->semptr[semindex], &semval);
-            if (semval < SEMAPHORE_MAXVAL)
-            {
-                sem_post(image->semptr[semindex]);
-                image->semWritePID[semindex] = writeProcessPID;
-            }
+            ImageStreamIO_sempost(image, semindex);
         }
     }
-
-    if (image->semlog != NULL)
-    {
-        int semval;
-
-        sem_getvalue(image->semlog, &semval);
-        if (semval < SEMAPHORE_MAXVAL)
-        {
-            sem_post(image->semlog);
-            image->semWritePID[index] = writeProcessPID;
-        }
-    }
-
     return IMAGESTREAMIO_SUCCESS;
 }
 
@@ -2075,18 +2041,9 @@ long ImageStreamIO_semflush(
 {
     if (index < 0)
     {
-        long semindex;
-
-        for (semindex = 0; semindex < image->md->sem; semindex++)
+        for (long semindex = 0; semindex < image->md->sem; semindex++)
         {
-            int semval;
-            int i;
-
-            sem_getvalue(image->semptr[semindex], &semval);
-            for (i = 0; i < semval; i++)
-            {
-                sem_trywait(image->semptr[semindex]);
-            }
+            ImageStreamIO_semflush(image, semindex);
         }
     }
     else
@@ -2096,15 +2053,13 @@ long ImageStreamIO_semflush(
                    image->md->name, index);
         else
         {
-            long semindex;
             int semval;
             int i;
 
-            semindex = index;
-            sem_getvalue(image->semptr[semindex], &semval);
+            semval = ImageStreamIO_semvalue(image, index);
             for (i = 0; i < semval; i++)
             {
-                sem_trywait(image->semptr[semindex]);
+                sem_trywait(image->semptr[index]);
             }
         }
     }
@@ -2116,16 +2071,15 @@ long ImageStreamIO_semvalue(
     IMAGE *image,
     long index)
 {
-    if(index > image->md->sem - 1)
+    if(index < 0 || index > image->md->sem - 1)
+    {
         printf("ERROR: image %s semaphore # %ld does not exist\n",
                image->md->name, index);
-    else
-    {
-        int semval;
-        sem_getvalue(image->semptr[index], &semval);
-        return semval;
+        return -1; // in-band error bad
     }
-    return -1; // in-band error bad
+    int semval;
+    sem_getvalue(image->semptr[index], &semval);
+    return semval;
 }
 
 /**

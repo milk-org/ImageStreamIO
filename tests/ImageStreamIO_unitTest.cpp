@@ -782,7 +782,7 @@ TEST(ImageStreamIOTestRead, CubeCPUSharedNbSlices) {
 ////////////////////////////////////////////////////////////////////////
 TEST(ImageStreamIOTestLocation, BadLocationFailure) {
 
-  EXPECT_EQ(IMAGESTREAMIO_FAILURE
+  EXPECT_EQ(IMAGESTREAMIO_INVALIDARG
            ,ImageStreamIO_createIm_gpu(&imageTest, SHM_NAME_LocnTest
                                       ,2, dims2,_DATATYPE_FLOAT
                                       ,badLocn, 1, 10, 10, MATH_DATA,0)

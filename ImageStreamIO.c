@@ -186,8 +186,8 @@ errno_t ImageStreamIO_printERROR_(
         char buff[256];
 
         // Test for which version of strerror_r we're using (XSI or GNU)
-#if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && \
-     !defined(_GNU_SOURCE))
+#       if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && \
+            !defined(_GNU_SOURCE))
         if (strerror_r(errno, buff, sizeof(buff)) == 0)
         {
             fprintf(stderr, "C Error: %s\n", buff);
@@ -196,7 +196,7 @@ errno_t ImageStreamIO_printERROR_(
         {
             fprintf(stderr, "Unknown C Error\n");
         }
-#else
+#       else
         // GNU strerror_r does not necessarily use buff, and uses errno to report
         // errors.
         int _errno = errno;
@@ -211,7 +211,7 @@ errno_t ImageStreamIO_printERROR_(
                     0);
 
         errno = _errno; // restore it in case it's used later.
-#endif
+#       endif
     }
     else
         fprintf(stderr, "%c[%d;%dmNo C error (errno = 0)%c[%d;m\n", (char)27, 1, 31,
@@ -644,7 +644,7 @@ int ImageStreamIO_FITSIOdatatype(uint8_t datatype)
 {
     switch (datatype)
     {
-#ifdef USE_CFITSIO
+#   ifdef USE_CFITSIO
     case _DATATYPE_UINT8:
         return TBYTE;
     case _DATATYPE_INT8:
@@ -665,7 +665,7 @@ int ImageStreamIO_FITSIOdatatype(uint8_t datatype)
         return TFLOAT;
     case _DATATYPE_DOUBLE:
         return TDOUBLE;
-#endif
+#   endif
     default:
         break;
     }
@@ -686,7 +686,7 @@ int ImageStreamIO_FITSIObitpix(
 {
     switch (datatype)
     {
-#ifdef USE_CFITSIO
+#   ifdef USE_CFITSIO
     case _DATATYPE_UINT8:
         return BYTE_IMG;
     case _DATATYPE_INT8:
@@ -707,7 +707,7 @@ int ImageStreamIO_FITSIObitpix(
         return FLOAT_IMG;
     case _DATATYPE_DOUBLE:
         return DOUBLE_IMG;
-#endif
+#   endif
     default:
         break;
     }
@@ -797,7 +797,7 @@ uint64_t ImageStreamIO_initialize_buffer(
     }
     else if (image->md->location >= 0)
     {
-#ifdef HAVE_CUDA
+#       ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
         checkCudaErrors(
             cudaMalloc(&image->array.raw, size_element * image->md->nelement));
@@ -806,10 +806,10 @@ uint64_t ImageStreamIO_initialize_buffer(
             checkCudaErrors(
                 cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
         }
-#else
+#       else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
                                  "unsupported location, milk needs to be compiled with -DUSE_CUDA=ON"); ///\todo should this return an error?
-#endif
+#       endif
     }
 
     return ImageStreamIO_offset_data(image, image->array.raw);
@@ -1583,15 +1583,15 @@ void *ImageStreamIO_get_image_d_ptr(
     void *d_ptr = NULL;
     if (image->md->location >= 0)
     {
-#ifdef HAVE_CUDA
+#       ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
         checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr, image->md->cudaMemHandle,
                                              cudaIpcMemLazyEnablePeerAccess));
-#else
+#       else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
                                  "Error calling ImageStreamIO_get_image_d_ptr(), CACAO needs to be "
                                  "compiled with -DUSE_CUDA=ON"); ///\todo should this return a NULL?
-#endif
+#       endif
     }
     else
     {
@@ -2166,12 +2166,12 @@ long ImageStreamIO_UpdateIm(
         image->md->cnt0++;
         image->md->write = 0;
 
-#ifdef IMAGESTRUCT_WRITEHISTORY
+#       ifdef IMAGESTRUCT_WRITEHISTORY
         // Update image write history
-        image->md->wCBindex ++;
-        if( image->md->wCBindex == IMAGESTRUCT_FRAMEWRITEMDSIZE )
+        if( ++image->md->wCBindex >= IMAGESTRUCT_FRAMEWRITEMDSIZE )
         {
             image->md->wCBindex = 0;
+            ++image->md->wCBcycle;
         }
         {
             struct timespec ts;
@@ -2184,9 +2184,7 @@ long ImageStreamIO_UpdateIm(
             image->writehist[image->md->wCBindex].cnt0 = image->md->cnt0;
             image->writehist[image->md->wCBindex].wpid = getpid();
         }
-#endif
-
-
+#       endif
 
         ImageStreamIO_sempost(image, -1); // post all semaphores
     }

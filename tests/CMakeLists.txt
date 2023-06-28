@@ -6,11 +6,6 @@ add_executable(ISIO_Catch2
   ImageStreamIO_subTest_Operations.cpp
 )
 
-add_compile_options(ISIO_Catch2
-                    -I ..
-                    -pthread
-                   )
-
 target_link_libraries(ISIO_Catch2 ImageStreamIO pthread
                      )
 

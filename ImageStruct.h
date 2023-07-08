@@ -68,7 +68,7 @@ extern "C" {
 
 #define SHAREDMEMDIR    "/milk/shm"    /**< default location of file mapped semaphores, can be over-ridden by env variable MILK_SHM_DIR */
 
-#define SEMAPHORE_MAXVAL         1     /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
+#define SEMAPHORE_MAXVAL        10     /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
 #define SEMAPHORE_INITVAL        0     /**< initial value for each of the semaphore */
 #define IMAGE_NB_SEMAPHORE      10     /**< Number of semaphores per image */
 

@@ -66,13 +66,15 @@ extern "C" {
 // packing data should be use with extreme care, so it is recommended to disable this feature
 //#define DATA_PACKED
 
-#define SHAREDMEMDIR    "/milk/shm"          /**< default location of file mapped semaphores, can be over-ridden by env variable MILK_SHM_DIR */
+#define SHAREDMEMDIR    "/milk/shm"    /**< default location of file mapped semaphores, can be over-ridden by env variable MILK_SHM_DIR */
 
-#define SEMAPHORE_MAXVAL    10            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
-#define SEMAPHORE_INITVAL    0            /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
-#define IMAGE_NB_SEMAPHORE  10            /**< Number of semaphores per image */
+#define SEMAPHORE_MAXVAL         1     /**< maximum value for each of the semaphore, mitigates warm-up time when processes catch up with data that has accumulated */
+#define SEMAPHORE_INITVAL        0     /**< initial value for each of the semaphore */
+#define IMAGE_NB_SEMAPHORE      10     /**< Number of semaphores per image */
 
-#define IMAGE_NB_PROCTRACE  10            /**< Number of STREAM_PROC_TRACE entries per image */
+#define IMAGE_NB_PROCTRACE      10     /**< Number of STREAM_PROC_TRACE entries per image */
+
+#define GPU_IMAGE_PLACEHOLDER    0     /**< GPU memory placeholder for image info */
 
 // Data types are defined as machine-independent types for portability
 

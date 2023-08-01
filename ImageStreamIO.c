@@ -976,6 +976,11 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
     // Sizing part (ii) - calculate sizes and pointers in IMAGE structure
     // N.B. No METADATA (image->md->...) elements are calculated here
 
+    strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
+    // Ensure image and image metadata names are null-terminated
+    image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
+
+
     if (image->md->shared == 0)
     {
         // IMAGE and IMAGE_METADATA are for process-local memory
@@ -990,6 +995,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
     map += sizeof(IMAGE_METADATA);
     // image->md will be assigned elsewhere
 
+
     if (image->md->location == -1)
     {
         // image on CPU
@@ -1003,10 +1009,6 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
         // GPU - array pointer will be assigned later via ImageStreamIO_get_img_d_ptr(...)
         image->array.raw = NULL;
     }
-
-    strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
-    // Ensure image and image metadata names are null-terminated
-    image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
 
     image->kw       = (IMAGE_KEYWORD *)(map);
     map            += sizeof(IMAGE_KEYWORD) * image->md->NBkw;

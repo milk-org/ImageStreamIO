@@ -868,7 +868,7 @@ ImageStreamIO_check_image_inode(IMAGE* image)
 
     // - Return success or failure if inode matches or not, respectively
     return image->md->inode == file_stat.st_ino ? IMAGESTREAMIO_SUCCESS
-                                                : IMAGESTREAMIO_INODE;
+           : IMAGESTREAMIO_INODE;
 }
 
 
@@ -917,7 +917,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
                                      "invalid size of third axis");
             return IMAGESTREAMIO_INVALIDARG;
         }
-        // N.B. no break, fall through to previous axis
+    // N.B. no break, fall through to previous axis
     case 2:
         if (image->md->size[1] < 1)
         {
@@ -926,7 +926,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
                                      "invalid size of second axis");
             return IMAGESTREAMIO_INVALIDARG;
         }
-        // N.B. no break, fall through to previous axis
+    // N.B. no break, fall through to previous axis
     case 1:
         if (image->md->size[0] < 1)
         {
@@ -1266,13 +1266,15 @@ errno_t ImageStreamIO_createIm_gpu(
 
     image->md = (IMAGE_METADATA*) map;
     errno_t ierrno = ImageStreamIO_image_sizing_from_scratch(
-                       image, name, naxis, size, datatype
-                     , location, shared, NBsem, NBkw
-                     , imagetype, CBsize, map
+                         image, name, naxis, size, datatype
+                         , location, shared, NBsem, NBkw
+                         , imagetype, CBsize, map
                      );
     if (ierrno != IMAGESTREAMIO_SUCCESS)
     {
-        if (shared != 1) { free(map); }
+        if (shared != 1) {
+            free(map);
+        }
         return ierrno;
     }
 
@@ -1361,16 +1363,20 @@ errno_t ImageStreamIO_createIm_gpu(
         ////////////////////////////////////////////////////////////////
         image->md = (IMAGE_METADATA *)map;
         ierrno = ImageStreamIO_image_sizing_from_scratch(
-                   image, name, naxis, size, datatype
-                 , location, shared, NBsem, NBkw
-                 , imagetype, CBsize, map
+                     image, name, naxis, size, datatype
+                     , location, shared, NBsem, NBkw
+                     , imagetype, CBsize, map
                  );
-        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
+        if (ierrno != IMAGESTREAMIO_SUCCESS) {
+            return ierrno;
+        }
 
         // - Store the inode of the shmim flle into image->md->inode
         //   - On error, shmim will have been closed; return
         ierrno = ImageStreamIO_store_image_inode(image);
-        if (ierrno != IMAGESTREAMIO_SUCCESS) { return ierrno; }
+        if (ierrno != IMAGESTREAMIO_SUCCESS) {
+            return ierrno;
+        }
 
         image->md->creatorPID = getpid();
         image->md->ownerPID = 0; // default value, indicates unset
@@ -1683,6 +1689,11 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         return IMAGESTREAMIO_FILEOPEN;
     }
 
+    // copy name to image name
+    // if symlink, image->name is the link name and image->md->name is the target
+    strncpy(image->name, name, STRINGMAXLEN_IMAGE_NAME - 1);
+    image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
+
     // Check the shmim version
     if (strcmp(image->md->version, IMAGESTRUCT_VERSION))
     {
@@ -1815,7 +1826,7 @@ long ImageStreamIO_sempost(
 
         if (index > image->md->sem - 1)
             printf("ERROR: image %s semaphore # %ld does not exist\n"
-                  , image->md->name, index);
+                   , image->md->name, index);
         else
         {
             int semval;

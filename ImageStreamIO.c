@@ -918,6 +918,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
             return IMAGESTREAMIO_INVALIDARG;
         }
     // N.B. no break, fall through to previous axis
+    // fall through
     case 2:
         if (image->md->size[1] < 1)
         {
@@ -927,6 +928,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
             return IMAGESTREAMIO_INVALIDARG;
         }
     // N.B. no break, fall through to previous axis
+    // fall through
     case 1:
         if (image->md->size[0] < 1)
         {
@@ -965,7 +967,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
                                  "temporal circular buffer needs 3 dimensions");
         return IMAGESTREAMIO_INVALIDARG;
     }
-    if (image->md->shared < 0 || image->md->shared > 1 )
+    if ( image->md->shared > 1 )
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
                                  "Error calling ImageStreamIO_image_sizing, "
@@ -1666,7 +1668,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         }
         file_stat.st_size = 0;
         fstat(SM_fd, &file_stat);
-    } while (file_stat.st_size <= sizeof(IMAGE_METADATA));
+    } while ((int) file_stat.st_size <= (int) sizeof(IMAGE_METADATA));
 
     uint8_t *map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
                                         MAP_SHARED, SM_fd, 0);
@@ -1681,7 +1683,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     image->md = (IMAGE_METADATA *)map_root;
 
     ierrno = ImageStreamIO_image_sizing(image, map_root);
-    if (IMAGESTREAMIO_SUCCESS != ierrno || image->memsize != file_stat.st_size)
+    if (IMAGESTREAMIO_SUCCESS != ierrno || ((int) image->memsize != (int) file_stat.st_size))
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file");
         munmap(image->md, file_stat.st_size);

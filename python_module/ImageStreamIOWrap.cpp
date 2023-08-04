@@ -173,10 +173,10 @@ py::array_t<T> convert_img(const IMAGE &img) {
   std::vector<ssize_t> strides(img.md->naxis);
   ssize_t stride = sizeof(T);
 
-  // Row Major representation
-  // for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
   // Col Major representation
-  for (int8_t axis(0); axis < img.md->naxis; ++axis) {
+  // for (int8_t axis(0); axis < img.md->naxis; ++axis) {
+  // Row Major representation
+  for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
     shape[axis] = img.md->size[axis];
     strides[axis] = stride;
     stride *= shape[axis];
@@ -201,8 +201,7 @@ py::array_t<T> convert_img(const IMAGE &img) {
 }
 
 template <typename T>
-void write(IMAGE &img,
-           py::array_t<T, py::array::f_style | py::array::forcecast> b) {
+void write(IMAGE &img, py::array_t<T> b) {
   if (img.array.raw == nullptr) {
     throw std::runtime_error("image not initialized");
   }
@@ -727,10 +726,10 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
         std::vector<ssize_t> strides(img.md->naxis);
         ssize_t stride = dt.asize;
 
-        // Row Major representation
-        // for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
         // Col Major representation
-        for (int8_t axis(0); axis < img.md->naxis; ++axis) {
+        // for (int8_t axis(0); axis < img.md->naxis; ++axis) {
+        // Row Major representation
+        for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
           shape[axis] = img.md->size[axis];
           strides[axis] = stride;
           stride *= shape[axis];
@@ -1175,4 +1174,3 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               )pbdoc",
         py::arg("index"));
 }
-

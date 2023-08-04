@@ -797,7 +797,7 @@ uint64_t ImageStreamIO_initialize_buffer(
 #       ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
         checkCudaErrors(
-            cudaMalloc(&image->array.raw, size_element * image->md->nelement));
+            cudaMalloc(&image->array.raw, size_element * image->md->nelement + GPU_IMAGE_PLACEHOLDER));
         if (image->md->shared == 1)
         {
             checkCudaErrors(

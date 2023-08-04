@@ -85,6 +85,8 @@ struct ImageStreamIODataType {
   ImageStreamIODataType(uint8_t datatype)
       : datatype(static_cast<ImageStreamIODataType::DataType>(datatype)),
         asize(Size[datatype]){};
+
+  operator uint8_t() const { return datatype; }
 };
 
 const std::vector<uint8_t> ImageStreamIODataType::Size(
@@ -125,35 +127,35 @@ std::string ImageStreamIODataTypeToPyFormat(ImageStreamIODataType dt) {
   }
 }
 
-ImageStreamIODataType PyFormatToImageStreamIODataType(const std::string &pf) {
-  if (pf == py::format_descriptor<uint8_t>::format()) {
+ImageStreamIODataType PyFormatToImageStreamIODataType(const py::buffer_info &info) {
+  if (info.item_type_is_equivalent_to<uint8_t>()) {
     return ImageStreamIODataType::DataType::UINT8;
   }
-  if (pf == py::format_descriptor<int8_t>::format()) {
+  if (info.item_type_is_equivalent_to<int8_t>()) {
     return ImageStreamIODataType::DataType::INT8;
   }
-  if (pf == py::format_descriptor<uint16_t>::format()) {
+  if (info.item_type_is_equivalent_to<uint16_t>()) {
     return ImageStreamIODataType::DataType::UINT16;
   }
-  if (pf == py::format_descriptor<int16_t>::format()) {
+  if (info.item_type_is_equivalent_to<int16_t>()) {
     return ImageStreamIODataType::DataType::INT16;
   }
-  if (pf == py::format_descriptor<uint32_t>::format()) {
+  if (info.item_type_is_equivalent_to<uint32_t>()) {
     return ImageStreamIODataType::DataType::UINT32;
   }
-  if (pf == py::format_descriptor<int32_t>::format()) {
+  if (info.item_type_is_equivalent_to<int32_t>()) {
     return ImageStreamIODataType::DataType::INT32;
   }
-  if (pf == py::format_descriptor<uint64_t>::format()) {
+  if (info.item_type_is_equivalent_to<uint64_t>()) {
     return ImageStreamIODataType::DataType::UINT64;
   }
-  if (pf == py::format_descriptor<int64_t>::format()) {
+  if (info.item_type_is_equivalent_to<int64_t>()) {
     return ImageStreamIODataType::DataType::INT64;
   }
-  if (pf == py::format_descriptor<float>::format()) {
+  if (info.item_type_is_equivalent_to<float>()) {
     return ImageStreamIODataType::DataType::FLOAT;
   }
-  if (pf == py::format_descriptor<double>::format()) {
+  if (info.item_type_is_equivalent_to<double>()) {
     return ImageStreamIODataType::DataType::DOUBLE;
   }
   // case ImageStreamIODataType::DataType::COMPLEX_FLOAT: return
@@ -210,7 +212,7 @@ void write(IMAGE &img,
   py::buffer_info info = b.request();
 
   if (img.md->datatype !=
-      PyFormatToImageStreamIODataType(info.format).datatype) {
+      PyFormatToImageStreamIODataType(info)) {
     throw std::invalid_argument("incompatible type");
   }
   if (info.ndim != img.md->naxis) {
@@ -871,8 +873,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               throw std::invalid_argument("input buffer is not an np.array");
             }
 
-            uint8_t datatype =
-                PyFormatToImageStreamIODataType(info.format).datatype;
+            uint8_t datatype = PyFormatToImageStreamIODataType(info);
 
             uint32_t dims[buf.ndim()];
             for (int i = 0; i < buf.ndim(); ++i) {
@@ -936,7 +937,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       //       py::buffer_info info = dims.request();
 
       //       // uint8_t datatype =
-      //       // PyFormatToImageStreamIODataType(info.format).datatype;
+      //       // PyFormatToImageStreamIODataType(info);
       //       // std::vector<uint32_t> ushape(info.ndim);
       //       // std::copy(info.shape.begin(), info.shape.end(),
       //       ushape.begin());
@@ -971,7 +972,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       //       py::buffer_info info = dims.request();
 
       //       // uint8_t datatype =
-      //       // PyFormatToImageStreamIODataType(info.format).datatype;
+      //       // PyFormatToImageStreamIODataType(info);
       //       // std::vector<uint32_t> ushape(info.ndim);
       //       // std::copy(info.shape.begin(), info.shape.end(),
       //       ushape.begin());
@@ -1175,4 +1176,3 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               )pbdoc",
         py::arg("index"));
 }
-

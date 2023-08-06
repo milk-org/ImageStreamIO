@@ -1663,10 +1663,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
-    else
-    {
-        image->shmfd = SM_fd;
-    }
+
     // open() was successful. We'll need to close SM_fd for any failed exit
 
     struct stat file_stat = {0};
@@ -1763,6 +1760,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         image->semptr[semindex] = &image->semfile[semindex].semdata;
     }
 
+    image->shmfd = SM_fd;
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
 

@@ -1100,6 +1100,10 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 } // errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 
 
+
+
+
+
 /**
  * @brief Initialze metadata, write sizes and pointers to IMAGE struct
  *
@@ -1521,6 +1525,16 @@ errno_t ImageStreamIO_destroyIm(
             image->semlog = NULL;
         }
 
+        if (image->md->shared != 1)
+        {
+            if (image->kw != NULL)
+            {
+                free(image->kw);
+            }
+        }
+        image->kw = NULL;
+
+
         if (image->memsize > 0)
         {
             char fname[512];
@@ -1539,19 +1553,19 @@ errno_t ImageStreamIO_destroyIm(
         }
         image->array.UI8 = NULL;
 
+
         if (image->md != NULL)
         {
             free(image->md);
             image->md = NULL;
         }
 
-        image->kw = NULL;
-
         image->used = 0;
     }
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
 
 
 
@@ -1648,6 +1662,10 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         snprintf(wmsg, sizeof(wmsg), "Cannot open shm file \"%s\"\n", SM_fname);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
+    }
+    else
+    {
+        image->shmfd = SM_fd;
     }
     // open() was successful. We'll need to close SM_fd for any failed exit
 

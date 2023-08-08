@@ -993,8 +993,8 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 
     // To here image->md->shared must be 1 i.e. not process-local memory
     // Start accumulating size of, and pointers to, data in shmim file
-    image->memsize = sizeof(IMAGE_METADATA);
-    map += sizeof(IMAGE_METADATA);
+    image->memsize = ROUND_UP_8(sizeof(IMAGE_METADATA));
+    map += ROUND_UP_8(sizeof(IMAGE_METADATA));
     // image->md will be assigned elsewhere
 
 
@@ -1003,8 +1003,8 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
         // image on CPU
         image->
         array.raw       = map;
-        map            += image->md->imdatamemsize;
-        image->memsize += image->md->imdatamemsize;
+        map            += ROUND_UP_8(image->md->imdatamemsize);
+        image->memsize += ROUND_UP_8(image->md->imdatamemsize);
     }
     else
     {
@@ -1013,75 +1013,75 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
     }
 
     image->kw       = (IMAGE_KEYWORD *)(map);
-    map            += sizeof(IMAGE_KEYWORD) * image->md->NBkw;
-    image->memsize += sizeof(IMAGE_KEYWORD) * image->md->NBkw;
+    map            += ROUND_UP_8(sizeof(IMAGE_KEYWORD) * image->md->NBkw);
+    image->memsize += ROUND_UP_8(sizeof(IMAGE_KEYWORD) * image->md->NBkw);
 
 
     image->semfile  = (SEMFILEDATA*)(map);
-    map            += sizeof(SEMFILEDATA) * image->md->sem;
-    image->memsize += sizeof(SEMFILEDATA) * image->md->sem;
+    map            += ROUND_UP_8(sizeof(SEMFILEDATA) * image->md->sem);
+    image->memsize += ROUND_UP_8(sizeof(SEMFILEDATA) * image->md->sem);
 
     image->semlog   = (sem_t *)(map);
-    map            += sizeof(sem_t);
-    image->memsize += sizeof(sem_t); // for semlog
+    map            += ROUND_UP_8(sizeof(sem_t));
+    image->memsize += ROUND_UP_8(sizeof(sem_t)); // for semlog
 
     // One read PID array, one write PID array
     image->
     semReadPID      = (pid_t *)(map);
-    map            += sizeof(pid_t) * image->md->sem;
-    image->memsize += sizeof(pid_t) * image->md->sem;
+    map            += ROUND_UP_8(sizeof(pid_t) * image->md->sem);
+    image->memsize += ROUND_UP_8(sizeof(pid_t) * image->md->sem);
 
     image->
     semWritePID     = (pid_t *)(map);
-    map            += sizeof(pid_t) * image->md->sem;
-    image->memsize += sizeof(pid_t) * image->md->sem;
+    map            += ROUND_UP_8(sizeof(pid_t) * image->md->sem);
+    image->memsize += ROUND_UP_8(sizeof(pid_t) * image->md->sem);
 
     // Calculate space for semctrl integers
     image->semctrl  = (uint32_t *)(map);
-    map            += sizeof(uint32_t) * image->md->sem;
-    image->memsize += sizeof(uint32_t) * image->md->sem;
+    map            += ROUND_UP_8(sizeof(uint32_t) * image->md->sem);
+    image->memsize += ROUND_UP_8(sizeof(uint32_t) * image->md->sem);
 
     // Calculate space for semstatus integers
     image->
     semstatus       = (uint32_t *)(map);
-    map            += sizeof(uint32_t) * image->md->sem;
-    image->memsize += sizeof(uint32_t) * image->md->sem;
+    map            += ROUND_UP_8(sizeof(uint32_t) * image->md->sem);
+    image->memsize += ROUND_UP_8(sizeof(uint32_t) * image->md->sem);
 
     image->
     streamproctrace = (STREAM_PROC_TRACE *)(map);
-    map            += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
-    image->memsize += sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace;
+    map            += ROUND_UP_8(sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace);
+    image->memsize += ROUND_UP_8(sizeof(STREAM_PROC_TRACE) * image->md->NBproctrace);
 
     if ((image->md->imagetype & 0xF000F) ==
             (CIRCULAR_BUFFER | ZAXIS_TEMPORAL)) // Circular Buffer
     {
         image->
         atimearray      = (struct timespec *)(map);
-        map            += sizeof(struct timespec) * image->md->size[2];
-        image->memsize += sizeof(struct timespec) * image->md->size[2];
+        map            += ROUND_UP_8(sizeof(struct timespec) * image->md->size[2]);
+        image->memsize += ROUND_UP_8(sizeof(struct timespec) * image->md->size[2]);
 
         image->
         writetimearray  = (struct timespec *)(map);
-        map            += sizeof(struct timespec) * image->md->size[2];
-        image->memsize += sizeof(struct timespec) * image->md->size[2];
+        map            += ROUND_UP_8(sizeof(struct timespec) * image->md->size[2]);
+        image->memsize += ROUND_UP_8(sizeof(struct timespec) * image->md->size[2]);
 
         image->cntarray = (uint64_t *)(map);
-        map            += sizeof(uint64_t) * image->md->size[2];
-        image->memsize += sizeof(uint64_t) * image->md->size[2];
+        map            += ROUND_UP_8(sizeof(uint64_t) * image->md->size[2]);
+        image->memsize += ROUND_UP_8(sizeof(uint64_t) * image->md->size[2]);
     }
 
     // Fast circular buffer metadata
     image->
     CircBuff_md     = (CBFRAMEMD *)(map);
-    map            += sizeof(CBFRAMEMD) * image->md->CBsize;
-    image->memsize += sizeof(CBFRAMEMD) * image->md->CBsize;
+    map            += ROUND_UP_8(sizeof(CBFRAMEMD) * image->md->CBsize);
+    image->memsize += ROUND_UP_8(sizeof(CBFRAMEMD) * image->md->CBsize);
 
     // Fast circular buffer data buffer
     if (image->md->CBsize > 0)
     {
         image->CBimdata = map;
-        map            += image->md->imdatamemsize * image->md->CBsize;
-        image->memsize += image->md->imdatamemsize * image->md->CBsize;
+        map            += ROUND_UP_8(image->md->imdatamemsize * image->md->CBsize);
+        image->memsize += ROUND_UP_8(image->md->imdatamemsize * image->md->CBsize);
     }
     else
     {
@@ -1092,8 +1092,8 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
     // Write time buffer
     image->
     writehist       = (FRAMEWRITEMD *)(map);
-    map            += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
-    image->memsize += sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE;
+    map            += ROUND_UP_8(sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE);
+    image->memsize += ROUND_UP_8(sizeof(FRAMEWRITEMD) * IMAGESTRUCT_FRAMEWRITEMDSIZE);
 #   endif
 
     return IMAGESTREAMIO_SUCCESS;

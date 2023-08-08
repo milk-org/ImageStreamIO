@@ -21,7 +21,7 @@ extern "C"
 
 void __attribute__((constructor)) libinit_ImageStreamIO();
 
-
+#define ROUND_UP_8(x) (((x) + 7) & (-8))
 
 errno_t init_ImageStreamIO();
 

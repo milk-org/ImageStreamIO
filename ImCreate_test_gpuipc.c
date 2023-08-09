@@ -62,7 +62,7 @@ int main()
 
 	// image will be in shared memory
 	shared = 1;
-	location = -1; // on GPU0
+	location = 0; // on GPU0
 
 	// allocate space for 10 keywords
 	NBkw = 1;

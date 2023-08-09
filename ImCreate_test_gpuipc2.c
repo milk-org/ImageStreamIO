@@ -43,30 +43,36 @@ int main()
 
 	// create an image in shared memory
 	ImageStreamIO_read_sharedmem_image_toIMAGE("imtest00", &imarray[0]);
-	void *d_ptr = ImageStreamIO_get_image_d_ptr(&imarray[0]);
+	if(imarray[0].md[0].location<0) {
+		printf("this ISIO is not a GPU SMH\n");
+	} else {
+		void *d_ptr = ImageStreamIO_get_image_d_ptr(&imarray[0]);
 
-	float *h_ptr = (float*)malloc(imarray[0].md[0].size[0]*imarray[0].md[0].size[1]*sizeof(float));
-	cudaMemcpy(h_ptr, d_ptr, imarray[0].md[0].size[0]*imarray[0].md[0].size[1]*sizeof(float),
-		cudaMemcpyDeviceToHost);
+		float *h_ptr = (float*)malloc(imarray[0].md[0].size[0]*imarray[0].md[0].size[1]*sizeof(float));
+		cudaMemcpy(h_ptr, d_ptr, imarray[0].md[0].size[0]*imarray[0].md[0].size[1]*sizeof(float),
+			cudaMemcpyDeviceToHost);
 
-	printf("ImCreate_test_gpuipc2 read in SHM\n");
-	for(int i=0; i<10 /*imsize[0]*imsize[1]*/; i++){
-		printf("%f ", h_ptr[i]);
+		printf("ImCreate_test_gpuipc2 read in SHM\n");
+		for(int i=0; i<10 /*imsize[0]*imsize[1]*/; i++){
+			printf("%f ", h_ptr[i]);
+		}
+		printf("\n");
+
+		for(int i=0; i<imarray[0].md[0].size[0]*imarray[0].md[0].size[1]; i++){
+			h_ptr[i]=i;
+		}
+		cudaMemcpy(d_ptr, h_ptr, imarray[0].md[0].size[0]*imarray[0].md[0].size[1]*sizeof(float),
+			cudaMemcpyHostToDevice);
+
+		printf("ImCreate_test_gpuipc2 wrote in SHM\n");
+		for(int i=0; i<10 /*imsize[0]*imsize[1]*/; i++){
+			printf("%f ", h_ptr[i]);
+		}
+		printf("\n");
+
+		free(h_ptr);
+
 	}
-	printf("\n");
-
-	for(int i=0; i<imarray[0].md[0].size[0]*imarray[0].md[0].size[1]; i++){
-		h_ptr[i]=i;
-	}
-	cudaMemcpy(d_ptr, h_ptr, imarray[0].md[0].size[0]*imarray[0].md[0].size[1]*sizeof(float),
-		cudaMemcpyHostToDevice);
-
-	printf("ImCreate_test_gpuipc2 wrote in SHM\n");
-	for(int i=0; i<10 /*imsize[0]*imsize[1]*/; i++){
-		printf("%f ", h_ptr[i]);
-	}
-	printf("\n");
-
 	// POST ALL SEMAPHORES
 	printf("ImCreate_test_gpuipc2 is sending update\n");
 	ImageStreamIO_sempost(&imarray[0], -1);
@@ -75,7 +81,6 @@ int main()
 	imarray[0].md[0].cnt0++;
 	imarray[0].md[0].cnt1++;
 
-	free(h_ptr);
 	free(imarray);
 
 	return 0;

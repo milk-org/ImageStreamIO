@@ -1,23 +1,23 @@
 /*
  * Example code to write image in shared memory
- * 
+ *
  * compile with:
- * gcc ImCreate_test.c ImageStreamIO.c -lm -lpthread 
- * 
+ * gcc ImCreate_test.c ImageStreamIO.c -lm -lpthread
+ *
  * Required files in compilation directory :
  * ImCreate_test.c   : source code (this file)
  * ImageStreamIO.c   : ImageStreamIO source code
  * ImageStreamIO.h   : ImageCreate function prototypes
  * ImageStruct.h     : Image structure definition
- * 
+ *
  * EXECUTION:
- * ./a.out  
+ * ./a.out
  * (no argument)
- * 
+ *
  * Creates an image imtest00 in shared memory
  * Updates the image every ~ 10ms, forever...
  * A square is rotating around the center of the image
- * 
+ *
  */
 
 
@@ -40,7 +40,7 @@ int main()
 
 	// allocate memory for array of images
 	imarray = (IMAGE*) malloc(sizeof(IMAGE)*NBIMAGES);
-	
+
 	// create an image in shared memory
 	ImageStreamIO_read_sharedmem_image_toIMAGE("imtest00", &imarray[0]);
 	void *d_ptr = ImageStreamIO_get_image_d_ptr(&imarray[0]);
@@ -49,7 +49,7 @@ int main()
 	cudaMemcpy(h_ptr, d_ptr, imarray[0].md[0].size[0]*imarray[0].md[0].size[1]*sizeof(float),
 		cudaMemcpyDeviceToHost);
 
-	printf("Read in SHM\n");	
+	printf("ImCreate_test_gpuipc2 read in SHM\n");
 	for(int i=0; i<10 /*imsize[0]*imsize[1]*/; i++){
 		printf("%f ", h_ptr[i]);
 	}
@@ -61,22 +61,22 @@ int main()
 	cudaMemcpy(d_ptr, h_ptr, imarray[0].md[0].size[0]*imarray[0].md[0].size[1]*sizeof(float),
 		cudaMemcpyHostToDevice);
 
-	// POST ALL SEMAPHORES
-	printf("Sending update\n");
-	ImageStreamIO_sempost(&imarray[0], -1);
-	
-	imarray[0].md[0].write = 0; // Done writing data
-	imarray[0].md[0].cnt0++;
-	imarray[0].md[0].cnt1++;
-	
-	printf("Wrote in SHM\n");	
+	printf("ImCreate_test_gpuipc2 wrote in SHM\n");
 	for(int i=0; i<10 /*imsize[0]*imsize[1]*/; i++){
 		printf("%f ", h_ptr[i]);
 	}
 	printf("\n");
 
+	// POST ALL SEMAPHORES
+	printf("ImCreate_test_gpuipc2 is sending update\n");
+	ImageStreamIO_sempost(&imarray[0], -1);
+
+	imarray[0].md[0].write = 0; // Done writing data
+	imarray[0].md[0].cnt0++;
+	imarray[0].md[0].cnt1++;
+
 	free(h_ptr);
 	free(imarray);
-	
+
 	return 0;
 }

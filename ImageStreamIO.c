@@ -1553,13 +1553,6 @@ errno_t ImageStreamIO_destroyIm(
         }
         image->array.UI8 = NULL;
 
-
-        if (image->md != NULL)
-        {
-            free(image->md);
-            image->md = NULL;
-        }
-
         image->used = 0;
     }
 

@@ -2144,6 +2144,15 @@ long ImageStreamIO_UpdateIm(
             image->md->CBindex = CBindexWrite;
         }
 
+        struct timespec ts;
+        if(clock_gettime(CLOCK_ISIO, &ts) == -1)
+        {
+            perror("clock_gettime");
+            exit(EXIT_FAILURE);
+        }
+
+        image->md->writetime = ts;
+        
         image->md->cnt0++;
         image->md->write = 0;
 
@@ -2155,12 +2164,7 @@ long ImageStreamIO_UpdateIm(
             ++image->md->wCBcycle;
         }
         {
-            struct timespec ts;
-            if(clock_gettime(CLOCK_ISIO, &ts) == -1)
-            {
-                perror("clock_gettime");
-                exit(EXIT_FAILURE);
-            }
+            //re-use ts from above
             image->writehist[image->md->wCBindex].writetime = ts;
             image->writehist[image->md->wCBindex].cnt0 = image->md->cnt0;
             image->writehist[image->md->wCBindex].wpid = getpid();

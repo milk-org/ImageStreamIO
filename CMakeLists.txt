@@ -49,6 +49,21 @@ endif()
 
 ########################################################################
 #
+# pkg-config
+#
+set(INSTALL_PKGCONFIG_DIR "lib/pkgconfig"
+    CACHE PATH "Installation directory for pkgconfig (.pc) files")
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ImageStreamIO.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/ImageStreamIO.pc @ONLY)
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ImageStreamIO.pc
+        DESTINATION "${INSTALL_PKGCONFIG_DIR}")
+
+
+
+########################################################################
+#
 # Google Test.
 #
 # The tests are not built by default.  To build them, set the

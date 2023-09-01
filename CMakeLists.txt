@@ -51,13 +51,14 @@ endif()
 #
 # pkg-config
 #
+string(APPEND LINKSTRING "-l${LIBNAME} ")
 set(INSTALL_PKGCONFIG_DIR "lib/pkgconfig"
     CACHE PATH "Installation directory for pkgconfig (.pc) files")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ImageStreamIO.pc.in
-               ${CMAKE_CURRENT_BINARY_DIR}/ImageStreamIO.pc @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${LIBNAME}.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}.pc @ONLY)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ImageStreamIO.pc
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}.pc
         DESTINATION "${INSTALL_PKGCONFIG_DIR}")
 
 

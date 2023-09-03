@@ -1656,28 +1656,20 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
-
     // open() was successful. We'll need to close SM_fd for any failed exit
 
     struct stat file_stat = {0};
-    int tenths_timeout = 0;
-
-    do // ensure shmim file size is adequate (greater than size of IMAGE_METADATA)
+    // ensure shmim file size is adequate (greater than size of IMAGE_METADATA)
     {
-        if (tenths_timeout > 99) // Fail after 100 tries (~10s)
+        file_stat.st_size = 0;
+        fstat(SM_fd, &file_stat);
+        if ((int) file_stat.st_size <= (int) sizeof(IMAGE_METADATA))
         {
             close(SM_fd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file (too small)");
             return IMAGESTREAMIO_FILEOPEN;
         }
-        if (tenths_timeout++)
-        {
-            usleep(100000);    // wait 0.1s
-        }
-        file_stat.st_size = 0;
-        fstat(SM_fd, &file_stat);
-    } while ((int) file_stat.st_size <= (int) sizeof(IMAGE_METADATA));
-
+    }
     uint8_t *map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
                                         MAP_SHARED, SM_fd, 0);
     if (map_root == MAP_FAILED)
@@ -2152,7 +2144,7 @@ long ImageStreamIO_UpdateIm(
         }
 
         image->md->writetime = ts;
-        
+
         image->md->cnt0++;
         image->md->write = 0;
 

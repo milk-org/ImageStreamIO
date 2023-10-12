@@ -464,6 +464,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                                return tmp_str.str();
                              })
       .def_readonly("status", &IMAGE_METADATA::status)
+      .def_readonly("inode", &IMAGE_METADATA::inode)
       .def_readonly("logflag", &IMAGE_METADATA::logflag)
       .def_readonly("sem", &IMAGE_METADATA::sem)
       .def_readonly("cnt0", &IMAGE_METADATA::cnt0)

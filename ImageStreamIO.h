@@ -219,6 +219,10 @@ int ImageStreamIO_FITSIObitpix(uint8_t
 int ImageStreamIO_FITSIOdatatype(uint8_t datatype);
 
 errno_t ImageStreamIO_check_image_inode(IMAGE* image);
+errno_t ImageStreamIO_check_image_endpoint_inode(IMAGE *image);
+errno_t ImageStreamIO_autorelink_if_need_if_can(IMAGE *image);
+errno_t ImageStreamIO_new_image_compatible(IMAGE* source_image, IMAGE* new_image);
+
 
 ///@}
 

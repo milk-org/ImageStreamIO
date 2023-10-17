@@ -13,6 +13,7 @@
 #endif//_GNU_SOURCE
 
 #include <math.h>
+#include <limits.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
@@ -847,30 +848,144 @@ ImageStreamIO_store_image_inode(IMAGE* image)
  * \returns _FAILURE if the shmim name inode could not be retrieved
  *
  */
-errno_t
-ImageStreamIO_check_image_inode(IMAGE* image)
+errno_t ImageStreamIO_check_image_inode(IMAGE *image)
 {
     // - Build filename from shmim name image->md->name
     char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
-    if (IMAGESTREAMIO_SUCCESS
+    if(IMAGESTREAMIO_SUCCESS
             != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), image->md->name))
     {
         return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
     }
 
+    // - Retrieve status of file OR SYMLINK referenced by SM_fname
+    struct stat file_stat;
+    if(stat(SM_fname, &file_stat) < 0)
+    {
+        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, "Error getting inode");
+        return IMAGESTREAMIO_FAILURE;
+    }
+    // - Return success or failure if inode matches or not, respectively
+    return image->md->inode == file_stat.st_ino ? IMAGESTREAMIO_SUCCESS :
+           IMAGESTREAMIO_INODE;
+}
+
+/**
+ * @brief Check image->md->inode against inode from filesystem (post symlink resolution)
+ *
+ * \returns IMAGESTREAMIO_SUCCESS if ->md->inode matches the post-symlink file inode
+ * \returns _INODE if ->md->inode does not match
+ * \returns _FAILURE if the shmim name inode could not be retrieved
+ *
+ */
+errno_t ImageStreamIO_check_image_endpoint_inode(IMAGE *image)
+{
+    // - Build filename from shmim name image->md->name
+    char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
+    if(IMAGESTREAMIO_SUCCESS
+            != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), image->md->name))
+    {
+        return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
+    }
+
+    // Symlink resolution
+    char resolved_path[PATH_MAX] = {'\0'};
+    if(realpath(SM_fname, resolved_path) == NULL)
+    {
+        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, "Error getting realpath");
+        return IMAGESTREAMIO_FAILURE;
+    }
+
     // - Retrieve status of file referenced by SM_fname
     struct stat file_stat;
-    if (stat(SM_fname, &file_stat) < 0)
+    if(stat(resolved_path, &file_stat) < 0)
     {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_INODE, "Error getting inode");
+        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, "Error getting realpath inode");
         return IMAGESTREAMIO_FAILURE;
     }
 
     // - Return success or failure if inode matches or not, respectively
-    return image->md->inode == file_stat.st_ino ? IMAGESTREAMIO_SUCCESS
-           : IMAGESTREAMIO_INODE;
+    return image->md->inode == file_stat.st_ino ? IMAGESTREAMIO_SUCCESS :
+           IMAGESTREAMIO_INODE;
 }
 
+/**
+ * @brief Check if an autorelink is needed.
+ *
+ * \returns IMAGESTREAMIO_SUCCESS if no need.
+ * \returns IMAGESTREAMIO_INODE if successful relink to a new [compliant] inode.
+ * \returns IMAGESTREAMIO_FAILURE if no can.
+ */
+errno_t ImageStreamIO_autorelink_if_need_if_can(IMAGE *image)
+{
+    int retcode = ImageStreamIO_check_image_endpoint_inode(image);
+    if (retcode == IMAGESTREAMIO_SUCCESS || retcode == IMAGESTREAMIO_FAILURE) {
+        // SUCCESS: underlying INODE hasn't changed.
+        // FAILURE: something messed up that we won't recover
+        return retcode;
+    }
+    // retcode == IMAGESTREAMIO_INODE
+    // This code below should not be executed if the image we're relinking on is actually the same
+    // mmap. This would result in a use-after-free.
+
+    IMAGE candidate_img = {0}; // stack temp image.
+    IMAGE* new_candidate_img = &candidate_img;
+
+    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_openIm(new_candidate_img, image->name)) {
+        printf("_openIm failed @ _autorelink_if_need_if_can\n");
+        return IMAGESTREAMIO_FAILURE;
+    }
+
+    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_new_image_compatible(image, new_candidate_img)) {
+        printf("New image incompatible @ _autorelink_if_need_if_can\n");
+        return IMAGESTREAMIO_FAILURE;
+    }
+
+    // Sizing works. Let's do the dirty.
+    // 1. Close the image (old inode) from the caller.
+    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_closeIm(image)) {
+        printf("_closeIm failed @ _autorelink_if_need_if_can\n");
+    }
+    // 2. Copy the temp stack frame into the caller struct, including pointers to the new mappings.
+    memcpy(image, new_candidate_img, sizeof(IMAGE));
+
+    return IMAGESTREAMIO_SUCCESS;
+}
+
+
+/**
+ * @brief Compares if an image fits into another
+ *
+ * \returns IMAGESTREAMIO_SUCCESS if source_image would fit into new_image
+ * \returns IMAGESTREAMIO_FAILURE if not
+ */
+errno_t ImageStreamIO_new_image_compatible(IMAGE* source_image, IMAGE* new_image){
+    int compatible = 1;
+
+    IMAGE_METADATA* src_md = source_image->md;
+    IMAGE_METADATA* new_md = new_image->md;
+    compatible &= (src_md->datatype == new_md->datatype &&
+                   src_md->location == new_md->location &&
+                   src_md->sem == new_md->sem &&
+                   src_md->naxis == new_md->naxis &&
+                   src_md->size[0] == new_md->size[0]);
+
+    if (src_md->naxis >= 2){
+        compatible &= src_md->size[1] == new_md->size[1];
+    }
+    if (src_md->naxis >= 3){
+        compatible &= src_md->size[2] == new_md->size[2];
+    }
+
+    compatible &= (src_md->NBkw <= new_md->NBkw &&
+                   src_md->CBsize <= new_md->CBsize);
+
+    if (compatible) {
+        return IMAGESTREAMIO_SUCCESS;
+    } else {
+        return IMAGESTREAMIO_FAILURE;
+    }
+}
 
 
 

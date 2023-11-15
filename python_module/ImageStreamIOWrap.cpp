@@ -388,6 +388,17 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def("__repr__", [](const IMAGE_KEYWORD &kw) { return toString(kw); })
       .def_readonly("comment", &IMAGE_KEYWORD::comment);
 
+  // STREAM_PROC_TRACE interface
+  py::class_<STREAM_PROC_TRACE>(m, "Proc_trace")
+      .def_readonly("triggermode", &STREAM_PROC_TRACE::triggermode)
+      .def_readonly("pid_write", &STREAM_PROC_TRACE::procwrite_PID)
+      .def_readonly("trigger_inode", &STREAM_PROC_TRACE::trigger_inode)
+      .def_readonly("ts_procstart", &STREAM_PROC_TRACE::ts_procstart)
+      .def_readonly("ts_streamupdate", &STREAM_PROC_TRACE::ts_streamupdate)
+      .def_readonly("trigger_semindex", &STREAM_PROC_TRACE::trigsemindex)
+      .def_readonly("trigger_status", &STREAM_PROC_TRACE::triggerstatus)
+      .def_readonly("cnt0", &STREAM_PROC_TRACE::cnt0);
+
   // IMAGE_METADATA interface
   py::class_<IMAGE_METADATA>(m, "Image_md")
       // .def(py::init([]() {
@@ -530,6 +541,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .def_readonly("used", &IMAGE::used)
       .def_readonly("memsize", &IMAGE::memsize)
       .def_readonly("md", &IMAGE::md)
+      .def_readonly("streamproctrace0", &IMAGE::streamproctrace)
       .def_property_readonly(
           "shape",
           [](const IMAGE &img) {

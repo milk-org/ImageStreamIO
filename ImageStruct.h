@@ -382,8 +382,7 @@ typedef struct
     struct timespec ts_streamupdate;      /**< timestamp write this stream */
     int             trigsemindex;         /**< trigger semaphore */
     int             triggerstatus;
-    uint64_t
-    cnt0;                 /**< trigger stream cnt0 value at trigger */
+    uint64_t cnt0;        /**< trigger stream cnt0 value at trigger */
 } STREAM_PROC_TRACE;
 
 

@@ -468,12 +468,26 @@ long ImageStreamIO_semvalue(
     long index); // Warning returns in-band error if semID is bad.
 
 
-long ImageStreamIO_UpdateIm(
-    IMAGE *image
-);
 
+/** @brief Update image metadata and post semaphores after image is updated
+ * 
+ * Increments counters, sets times, sets write flag to zero, and posts semaphores.  
+ * Should be called each time image content is updated
+ *
+ */
+long ImageStreamIO_UpdateIm_atime( IMAGE *image,           ///< [out] pointer to the IMAGE to update
+                                   struct timespec * atime ///< [in] the acquisition time, if NULL writetime is used for atime
+                                 );
 
-
+/** @brief Update image metadata and post semaphores after image is updated
+ * 
+ * Increments counters, sets times, sets write flag to zero, and posts semaphores.  
+ * Should be called each time image content is updated
+ *
+ * Acquisition time (atime) will be set to the write time.
+ *
+ */
+long ImageStreamIO_UpdateIm( IMAGE *image /**< [out] pointer to the IMAGE to update*/);
 
 
 

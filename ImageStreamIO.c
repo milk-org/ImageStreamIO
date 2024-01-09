@@ -2216,14 +2216,9 @@ long ImageStreamIO_semvalue(
     return semval;
 }
 
-/**
- * ## Purpose
- *
- * Increment counter, set write flag to zero etc.,
- * if called each time image content is updated
- **/
-long ImageStreamIO_UpdateIm(
-    IMAGE *image)
+long ImageStreamIO_UpdateIm_atime( IMAGE *image,
+                                   struct timespec * atime
+                                 )
 {
     if (image->md->shared == 1)
     {
@@ -2260,26 +2255,39 @@ long ImageStreamIO_UpdateIm(
 
         image->md->writetime = ts;
 
+        if(atime == NULL)
+        {
+            image->md->atime = ts;
+        }
+        else
+        {
+            image->md->atime = *atime;
+        }
+
         image->md->cnt0++;
         image->md->write = 0;
 
-#       ifdef IMAGESTRUCT_WRITEHISTORY
+        #ifdef IMAGESTRUCT_WRITEHISTORY
         // Update image write history
         if( ++image->md->wCBindex >= IMAGESTRUCT_FRAMEWRITEMDSIZE )
         {
             image->md->wCBindex = 0;
             ++image->md->wCBcycle;
         }
-        {
-            //re-use ts from above
-            image->writehist[image->md->wCBindex].writetime = ts;
-            image->writehist[image->md->wCBindex].cnt0 = image->md->cnt0;
-            image->writehist[image->md->wCBindex].wpid = getpid();
-        }
-#       endif
+        
+        //re-use ts from above
+        image->writehist[image->md->wCBindex].writetime = ts;
+        image->writehist[image->md->wCBindex].cnt0 = image->md->cnt0;
+        image->writehist[image->md->wCBindex].wpid = getpid();
+        #endif
 
         ImageStreamIO_sempost(image, -1); // post all semaphores
     }
 
     return IMAGESTREAMIO_SUCCESS;
+}
+
+long ImageStreamIO_UpdateIm( IMAGE *image )
+{
+    return ImageStreamIO_UpdateIm_atime(image, NULL);
 }

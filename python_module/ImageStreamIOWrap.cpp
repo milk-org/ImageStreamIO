@@ -667,7 +667,6 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
              }
              return keywords;
            })
-
       .def("get_kws_list",
            [](const IMAGE &img) {
              if (img.array.raw == nullptr) {
@@ -724,7 +723,6 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               img.kw[cnt] = IMAGE_KEYWORD();
             }
           })
-
 
       .def_buffer([](const IMAGE &img) -> py::buffer_info {
         if (img.array.raw == nullptr) {
@@ -792,6 +790,24 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                  throw std::runtime_error("Not implemented");
              }
            })
+
+      .def("update", [](IMAGE &img) {
+        if (img.array.raw == nullptr)
+            throw std::runtime_error("image not initialized");
+        return ImageStreamIO_UpdateIm(&img);
+      })
+
+      .def("update_atime", [](IMAGE &img, std::chrono::system_clock::time_point &tp) {
+        if (img.array.raw == nullptr)
+            throw std::runtime_error("image not initialized");
+        auto secs = std::chrono::time_point_cast<std::chrono::seconds>(tp);
+        auto ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(tp) -
+                  std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
+        
+        struct timespec atime = {secs.time_since_epoch().count(), ns.count()};
+
+        return ImageStreamIO_UpdateIm_atime(&img, &atime);
+      })
 
       .def("write", &write<uint8_t>,
            R"pbdoc(

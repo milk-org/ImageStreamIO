@@ -18,12 +18,14 @@ class CMakeExtension(Extension):
 class CMakeBuildExt(build_ext):
     def run(self):
         try:
-            import pybind11
-            out = subprocess.check_output(['cmake', '--version'])
+            import pybind11 # Will raise ModuleNotFoundError
+            if pybind11.version_info < (2, 11):
+                raise ModuleNotFoundError('pybind version nok')
+            out = subprocess.check_output(['cmake', '--version']) # Will raise FileNotFoundError
         except:
             raise RuntimeError(
                 "CMake and pybind11 must be installed to build the following extensions: " +
-                ", ".join(e.name for e in self.extensions))
+                ", ".join(e.name for e in self.extensions) + "\n and pybind must be > 2.11 (pip install --upgrade pybind11)")
 
         if platform.system() == "Windows":
             cmake_version = LooseVersion(

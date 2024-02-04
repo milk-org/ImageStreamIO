@@ -27,12 +27,15 @@ if(${CFITSIO_FOUND})
   target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
 endif()
 
-target_include_directories(${LIBNAME} PUBLIC ${PROJECT_SOURCE_DIR})
+target_include_directories(${LIBNAME} PUBLIC  
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}> # for headers when building 
+  $<INSTALL_INTERFACE:include>  # <prefix>/include/mylib
+)
 
 if(USE_CUDA)
-  find_package(CUDA REQUIRED)
-  target_include_directories(${LIBNAME} PUBLIC ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(${LIBNAME} PUBLIC ${CUDA_LIBRARIES})
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  target_link_libraries(${LIBNAME} PUBLIC CUDA::cudart)
   target_compile_options(${LIBNAME} PUBLIC -DHAVE_CUDA)
 endif(USE_CUDA)
 

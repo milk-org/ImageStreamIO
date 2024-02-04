@@ -8,6 +8,6 @@ Description: @PROJECT_DESCRIPTION@
 Version: @PROJECT_VERSION@
 
 Requires:
-Libs: -L${libdir} @LINKSTRING@ -lpthread
-Cflags: -I${includedir} @DFLAGS@
+Libs: -Wl,-rpath=${libdir} -L${libdir} @LINKSTRING@ -lpthread
+Cflags: -I${includedir} @BUILD_FLAGS@
 

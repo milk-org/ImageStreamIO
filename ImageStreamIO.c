@@ -1093,7 +1093,7 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
     // Sizing part (ii) - calculate sizes and pointers in IMAGE structure
     // N.B. No METADATA (image->md->...) elements are calculated here
 
-    strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME); // local name
+    strncpy(image->name, image->md->name, STRINGMAXLEN_IMAGE_NAME - 1); // local name
     // Ensure image and image metadata names are null-terminated
     image->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
 

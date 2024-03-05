@@ -1286,7 +1286,7 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
 
     if (name)
     {
-        strncpy(image->md->name, name, STRINGMAXLEN_IMAGE_NAME);
+        strncpy(image->md->name, name, STRINGMAXLEN_IMAGE_NAME-1);
         image->md->name[STRINGMAXLEN_IMAGE_NAME-1] = '\0';
     }
     else

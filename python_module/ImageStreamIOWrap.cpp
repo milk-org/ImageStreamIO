@@ -246,7 +246,7 @@ void write(IMAGE &img,
 #endif
   }
   ImageStreamIO_sempost(&img, -1);
-  clock_gettime(CLOCK_REALTIME, &img.md->lastaccesstime);
+  clock_gettime(CLOCK_ISIO, &img.md->lastaccesstime);
   img.md->write = 0;  // Done writing data
   img.md->cnt0++;
   img.md->cnt1++;
@@ -1122,7 +1122,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               throw std::runtime_error("image not initialized");
             }
             struct timespec timeout;
-            clock_gettime(CLOCK_REALTIME, &timeout);
+            clock_gettime(CLOCK_ISIO, &timeout);
             timeout.tv_nsec += (long)(timeoutsec * 1000000000L);
             timeout.tv_sec += timeout.tv_nsec / 1000000000L;
             timeout.tv_nsec = timeout.tv_nsec % 1000000000L;

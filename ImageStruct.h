@@ -160,6 +160,7 @@ extern "C" {
 
 #define MAX_NB_PARTIAL_PACKET 512 /**< max number of partial packet used for partial write in teh SHM */
 
+
 /** @brief  Keyword
  * The IMAGE_KEYWORD structure includes :
  * 	- name
@@ -363,12 +364,14 @@ typedef struct
 
     cudaIpcMemHandle_t cudaMemHandle;
 
+#ifdef DAO_COMPAT
     // The following fields are used for partial write in the SHM
     uint32_t lastPos;              /**< the 1st positon of the last write                                           */
     uint32_t lastNb;               /**< the number of last write                                                    */
     uint32_t packetNb;             /**< current partial packet write number                                         */
     uint32_t packetTotal;          /**< expected total number of packet                                             */ 
     uint64_t lastNbArray[MAX_NB_PARTIAL_PACKET]; /**< array containing the sub frame number                         */
+#endif
 
 } IMAGE_METADATA;
 

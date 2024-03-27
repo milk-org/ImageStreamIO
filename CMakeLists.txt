@@ -36,6 +36,9 @@ if(USE_CUDA)
   target_compile_options(${LIBNAME} PUBLIC -DHAVE_CUDA)
 endif(USE_CUDA)
 
+if(DAO_COMPAT)
+  target_compile_options(${LIBNAME} PUBLIC -DDAO_COMPAT)
+endif(DAO_COMPAT)
 #
 # Python wrap.
 #

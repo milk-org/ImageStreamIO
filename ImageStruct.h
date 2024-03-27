@@ -501,6 +501,9 @@ typedef struct /**< structure used to store data arrays                      */
         complex_float *CF;
         complex_double *CD;
 
+#ifdef DAO_COMPAT
+        void * V; // add so the cpp interface and reinterpret cast using templaces to required type.
+#endif
     } array; /**< pointer to data array */
 
 

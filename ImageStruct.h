@@ -18,7 +18,7 @@
 #ifndef _IMAGESTRUCT_H
 #define _IMAGESTRUCT_H
 
-#define IMAGESTRUCT_VERSION "2.00"
+#define IMAGESTRUCT_VERSION "2.01"
 
 #define STRINGMAXLEN_IMAGE_NAME          80
 #define STRINGMAXLEN_FILE_NAME          200
@@ -26,6 +26,7 @@
 
 #define KEYWORD_MAX_STRING  16            /**< maximun size of the keyword's name */
 #define KEYWORD_MAX_COMMENT 80            /**< maximun size of a keyword's comment */
+#define KEYWORD_MAX_FORMAT   8            /**< maximun size of a keyword's format */
 
 // comment if no write history
 //#define IMAGESTRUCT_WRITEHISTORY
@@ -165,13 +166,14 @@ extern "C" {
  * The IMAGE_KEYWORD structure includes :
  * 	- name
  * 	- type
+ *  - (optional) formatter string
  * 	- value
  */
 typedef struct
 {
     char name[KEYWORD_MAX_STRING]; /**< keyword name                                                   */
-    char type;                     /**< N: unused, L: long, D: double, S: 16-char string               */
-    uint64_t : 0;                  // align array to 8-byte boundary for speed
+    char type;                     /**< N: unused, L: long, D: double, S: 16-char string, F: formatted */
+    char format[KEYWORD_MAX_FORMAT]; // String formatter for card when type is F
 
     union
     {

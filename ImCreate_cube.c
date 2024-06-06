@@ -82,6 +82,10 @@ int main()
     strncpy(imarray.kw[2].value.valstr, "ImCreate_cube", KEYWORD_MAX_STRING-1);
     strncpy(imarray.kw[2].comment, "source value", KEYWORD_MAX_COMMENT-1);
 
+    strcpy(imarray.kw[3].name, "keyword_custom");
+    imarray.kw[3].type = 'F';
+    strcpy(imarray.kw[3].format, "%6.2f");
+    imarray.kw[3].value.numf = 12.335;
 
 	free(imsize);
 

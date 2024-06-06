@@ -78,6 +78,12 @@ int main()
     imarray.kw[2].type = 'S';
     strcpy(imarray.kw[2].value.valstr, "Hello!");
 
+    strcpy(imarray.kw[3].name, "keyword_custom");
+    imarray.kw[3].type = 'F';
+    strcpy(imarray.kw[3].format, "%6.2f");
+    imarray.kw[3].value.numf = 12.335;
+
+
     float angle;
     float r;
     float r1;

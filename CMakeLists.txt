@@ -11,17 +11,12 @@ option(gtest_build_tests "Build Unit Tests" OFF)
 
 project(${LIBNAME} LANGUAGES C)
 
-# Version number
-set ( VERSION_MAJOR 2 )
-set ( VERSION_MINOR 00 )
-set ( VERSION_PATCH 00 )
-set ( VERSION_OPTION "" )
-set ( PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" )
-configure_file (
-  "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}_config.h.in"
-  "${PROJECT_SOURCE_DIR}//${PROJECT_NAME}_config.h"
-  )
-message(" VERSION = ${PROJECT_VERSION}")
+# Read version from ImageStruct.h
+file(READ "ImageStruct.h" header)
+string(REGEX MATCH "#define IMAGESTRUCT_VERSION \"[0-9\.]+\"" versiondef "${header}")
+string(REGEX MATCH "[0-9]+" IMAGESTRUCT_VERSION "${versiondef}")
+set(PROJECT_VERSION ${IMAGESTRUCT_VERSION})
+message(" VERSION: ${PROJECT_VERSION}")
 
 add_compile_options(-Ofast)
 

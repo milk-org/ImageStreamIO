@@ -18,8 +18,7 @@
 #ifndef _IMAGESTRUCT_H
 #define _IMAGESTRUCT_H
 
-#include "ImageStreamIO_config.h"
-// #define IMAGESTRUCT_VERSION "2.00"
+#define IMAGESTRUCT_VERSION "2.00"
 
 #define STRINGMAXLEN_IMAGE_NAME          80
 #define STRINGMAXLEN_FILE_NAME          200

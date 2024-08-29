@@ -9,14 +9,7 @@ message(" SRCNAME = ${SRCNAME} -> LIBNAME = ${LIBNAME}")
 option(build_python_module "Compile Python Wrappers" OFF)
 option(gtest_build_tests "Build Unit Tests" OFF)
 
-project(${LIBNAME} LANGUAGES C)
-
-# Read version from ImageStruct.h
-file(READ "ImageStruct.h" header)
-string(REGEX MATCH "#define IMAGESTRUCT_VERSION \"[0-9\.]+\"" versiondef "${header}")
-string(REGEX MATCH "[0-9]+" IMAGESTRUCT_VERSION "${versiondef}")
-set(PROJECT_VERSION ${IMAGESTRUCT_VERSION})
-message(" VERSION: ${PROJECT_VERSION}")
+project(${LIBNAME} VERSION 1.0 LANGUAGES C)
 
 add_compile_options(-Ofast)
 
@@ -63,6 +56,17 @@ endif()
 #
 # CONFIG.CMAKE
 #
+
+# if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+#     message(STATUS "Building as a standalone project.")
+# else()
+#     message(STATUS "Building as part of ${PROJECT_NAME}.")
+
+#     set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include
+#         CACHE PATH "Location of header files" )
+#     set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib
+#         CACHE PATH "Location of libraries" )
+# endif()
 
 set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include
     CACHE PATH "Location of header files" )

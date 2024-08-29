@@ -9,7 +9,7 @@ message(" SRCNAME = ${SRCNAME} -> LIBNAME = ${LIBNAME}")
 option(build_python_module "Compile Python Wrappers" OFF)
 option(gtest_build_tests "Build Unit Tests" OFF)
 
-project(${LIBNAME} VERSION 1.0 LANGUAGES C)
+project(${LIBNAME} LANGUAGES C)
 
 add_compile_options(-Ofast)
 
@@ -27,9 +27,7 @@ if(${CFITSIO_FOUND})
   target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
 endif()
 
-target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-                                              $<INSTALL_INTERFACE:include/${SRCNAME}>
-                                              $<INSTALL_INTERFACE:include>)
+target_include_directories(${LIBNAME} PUBLIC ${PROJECT_SOURCE_DIR})
 
 if(USE_CUDA)
   find_package(CUDA REQUIRED)
@@ -51,57 +49,6 @@ endif(DAO_COMPAT)
 if(build_python_module)
   add_subdirectory(python_module)
 endif()
-
-########################################################################
-#
-# CONFIG.CMAKE
-#
-
-# if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-#     message(STATUS "Building as a standalone project.")
-# else()
-#     message(STATUS "Building as part of ${PROJECT_NAME}.")
-
-#     set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include
-#         CACHE PATH "Location of header files" )
-#     set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib
-#         CACHE PATH "Location of libraries" )
-# endif()
-
-set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include
-    CACHE PATH "Location of header files" )
-set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/lib
-    CACHE PATH "Location of libraries" )
-
-# Export the targets to a file for use in the Config.cmake file
-install(EXPORT ${LIBNAME}Targets
-    FILE "${LIBNAME}Targets.cmake"
-    NAMESPACE ${LIBNAME}::
-    DESTINATION lib/cmake
-)
-
-include(CMakePackageConfigHelpers)
-
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}ConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY AnyNewerVersion
-)
-
-configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}Config.cmake"
-    INSTALL_DESTINATION lib/cmake
-    PATH_VARS INCLUDE_INSTALL_DIR LIBRARY_INSTALL_DIR
-)
-
-# Install the Config.cmake and ConfigVersion.cmake files
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}Config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}ConfigVersion.cmake"
-    DESTINATION lib/cmake
-)
-
 
 ########################################################################
 #
@@ -135,6 +82,6 @@ if (gtest_build_tests)
 endif()
 
 
-install(TARGETS ${LIBNAME} EXPORT ${LIBNAME}Targets DESTINATION lib)
+install(TARGETS ${LIBNAME} DESTINATION lib)
 install(FILES ${SRCNAME}.h DESTINATION include/${SRCNAME})
 install(FILES ImageStruct.h ImageStreamIOError.h DESTINATION include/${SRCNAME})

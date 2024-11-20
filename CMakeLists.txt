@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.17)
 
 set(LIBNAME "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
@@ -44,10 +44,14 @@ target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_
                                               $<INSTALL_INTERFACE:include>)
 
 if(USE_CUDA)
-  find_package(CUDA REQUIRED)
-  target_include_directories(${LIBNAME} PUBLIC ${CUDA_INCLUDE_DIRS})
-  target_link_libraries(${LIBNAME} PUBLIC ${CUDA_LIBRARIES})
+	find_package(CUDAToolkit 9.0 REQUIRED)
+	message(STATUS "Found CUDA ${CUDAToolkit_VERSION} at ${CUDAToolkit_LIBRARY_DIR}")
+	message("---- CUDA_INCLUDE_DIRS = ${CUDAToolkit_INCLUDE_DIRS}")
+  target_include_directories(${LIBNAME} PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+  target_link_libraries(${LIBNAME} PRIVATE CUDA::toolkit CUDA::cudart)
   target_compile_options(${LIBNAME} PUBLIC -DHAVE_CUDA)
+
+  set(BUILD_FLAGS "${BUILD_FLAGS} -DHAVE_CUDA" )
 endif(USE_CUDA)
 
 if(DAO_COMPAT)

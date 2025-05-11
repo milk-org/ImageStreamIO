@@ -10,10 +10,13 @@
 #ifndef _IMAGESTREAMIO_H
 #define _IMAGESTREAMIO_H
 
-#ifdef CLOCK_TAI
-#define CLOCK_ISIO CLOCK_TAI
-#else
-#define CLOCK_ISIO CLOCK_REALTIME
+//If CLOCK_ISIO is not defined, define it as CLOCK_TAI if available, fallback to CLOCK_REALTIME
+#ifndef CLOCK_ISIO
+    #ifdef CLOCK_TAI
+        #define CLOCK_ISIO CLOCK_TAI
+    #else
+        #define CLOCK_ISIO CLOCK_REALTIME
+    #endif
 #endif
 
 #ifdef __cplusplus
@@ -474,8 +477,8 @@ long ImageStreamIO_semvalue(
 
 
 /** @brief Update image metadata and post semaphores after image is updated
- * 
- * Increments counters, sets times, sets write flag to zero, and posts semaphores.  
+ *
+ * Increments counters, sets times, sets write flag to zero, and posts semaphores.
  * Should be called each time image content is updated
  *
  */
@@ -484,8 +487,8 @@ long ImageStreamIO_UpdateIm_atime( IMAGE *image,           ///< [out] pointer to
                                  );
 
 /** @brief Update image metadata and post semaphores after image is updated
- * 
- * Increments counters, sets times, sets write flag to zero, and posts semaphores.  
+ *
+ * Increments counters, sets times, sets write flag to zero, and posts semaphores.
  * Should be called each time image content is updated
  *
  * Acquisition time (atime) will be set to the write time.

@@ -43,7 +43,10 @@
 #endif
 
 // shared memory and semaphores file permission
-#define FILEMODE 0666
+// if FILEMODE_ISIO is not defined, set to a+rw
+#ifndef FILEMODE_ISIO
+    #define FILEMODE_ISIO 0666
+#endif
 
 #if defined NDEBUG
 #define DEBUG_TRACEPOINT_LOG(...)
@@ -1432,7 +1435,7 @@ errno_t ImageStreamIO_createIm_gpu(
         image->shmfd = open(SM_fname
                             // (O_CREAT|O_EXCL) flags force new file
                             , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
-                            , (mode_t)FILEMODE
+                            , (mode_t)FILEMODE_ISIO
                            );
         if (image->shmfd == -1 && errno == EEXIST)
         {
@@ -1441,7 +1444,7 @@ errno_t ImageStreamIO_createIm_gpu(
             errno = 0;         // - ignore any error from unlink;
             image->shmfd = open(SM_fname  // - and try again ...
                                 , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
-                                , (mode_t)FILEMODE
+                                , (mode_t)FILEMODE_ISIO
                                );
         }
         if (image->shmfd == -1)
@@ -2276,7 +2279,7 @@ long ImageStreamIO_UpdateIm_atime( IMAGE *image,
             image->md->wCBindex = 0;
             ++image->md->wCBcycle;
         }
-        
+
         //re-use ts from above
         image->writehist[image->md->wCBindex].writetime = ts;
         image->writehist[image->md->wCBindex].cnt0 = image->md->cnt0;

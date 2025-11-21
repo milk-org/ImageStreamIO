@@ -2337,4 +2337,5 @@ long ImageStreamIO_BusywaitForNoWrite(IMAGE *image, int acquire)
     {
         image->md->write = 1;
     }
+    return IMAGESTREAMIO_SUCCESS;
 }

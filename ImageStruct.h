@@ -343,7 +343,7 @@ typedef struct
 
     uint64_t cnt0;               	/**< counter (incremented if image is updated)                                    */
     uint64_t cnt1;               	/**< in 3D rolling buffer image, this is the last slice written                   */
-    uint64_t cnt2;                  /**< in event mode, this is the # of events                                       */
+    uint64_t cnt2;                      /**< in cnt2-based syncronization, proceed until cnt0=cnt2                        */
 
     uint8_t  write;               	/**< 1 if image is being written                                                  */
 

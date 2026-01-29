@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 
 #include <ctime>
+#include <iostream>
 
 #include "ImageStreamIO.h"
 #include "ImageStruct.h"
@@ -123,7 +124,7 @@ std::string ImageStreamIODataTypeToPyFormat(ImageStreamIODataType dt) {
     // ImageStreamIODataType::DataType::COMPLEX_DOUBLE: return
     // py::format_descriptor<(std::complex<double>>::format();
     default:
-      throw std::runtime_error("Not implemented");
+      throw std::runtime_error("Number format implemented");
   }
 }
 
@@ -162,7 +163,7 @@ ImageStreamIODataType PyFormatToImageStreamIODataType(const py::buffer_info &inf
   // py::format_descriptor<(std::complex<float>>::format(); case
   // ImageStreamIODataType::DataType::COMPLEX_DOUBLE: return
   // py::format_descriptor<(std::complex<double>>::format();
-  throw std::runtime_error("Not implemented");
+  throw std::runtime_error("PyFormatToImageStreamIODataType -- Not implemented datatype (possibly endianess issue.)");
 }
 
 template <typename T>
@@ -913,28 +914,28 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 &img, name.c_str(), buf.ndim(), dims, datatype, location,
                 shared, NBsem, NBkw, imagetype, CBsize);
             if (res == 0) {
-              if (buf.dtype() == pybind11::dtype::of<uint8_t>()) {
+              if (info.item_type_is_equivalent_to<uint8_t>()) {
                 write<uint8_t>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<int8_t>()) {
+              } else if (info.item_type_is_equivalent_to<int8_t>()) {
                 write<int8_t>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<uint16_t>()) {
+              } else if (info.item_type_is_equivalent_to<uint16_t>()) {
                 write<uint16_t>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<int16_t>()) {
+              } else if (info.item_type_is_equivalent_to<int16_t>()) {
                 write<int16_t>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<uint32_t>()) {
+              } else if (info.item_type_is_equivalent_to<uint32_t>()) {
                 write<uint32_t>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<int32_t>()) {
+              } else if (info.item_type_is_equivalent_to<int32_t>()) {
                 write<int32_t>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<uint64_t>()) {
+              } else if (info.item_type_is_equivalent_to<uint64_t>()) {
                 write<uint64_t>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<int64_t>()) {
+              } else if (info.item_type_is_equivalent_to<int64_t>()) {
                 write<int64_t>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<float>()) {
+              } else if (info.item_type_is_equivalent_to<float>()) {
                 write<float>(img, buffer);
-              } else if (buf.dtype() == pybind11::dtype::of<double>()) {
+              } else if (info.item_type_is_equivalent_to<double>()) {
                 write<double>(img, buffer);
               } else {
-                throw std::invalid_argument("unsupported array datatype");
+                throw std::invalid_argument("IMAGE::create -- unsupported array datatype");
               }
             }
             return res;

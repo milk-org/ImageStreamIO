@@ -26,6 +26,8 @@ extern "C"
 
 #include "ImageStruct.h"
 
+void _gcov_dump();
+
 void __attribute__((constructor)) libinit_ImageStreamIO();
 
 #define ROUND_UP_8(x) (((x) + 7) & (-8))

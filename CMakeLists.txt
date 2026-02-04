@@ -23,14 +23,35 @@ configure_file (
   )
 message(" VERSION = ${PROJECT_VERSION}")
 
-add_compile_options(-Ofast)
-
 add_library(${LIBNAME} SHARED ${SRCNAME}.c)
 
 # set -C99 flag for 'for' loop initial declartaions
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
 
+# =======================================
+# BUILD TYPE
+# =======================================
+# cmake -DCMAKE_BUILD_TYPE=Debug
+# option: add -fanalyzer if gcc10+ (warning: this will take a while to run)
+set(CMAKE_C_FLAGS_DEBUG     "-O0 -g -Wall -Wextra -std=gnu17 -Wno-sign-compare")
+# cmake -DCMAKE_BUILD_TYPE=Coverage
+set(CMAKE_C_FLAGS_COVERAGE     "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
+set(CMAKE_CXX_FLAGS_COVERAGE     "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
+# cmake -DCMAKE_BUILD_TYPE=Release
+set(CMAKE_C_FLAGS_RELEASE     "-Ofast -DNDEBUG -std=gnu17")
+
+
+# Set a default build type if none was specified
+set(default_build_type "Release")
+if(NOT CMAKE_BUILD_TYPE)
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}")
+endif()
+
+message("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
+
 find_package(PkgConfig REQUIRED)
+
 pkg_check_modules(CFITSIO cfitsio)
 if(${CFITSIO_FOUND})
   link_directories(${CFITSIO_LIBRARY_DIRS})
@@ -54,6 +75,12 @@ if(USE_CUDA)
   set(BUILD_FLAGS "${BUILD_FLAGS} -DHAVE_CUDA" )
 endif(USE_CUDA)
 
+if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
+  target_compile_definitions(${LIBNAME} PRIVATE COVERAGE_BUILD=1)
+  target_link_options(${LIBNAME} PRIVATE --coverage)
+  target_link_libraries(${LIBNAME} PRIVATE gcov)
+endif()
+
 if(DAO_COMPAT)
   target_compile_options(${LIBNAME} PUBLIC -DDAO_COMPAT)
 endif(DAO_COMPAT)
@@ -67,6 +94,7 @@ endif(DAO_COMPAT)
 if(build_python_module)
   add_subdirectory(python_module)
 endif()
+
 
 ########################################################################
 #
@@ -106,7 +134,6 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}ConfigVersion.cmake"
     DESTINATION lib/cmake
 )
-
 
 ########################################################################
 #

@@ -129,7 +129,17 @@ void check(cudaError_t result, char const *const func, const char *const file,
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
 #endif
 
-
+// Technical function for coverage build.
+#ifdef COVERAGE_BUILD
+extern void __gcov_dump(); // From libgcov, may not exist outside of coverage build
+void _gcov_dump() {
+    __gcov_dump();
+}
+#else
+void _gcov_dump() {
+    ImageStreamIO_printWARNING("Invoking _gcov_dump but COVERAGE_BUILD is not set.");
+}
+#endif
 
 /**
  * @brief Write entry into debug log

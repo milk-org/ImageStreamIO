@@ -30,6 +30,15 @@ add_library(${LIBNAME} SHARED ${SRCNAME}.c)
 # set -C99 flag for 'for' loop initial declartaions
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
 
+# Setting these PRIVATE/PUBLIC tags means that sibling folders
+# do NOT inherit this folder as a valid -I<> target.
+# So a sibling project MUST #include "ImageStreamIO/ImageStruct.h"
+# instead of just #include "ImageStruct.h"
+target_include_directories(${LIBNAME} PRIVATE ${PROJECT_SOURCE_DIR})
+target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+                                             $<INSTALL_INTERFACE:include/${SRCNAME}>
+                                             $<INSTALL_INTERFACE:include>)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CFITSIO cfitsio)
 if(${CFITSIO_FOUND})
@@ -39,14 +48,10 @@ if(${CFITSIO_FOUND})
   target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
 endif()
 
-target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-                                              $<INSTALL_INTERFACE:include/${SRCNAME}>
-                                              $<INSTALL_INTERFACE:include>)
-
 if(USE_CUDA)
-	find_package(CUDAToolkit 9.0 REQUIRED)
-	message(STATUS "Found CUDA ${CUDAToolkit_VERSION} at ${CUDAToolkit_LIBRARY_DIR}")
-	message("---- CUDA_INCLUDE_DIRS = ${CUDAToolkit_INCLUDE_DIRS}")
+  find_package(CUDAToolkit 9.0 REQUIRED)
+  message(STATUS "Found CUDA ${CUDAToolkit_VERSION} at ${CUDAToolkit_LIBRARY_DIR}")
+  message("---- CUDA_INCLUDE_DIRS = ${CUDAToolkit_INCLUDE_DIRS}")
   target_include_directories(${LIBNAME} PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
   target_link_libraries(${LIBNAME} PRIVATE CUDA::toolkit CUDA::cudart)
   target_compile_options(${LIBNAME} PUBLIC -DHAVE_CUDA)
@@ -57,6 +62,7 @@ endif(USE_CUDA)
 if(DAO_COMPAT)
   target_compile_options(${LIBNAME} PUBLIC -DDAO_COMPAT)
 endif(DAO_COMPAT)
+
 #
 # Python wrap.
 #
@@ -67,6 +73,7 @@ endif(DAO_COMPAT)
 if(build_python_module)
   add_subdirectory(python_module)
 endif()
+
 
 ########################################################################
 #

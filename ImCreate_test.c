@@ -38,7 +38,14 @@ int main()
     int NBkw = 10;                 // number of keywords allowed
 
     // create an image in shared memory
-    ImageStreamIO_createIm(imarray, "imtest00", naxis, imsize, atype, shared, NBkw, 1);
+    ImageStreamIO_createIm(imarray,
+        "imtest00",
+        naxis,
+        imsize,
+        atype,
+        shared,
+        NBkw,
+        1);
 
     long ii, jj;              // Image column and row indices
     float x0, y0, xc, yc;     // Image center; disk center

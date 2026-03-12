@@ -61,6 +61,12 @@
 
 static int INITSTATUS_ImageStreamIO = 0;
 
+#ifdef __GNUC__
+#define ISIO_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define ISIO_UNLIKELY(x) (!!(x))
+#endif
+
 void __attribute__((constructor)) libinit_ImageStreamIO()
 {
     if (INITSTATUS_ImageStreamIO == 0)
@@ -1307,7 +1313,7 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
  * \returns IMAGESTREAMIO_INVALIDARG if image->md has any invalid values
  *
  */
-errno_t ImageStreamIO_createIm(
+__attribute__((cold)) errno_t ImageStreamIO_createIm(
     IMAGE *image,
     const char *name,
     long naxis,
@@ -1331,7 +1337,7 @@ errno_t ImageStreamIO_createIm(
  * \returns abort on malloc/calloc failure
  *
  */
-errno_t ImageStreamIO_createIm_gpu(
+__attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
     IMAGE *image,
     const char *name,
     long naxis,
@@ -1656,7 +1662,7 @@ errno_t ImageStreamIO_createIm_gpu(
  * \returns IMAGESTREAMIO_SUCCESS
  *
  */
-errno_t ImageStreamIO_destroyIm(
+__attribute__((cold)) errno_t ImageStreamIO_destroyIm(
     IMAGE *image)
 {
     if(image->used == 1)
@@ -1718,7 +1724,7 @@ errno_t ImageStreamIO_destroyIm(
  * \returns not IMAGESTREAMIO_SUCCESS on failure
  *
  */
-errno_t ImageStreamIO_openIm(
+__attribute__((cold)) errno_t ImageStreamIO_openIm(
     IMAGE *image,
     const char *name)
 {
@@ -1773,7 +1779,7 @@ void *ImageStreamIO_get_image_d_ptr(
  *
  */
 
-errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
+__attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     const char *name,
     IMAGE *image)
 {
@@ -2167,7 +2173,7 @@ int ImageStreamIO_semwait(
     IMAGE *image,
     int index)
 {
-    if (index < 0 || index > image->md->sem - 1)
+    if (ISIO_UNLIKELY(index < 0 || index > image->md->sem - 1))
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);
@@ -2180,7 +2186,7 @@ int ImageStreamIO_semtrywait(
     IMAGE *image,
     int index)
 {
-    if (index < 0 || index > image->md->sem - 1)
+    if (ISIO_UNLIKELY(index < 0 || index > image->md->sem - 1))
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);
@@ -2194,7 +2200,7 @@ int ImageStreamIO_semtimedwait(
     int index,
     const struct timespec *semwts)
 {
-    if (index < 0 || index > image->md->sem - 1)
+    if (ISIO_UNLIKELY(index < 0 || index > image->md->sem - 1))
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);
@@ -2255,7 +2261,7 @@ long ImageStreamIO_semvalue(
     IMAGE *image,
     long index)
 {
-    if(index < 0 || index > image->md->sem - 1)
+    if(ISIO_UNLIKELY(index < 0 || index > image->md->sem - 1))
     {
         printf("ERROR: image %s semaphore # %ld does not exist\n",
                image->md->name, index);

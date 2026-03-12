@@ -22,15 +22,11 @@
  */
 
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "ImageStruct.h"
 #include "ImageStreamIO.h"
-
-
 
 
 int main()
@@ -62,7 +58,16 @@ int main()
 
 
     // create an image in shared memory
-    ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, IMAGE_NB_SEMAPHORE, NBkw, MATH_DATA);
+    ImageStreamIO_createIm_gpu(&imarray,
+        "imtest00",
+        naxis,
+        imsize,
+        atype,
+        -1,
+        shared,
+        IMAGE_NB_SEMAPHORE,
+        NBkw,
+        MATH_DATA);
 
     free(imsize);
 
@@ -113,12 +118,12 @@ int main()
                 y = 1.0*jj;
                 float dx = x-xc;
                 float dy = y-yc;
-                imarray.array.F[ii*imarray.md->size[1]+jj] = cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
+                imarray.array.F[ii*imarray.md->size[1]+jj] = cos(0.03f*dx)*cos(0.03f*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
 
                 //if( (x-xc<squarerad) && (x-xc>-squarerad) && (y-yc<squarerad) && (y-yc>-squarerad))
-                //	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0;
+                //	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0f;
                 //else
-                //	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0;
+                //	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0f;
             }
         imarray.md->cnt1 = 0;
         imarray.md->cnt0++;

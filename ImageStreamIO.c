@@ -1969,33 +1969,31 @@ long ImageStreamIO_sempost(
     IMAGE *image,
     long index)
 {
+    /* Cache PID — getpid() is a syscall */
+    static __thread pid_t writeProcessPID;
+    static __thread int pid_cached;
+    if (ISIO_UNLIKELY(!pid_cached))
+    {
+        writeProcessPID = getpid();
+        pid_cached = 1;
+    }
+
     if (index < 0)
     {
-        // Inhibit per-semaphore posts to semlog
-        sem_t* save_semlog = image->semlog;
-        image->semlog = NULL;
-
-        // Post to all semaphores
         for (long semindex = 0; semindex < image->md->sem; semindex++)
         {
-            ImageStreamIO_sempost(image, semindex);
+            int semval;
+            sem_getvalue(image->semptr[semindex], &semval);
+            if (semval < SEMAPHORE_MAXVAL)
+            {
+                sem_post(image->semptr[semindex]);
+                image->semWritePID[semindex] = writeProcessPID;
+            }
         }
-
-        // Restore semlog pointer
-        image->semlog = save_semlog;
     }
     else
     {
-        /* Cache PID — getpid() is a syscall */
-        static __thread pid_t writeProcessPID;
-        static __thread int pid_cached;
-        if (!pid_cached)
-        {
-            writeProcessPID = getpid();
-            pid_cached = 1;
-        }
-
-        if (index > image->md->sem - 1)
+        if (ISIO_UNLIKELY(index > image->md->sem - 1))
         {
             ImageStreamIO_printERROR(
                 IMAGESTREAMIO_INVALIDARG,
@@ -2004,7 +2002,6 @@ long ImageStreamIO_sempost(
         else
         {
             int semval;
-
             sem_getvalue(image->semptr[index], &semval);
             if (semval < SEMAPHORE_MAXVAL)
             {
@@ -2017,7 +2014,6 @@ long ImageStreamIO_sempost(
     if (image->semlog != NULL)
     {
         int semval;
-
         sem_getvalue(image->semlog, &semval);
         if (semval < SEMAPHORE_MAXVAL)
         {
@@ -2047,13 +2043,39 @@ long ImageStreamIO_sempost_excl(
     IMAGE *image,
     long index)
 {
+    /* Cache PID — getpid() is a syscall */
+    static __thread pid_t writeProcessPID;
+    static __thread int pid_cached;
+    if (ISIO_UNLIKELY(!pid_cached))
+    {
+        writeProcessPID = getpid();
+        pid_cached = 1;
+    }
+
     for (long semindex = 0; semindex < image->md->sem; semindex++)
     {
         if (semindex != index)
         {
-            ImageStreamIO_sempost(image, semindex);
+            int semval;
+            sem_getvalue(image->semptr[semindex], &semval);
+            if (semval < SEMAPHORE_MAXVAL)
+            {
+                sem_post(image->semptr[semindex]);
+                image->semWritePID[semindex] = writeProcessPID;
+            }
         }
     }
+
+    if (image->semlog != NULL)
+    {
+        int semval;
+        sem_getvalue(image->semlog, &semval);
+        if (semval < SEMAPHORE_MAXVAL)
+        {
+            sem_post(image->semlog);
+        }
+    }
+    
     return IMAGESTREAMIO_SUCCESS;
 }
 

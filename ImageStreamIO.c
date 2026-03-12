@@ -12,11 +12,15 @@
 #define _GNU_SOURCE
 #endif//_GNU_SOURCE
 
+#include <math.h>
 #include <limits.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -24,9 +28,13 @@
 
 #include <dirent.h>
 
+#include <arpa/inet.h>
 #include <errno.h>
-#include <fcntl.h>
+#include <fcntl.h> // for open
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <semaphore.h>
+#include <unistd.h> // for close
 
 #include "ImageStreamIO_config.h" // For IMAGESTRUCT_VERSION
 
@@ -122,6 +130,7 @@ void check(cudaError_t result, char const *const func, const char *const file,
 #endif
 
 
+
 /**
  * @brief Write entry into debug log
  *
@@ -159,6 +168,7 @@ errno_t ImageStreamIO_write_process_log(
 
     return 0;
 }
+
 
 
 /**
@@ -220,6 +230,7 @@ errno_t ImageStreamIO_printERROR_(
 }
 
 
+
 /**
  * Print warning to stderr
  *
@@ -238,6 +249,8 @@ errno_t ImageStreamIO_printWARNING(
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
+
 
 
 /* ============================================================================================================================================================================================== */
@@ -267,6 +280,7 @@ errno_t ImageStreamIO_readBufferAt(
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
 
 
 /**
@@ -709,6 +723,7 @@ int ImageStreamIO_FITSIObitpix(
 }
 
 
+
 /**
  * @brief Assign map to image->array.raw shmim data ptr, get data size
  *
@@ -738,6 +753,7 @@ uint64_t ImageStreamIO_offset_data(
 }
 
 
+
 /**
  * @brief Initialize shmim data, set image->array.raw pointer if needed
  *
@@ -760,12 +776,10 @@ uint64_t ImageStreamIO_initialize_buffer(
         }
         else
         {
-            image->array.raw = calloc((size_t)image->md->nelement,
-                size_element);
+            image->array.raw = calloc((size_t)image->md->nelement, size_element);
             if (image->array.raw == NULL)
             {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC,
-                    "memory allocation failed");
+                ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC, "memory allocation failed");
                 fprintf(stderr, "%c[%d;%dm", (char)27, 1, 31);
                 fprintf(stderr, "Image name = %s\n", image->name);
                 fprintf(stderr, "Image size = ");
@@ -789,13 +803,11 @@ uint64_t ImageStreamIO_initialize_buffer(
 #       ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
         checkCudaErrors(
-            cudaMalloc(&image->array.raw,
-                size_element * image->md->nelement + GPU_IMAGE_PLACEHOLDER));
+            cudaMalloc(&image->array.raw, size_element * image->md->nelement + GPU_IMAGE_PLACEHOLDER));
         if (image->md->shared == 1)
         {
             checkCudaErrors(
-                cudaIpcGetMemHandle(&image->md->cudaMemHandle,
-                    image->array.raw));
+                cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
         }
 #       else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
@@ -805,6 +817,7 @@ uint64_t ImageStreamIO_initialize_buffer(
 
     return ImageStreamIO_offset_data(image, image->array.raw);
 } // uint64_t ImageStreamIO_initialize_buffer(IMAGE *image)
+
 
 
 /**
@@ -829,6 +842,7 @@ ImageStreamIO_store_image_inode(IMAGE* image)
     image->md->inode = file_stat.st_ino;
     return IMAGESTREAMIO_SUCCESS;
 }
+
 
 
 /**
@@ -883,8 +897,7 @@ errno_t ImageStreamIO_check_image_endpoint_inode(IMAGE *image)
     char resolved_path[PATH_MAX] = {'\0'};
     if(realpath(SM_fname, resolved_path) == NULL)
     {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE,
-            "Error getting realpath");
+        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, "Error getting realpath");
         return IMAGESTREAMIO_FAILURE;
     }
 
@@ -892,8 +905,7 @@ errno_t ImageStreamIO_check_image_endpoint_inode(IMAGE *image)
     struct stat file_stat;
     if(stat(resolved_path, &file_stat) < 0)
     {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE,
-            "Error getting realpath inode");
+        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, "Error getting realpath inode");
         return IMAGESTREAMIO_FAILURE;
     }
 
@@ -979,6 +991,7 @@ errno_t ImageStreamIO_new_image_compatible(IMAGE* source_image, IMAGE* new_image
         return IMAGESTREAMIO_FAILURE;
     }
 }
+
 
 
 /**
@@ -1207,6 +1220,10 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 } // errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 
 
+
+
+
+
 /**
  * @brief Initialze metadata, write sizes and pointers to IMAGE struct
  *
@@ -1287,6 +1304,10 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
 } // errno_t ImageStreamIO_image_sizing_from_scratch(...)
 
 
+
+
+
+
 /* ===============================================================================================
  */
 /* ===============================================================================================
@@ -1321,6 +1342,7 @@ errno_t ImageStreamIO_createIm(
                                       shared, IMAGE_NB_SEMAPHORE, NBkw,
                                       MATH_DATA, (uint32_t)CBsize);
 }
+
 
 
 /**
@@ -1457,8 +1479,7 @@ errno_t ImageStreamIO_createIm_gpu(
         if (map == MAP_FAILED)
         {
             close(image->shmfd);
-            ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP,
-                "Error mmapping the file");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
             return IMAGESTREAMIO_MMAP;
         }
 
@@ -1659,6 +1680,10 @@ errno_t ImageStreamIO_destroyIm(
 }
 
 
+
+
+
+
 /**
  * @brief ImageStreamIO_read_sharedmem_image_toIMAGE wrapper
  *
@@ -1672,6 +1697,7 @@ errno_t ImageStreamIO_openIm(
 {
     return ImageStreamIO_read_sharedmem_image_toIMAGE(name, image);
 }
+
 
 
 /**
@@ -1735,10 +1761,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         image->used = 0;
         char wmsg[STRINGMAXLEN_IMAGE_NAME+50];
-        snprintf(wmsg,
-            sizeof(wmsg),
-            "Cannot build file name from \"%s\"\n",
-            name);
+        snprintf(wmsg, sizeof(wmsg), "Cannot build file name from \"%s\"\n", name);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
@@ -1763,8 +1786,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         if ((int) file_stat.st_size <= (int) sizeof(IMAGE_METADATA))
         {
             close(SM_fd);
-            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,
-                "Error in the file (too small)");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file (too small)");
             return IMAGESTREAMIO_FILEOPEN;
         }
     }
@@ -1846,6 +1868,12 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     image->shmfd = SM_fd;
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
+
+
+
+
+
+
 
 
 errno_t ImageStreamIO_closeIm(

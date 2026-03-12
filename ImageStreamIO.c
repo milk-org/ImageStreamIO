@@ -1452,8 +1452,51 @@ errno_t ImageStreamIO_createIm_gpu(
         }
 
         // - Map the file into memory, address will be pointed to by map
-        map = (uint8_t *)mmap(0, image->memsize, PROT_READ | PROT_WRITE, MAP_SHARED,
-                              image->shmfd, 0);
+        {
+            // Pre-fault memory to reduce real-time latency jitter by resolving page faults during setup.
+            int mmap_flags = MAP_SHARED | MAP_POPULATE;
+
+            /* Opt-in to huge pages for large streams.
+             * Set MILK_SHM_HUGETLB=1 and ensure
+             * /proc/sys/vm/nr_hugepages is nonzero.
+             */
+            const size_t HUGEPAGE_THRESHOLD = 2 * 1024 * 1024;
+            int try_huge = 0;
+            {
+                char *env = getenv("MILK_SHM_HUGETLB");
+                if (env && env[0] == '1'
+                    && image->memsize >= HUGEPAGE_THRESHOLD)
+                {
+                    try_huge = 1;
+                }
+            }
+
+            if (try_huge)
+            {
+                map = (uint8_t *)mmap(
+                    0, image->memsize,
+                    PROT_READ | PROT_WRITE,
+                    mmap_flags | MAP_HUGETLB,
+                    image->shmfd, 0);
+                if (map == MAP_FAILED)
+                {
+                    /* Fallback to normal pages */
+                    map = (uint8_t *)mmap(
+                        0, image->memsize,
+                        PROT_READ | PROT_WRITE,
+                        mmap_flags,
+                        image->shmfd, 0);
+                }
+            }
+            else
+            {
+                map = (uint8_t *)mmap(
+                    0, image->memsize,
+                    PROT_READ | PROT_WRITE,
+                    mmap_flags,
+                    image->shmfd, 0);
+            }
+        }
         if (map == MAP_FAILED)
         {
             close(image->shmfd);
@@ -1461,6 +1504,15 @@ errno_t ImageStreamIO_createIm_gpu(
                 "Error mmapping the file");
             return IMAGESTREAMIO_MMAP;
         }
+
+        // Advise the kernel to use Transparent Huge Pages (THP) to reduce TLB misses
+#ifdef MADV_HUGEPAGE
+        madvise(map, image->memsize, MADV_HUGEPAGE);
+#endif
+
+        // Lock the memory in physical RAM to prevent swap ejections
+        // Note: This requires CAP_IPC_LOCK or adequate RLIMIT_MEMLOCK
+        mlock(map, image->memsize);
 
         ////////////////////////////////////////////////////////////////
         // Load IMAGE_METADATA struct at address map with all parameters
@@ -1768,14 +1820,27 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
             return IMAGESTREAMIO_FILEOPEN;
         }
     }
+    // Pre-fault memory to reduce real-time latency jitter by resolving page faults during setup.
+    int mmap_flags = MAP_SHARED | MAP_POPULATE;
+
     uint8_t *map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
-                                        MAP_SHARED, SM_fd, 0);
+                                        mmap_flags, SM_fd, 0);
     if (map_root == MAP_FAILED)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
         close(SM_fd);
         return IMAGESTREAMIO_MMAP;
     }
+
+    // Advise the kernel to use Transparent Huge Pages (THP) to reduce TLB misses
+#ifdef MADV_HUGEPAGE
+    madvise(map_root, file_stat.st_size, MADV_HUGEPAGE);
+#endif
+
+    // Lock the memory in physical RAM to prevent swap ejections
+    // Note: This requires CAP_IPC_LOCK or adequate RLIMIT_MEMLOCK
+    mlock(map_root, file_stat.st_size);
+
     // mmap() was successful. We'll need to unmap image->md for any failed exit
 
     image->md = (IMAGE_METADATA *)map_root;
@@ -1915,13 +1980,21 @@ long ImageStreamIO_sempost(
     }
     else
     {
-        pid_t writeProcessPID;
-
-        writeProcessPID = getpid();
+        /* Cache PID — getpid() is a syscall */
+        static __thread pid_t writeProcessPID;
+        static __thread int pid_cached;
+        if (!pid_cached)
+        {
+            writeProcessPID = getpid();
+            pid_cached = 1;
+        }
 
         if (index > image->md->sem - 1)
-            printf("ERROR: image %s semaphore # %ld does not exist\n"
-                   , image->md->name, index);
+        {
+            ImageStreamIO_printERROR(
+                IMAGESTREAMIO_INVALIDARG,
+                "semaphore index out of range");
+        }
         else
         {
             int semval;

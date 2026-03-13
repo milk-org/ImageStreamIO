@@ -118,7 +118,7 @@ int main()
                 y = 1.0*jj;
                 float dx = x-xc;
                 float dy = y-yc;
-                imarray.array.F[ii*imarray.md->size[1]+jj] = cos(0.03f*dx)*cos(0.03f*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
+                imarray.array.F[ii*imarray.md->size[1]+jj] = cosf(0.03f*dx)*cosf(0.03f*dy)*expf(-1.0e-4f*(dx*dx+dy*dy));
 
                 //if( (x-xc<squarerad) && (x-xc>-squarerad) && (y-yc<squarerad) && (y-yc>-squarerad))
                 //	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0f;

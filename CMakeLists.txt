@@ -144,3 +144,27 @@ endif()
 install(TARGETS ${LIBNAME} EXPORT ${LIBNAME}Targets DESTINATION lib)
 install(FILES ${SRCNAME}.h DESTINATION include/${SRCNAME})
 install(FILES ImageStruct.h ImageStreamIOError.h DESTINATION include/${SRCNAME})
+
+# Static archive for standalone LTO builds
+if(USE_STATIC_LTO)
+  add_library(${LIBNAME}_static STATIC ${SRCNAME}.c)
+  set_target_properties(${LIBNAME}_static
+      PROPERTIES OUTPUT_NAME ${LIBNAME})
+  target_include_directories(${LIBNAME}_static PUBLIC
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/..>
+      $<INSTALL_INTERFACE:include/${SRCNAME}>
+      $<INSTALL_INTERFACE:include>)
+  if(${CFITSIO_FOUND})
+    target_compile_definitions(${LIBNAME}_static
+        PUBLIC USE_CFITSIO=1)
+    target_include_directories(${LIBNAME}_static
+        PUBLIC ${CFITSIO_INCLUDE_DIRS})
+  endif()
+  if(USE_CUDA)
+    target_include_directories(${LIBNAME}_static
+        PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+    target_compile_options(${LIBNAME}_static
+        PUBLIC -DHAVE_CUDA)
+  endif()
+endif()

@@ -53,7 +53,7 @@ errno_t ImageStreamIO_set_default_printError();
   * \returns IMAGESTREAMIO_FAILURE on an error
   */
 errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
-                                     const char *, int, errno_t, char *));
+                                     const char *, int, errno_t, const char *));
 
 
 /* =============================================================================================== */

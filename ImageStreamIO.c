@@ -87,11 +87,11 @@ errno_t init_ImageStreamIO()
 
 // Forward dec'l
 errno_t ImageStreamIO_printERROR_(const char *file, const char *func, int line,
-                                  errno_t code, char *errmessage);
+                                  errno_t code, const char *errmessage);
 errno_t ImageStreamIO_printWARNING(char *warnmessage);
 
 errno_t (*internal_printError)(const char *, const char *, int, errno_t,
-                               char *) = &ImageStreamIO_printERROR_;
+                               const char *) = &ImageStreamIO_printERROR_;
 
 errno_t ImageStreamIO_set_default_printError()
 {
@@ -101,7 +101,7 @@ errno_t ImageStreamIO_set_default_printError()
 }
 
 errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
-                                     const char *, int, errno_t, char *))
+                                     const char *, int, errno_t, const char *))
 {
     internal_printError = new_printError;
 
@@ -193,7 +193,7 @@ errno_t ImageStreamIO_printERROR_(
     const char *func,
     int line,
     __attribute__((unused)) errno_t code,
-    char *errmessage)
+    const char *errmessage)
 {
     fprintf(stderr,
             "%c[%d;%dmERROR [ FILE: %s   FUNCTION: %s   LINE: %d ]  %c[%d;m\n",

@@ -113,6 +113,8 @@ errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
         internal_printError(__FILE__, __func__, __LINE__, code, (char*)msg);
 
 #ifdef HAVE_CUDA
+int IMAGESTRUCT_COMPILED_HAVE_CUDA = 1;
+
 void check(cudaError_t result, char const *const func, const char *const file,
            int const line)
 {
@@ -121,12 +123,15 @@ void check(cudaError_t result, char const *const func, const char *const file,
         cudaDeviceReset();
         // Make sure we call CUDA Device Reset
         ImageStreamIO_printERROR_(file, func, line, result, "CUDA error");
+        ImageStreamIO_printERROR_(file, func, line, result, cudaGetErrorString(result));
     }
 }
 
 // This will output the proper CUDA error strings in the event
 // that a CUDA host call returns an error
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
+#else
+int IMAGESTRUCT_COMPILED_HAVE_CUDA = 0;
 #endif
 
 // Technical function for coverage build.

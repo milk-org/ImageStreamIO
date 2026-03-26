@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 
-set(LIBNAME "ImageStreamIO")
+set(LIBNAME "ImageStreamIOpyMilk")
+set(LIBNAME_PCFILES "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
 message("")
@@ -13,13 +14,13 @@ project(${LIBNAME} LANGUAGES C)
 
 # Version number
 set ( VERSION_MAJOR 2 )
-set ( VERSION_MINOR 00 )
+set ( VERSION_MINOR 01 )
 set ( VERSION_PATCH 00 )
 set ( VERSION_OPTION "" )
 set ( PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" )
 configure_file (
-  "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}_config.h.in"
-  "${PROJECT_SOURCE_DIR}//${PROJECT_NAME}_config.h"
+  "${PROJECT_SOURCE_DIR}/${LIBNAME_PCFILES}_config.h.in"
+  "${PROJECT_SOURCE_DIR}//${LIBNAME_PCFILES}_config.h"
   )
 message(" VERSION = ${PROJECT_VERSION}")
 
@@ -153,10 +154,10 @@ string(APPEND LINKSTRING "-l${LIBNAME} ")
 set(INSTALL_PKGCONFIG_DIR "lib/pkgconfig"
     CACHE PATH "Installation directory for pkgconfig (.pc) files")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${LIBNAME}.pc.in
-               ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}.pc @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${LIBNAME_PCFILES}.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME_PCFILES}.pc @ONLY)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}.pc
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME_PCFILES}.pc
         DESTINATION "${INSTALL_PKGCONFIG_DIR}")
 
 

@@ -140,10 +140,6 @@ extern void __gcov_dump(); // From libgcov, may not exist outside of coverage bu
 void _gcov_dump() {
     __gcov_dump();
 }
-#else
-void _gcov_dump() {
-    ImageStreamIO_printWARNING("Invoking _gcov_dump but COVERAGE_BUILD is not set.");
-}
 #endif
 
 /**

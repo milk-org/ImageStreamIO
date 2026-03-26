@@ -256,7 +256,9 @@ void write(IMAGE &img,
 PYBIND11_MODULE(ImageStreamIOWrap, m) {
   m.doc() = "CACAO ImageStreamIO python module";
 
+#ifdef COVERAGE_BUILD
   m.def("_gcov_dump", &_gcov_dump);
+#endif
 
   auto imageDatatype =
       py::class_<ImageStreamIODataType>(m, "ImageStreamIODataType")

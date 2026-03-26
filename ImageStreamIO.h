@@ -26,7 +26,9 @@ extern "C"
 
 #include "ImageStruct.h"
 
+#ifdef COVERAGE_BUILD
 void _gcov_dump();
+#endif
 
 void __attribute__((constructor)) libinit_ImageStreamIO();
 

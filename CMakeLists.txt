@@ -23,7 +23,7 @@ configure_file (
   )
 message(" VERSION = ${PROJECT_VERSION}")
 
-add_library(${LIBNAME} SHARED ${SRCNAME}.c)
+add_library(${LIBNAME} SHARED ${SRCNAME}.c timeutils.c)
 
 # set -C99 flag for 'for' loop initial declartaions
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
@@ -178,5 +178,8 @@ endif()
 
 
 install(TARGETS ${LIBNAME} EXPORT ${LIBNAME}Targets DESTINATION lib)
-install(FILES ${SRCNAME}.h DESTINATION include/${SRCNAME})
-install(FILES ImageStruct.h ImageStreamIOError.h DESTINATION include/${SRCNAME})
+install(FILES
+  ${SRCNAME}.h
+  ImageStruct.h
+  ImageStreamIOError.h
+  DESTINATION include/${SRCNAME})

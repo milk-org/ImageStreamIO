@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.17)
 
 set(LIBNAME "ImageStreamIOWrap")
 project(${LIBNAME} LANGUAGES CXX)
@@ -9,7 +9,6 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # =======================================
 # BUILD TYPE
 # =======================================
-
 # Set a default build type if none was specified
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE)
@@ -19,6 +18,10 @@ endif()
 
 message("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
 
+# =======================================
+# PYBIND11
+# =======================================
+set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11)
 
 if(NOT TARGET pybind11)
@@ -45,10 +48,15 @@ else()
   pybind11_add_module(${LIBNAME} ImageStreamIOWrap.cpp)
 endif()
 
+# =======================================
+# COVERAGE BUILD
+# =======================================
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
   target_link_options(${LIBNAME} PRIVATE --coverage)
   target_link_libraries(${LIBNAME} PRIVATE gcov)
 endif()
+
+
 
 target_link_libraries(${LIBNAME} PUBLIC ImageStreamIO)
 

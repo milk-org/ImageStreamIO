@@ -50,6 +50,16 @@ endif()
 
 message("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
 
+
+# Setting these PRIVATE/PUBLIC tags means that sibling folders
+# do NOT inherit this folder as a valid -I<> target.
+# So a sibling project MUST #include "ImageStreamIO/ImageStruct.h"
+# instead of just #include "ImageStruct.h"
+target_include_directories(${LIBNAME} PRIVATE ${PROJECT_SOURCE_DIR})
+target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+                                             $<INSTALL_INTERFACE:include/${SRCNAME}>
+                                             $<INSTALL_INTERFACE:include>)
+
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(CFITSIO cfitsio)
@@ -60,14 +70,10 @@ if(${CFITSIO_FOUND})
   target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
 endif()
 
-target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-                                              $<INSTALL_INTERFACE:include/${SRCNAME}>
-                                              $<INSTALL_INTERFACE:include>)
-
 if(USE_CUDA)
-	find_package(CUDAToolkit 9.0 REQUIRED)
-	message(STATUS "Found CUDA ${CUDAToolkit_VERSION} at ${CUDAToolkit_LIBRARY_DIR}")
-	message("---- CUDA_INCLUDE_DIRS = ${CUDAToolkit_INCLUDE_DIRS}")
+  find_package(CUDAToolkit 9.0 REQUIRED)
+  message(STATUS "Found CUDA ${CUDAToolkit_VERSION} at ${CUDAToolkit_LIBRARY_DIR}")
+  message("---- CUDA_INCLUDE_DIRS = ${CUDAToolkit_INCLUDE_DIRS}")
   target_include_directories(${LIBNAME} PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
   target_link_libraries(${LIBNAME} PRIVATE CUDA::toolkit CUDA::cudart)
   target_compile_options(${LIBNAME} PUBLIC -DHAVE_CUDA)
@@ -75,6 +81,9 @@ if(USE_CUDA)
   set(BUILD_FLAGS "${BUILD_FLAGS} -DHAVE_CUDA" )
 endif(USE_CUDA)
 
+# =======================================
+# COVERAGE BUILD
+# =======================================
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
   target_compile_definitions(${LIBNAME} PRIVATE COVERAGE_BUILD=1)
   target_link_options(${LIBNAME} PRIVATE --coverage)
@@ -84,6 +93,7 @@ endif()
 if(DAO_COMPAT)
   target_compile_options(${LIBNAME} PUBLIC -DDAO_COMPAT)
 endif(DAO_COMPAT)
+
 #
 # Python wrap.
 #

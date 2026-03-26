@@ -6,8 +6,8 @@
 #include <ctime>
 #include <iostream>
 
-#include "ImageStreamIO.h"
-#include "ImageStruct.h"
+#include "../ImageStreamIO.h"
+#include "../ImageStruct.h"
 
 namespace py = pybind11;
 

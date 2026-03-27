@@ -12,7 +12,7 @@
 
 // handles leap seconds better than CLOCK_REALTIME
 // Really we should go get CLOCK_ISIO here
-#include "ImageStreamIO/ImageStreamIO.h"
+#include "ImageStreamIO.h"
 #ifndef CLOCK_MILK
 #define CLOCK_MILK CLOCK_ISIO
 #endif

@@ -24,7 +24,7 @@ message("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
 set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11)
 
-if(NOT TARGET pybind11)
+if(NOT pybind11_FOUND)
   execute_process(COMMAND bash -c "${PYTHON_EXECUTABLE} -m pybind11 --includes"
                   OUTPUT_VARIABLE pybind11_inc)
   execute_process(COMMAND bash -c "${PYTHON_EXECUTABLE} -c 'import sysconfig; print(sysconfig.get_config_var(\"EXT_SUFFIX\"))'"

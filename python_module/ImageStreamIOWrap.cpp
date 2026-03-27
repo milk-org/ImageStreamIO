@@ -1,15 +1,18 @@
-#include <pybind11/chrono.h>
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
+#include <nanobind/stl/string.h>
+#include <nanobind/stl/map.h>
+#include <nanobind/stl/vector.h>
+#include <nanobind/stl/list.h>
 
 #include <ctime>
 #include <iostream>
+#include <sstream>
 
 #include "../ImageStreamIO.h"
 #include "../ImageStruct.h"
 
-namespace py = pybind11;
+namespace nb = nanobind;
 
 std::string toString(const IMAGE_KEYWORD &kw) {
   std::ostringstream tmp_str;
@@ -97,150 +100,89 @@ const std::vector<uint8_t> ImageStreamIODataType::Size(
      SIZEOF_DATATYPE_DOUBLE, SIZEOF_DATATYPE_COMPLEX_FLOAT,
      SIZEOF_DATATYPE_COMPLEX_DOUBLE, SIZEOF_DATATYPE_HALF});
 
-std::string ImageStreamIODataTypeToPyFormat(ImageStreamIODataType dt) {
-  switch (dt.datatype) {
-    case ImageStreamIODataType::DataType::UINT8:
-      return py::format_descriptor<uint8_t>::format();
-    case ImageStreamIODataType::DataType::INT8:
-      return py::format_descriptor<int8_t>::format();
-    case ImageStreamIODataType::DataType::UINT16:
-      return py::format_descriptor<uint16_t>::format();
-    case ImageStreamIODataType::DataType::INT16:
-      return py::format_descriptor<int16_t>::format();
-    case ImageStreamIODataType::DataType::UINT32:
-      return py::format_descriptor<uint32_t>::format();
-    case ImageStreamIODataType::DataType::INT32:
-      return py::format_descriptor<int32_t>::format();
-    case ImageStreamIODataType::DataType::UINT64:
-      return py::format_descriptor<uint64_t>::format();
-    case ImageStreamIODataType::DataType::INT64:
-      return py::format_descriptor<int64_t>::format();
-    case ImageStreamIODataType::DataType::FLOAT:
-      return py::format_descriptor<float>::format();
-    case ImageStreamIODataType::DataType::DOUBLE:
-      return py::format_descriptor<double>::format();
-    // case ImageStreamIODataType::DataType::COMPLEX_FLOAT: return
-    // py::format_descriptor<(std::complex<float>>::format(); case
-    // ImageStreamIODataType::DataType::COMPLEX_DOUBLE: return
-    // py::format_descriptor<(std::complex<double>>::format();
-    default:
-      throw std::runtime_error("Number format implemented");
-  }
-}
-
-ImageStreamIODataType PyFormatToImageStreamIODataType(const py::buffer_info &info) {
-  if (info.item_type_is_equivalent_to<uint8_t>()) {
-    return ImageStreamIODataType::DataType::UINT8;
-  }
-  if (info.item_type_is_equivalent_to<int8_t>()) {
-    return ImageStreamIODataType::DataType::INT8;
-  }
-  if (info.item_type_is_equivalent_to<uint16_t>()) {
-    return ImageStreamIODataType::DataType::UINT16;
-  }
-  if (info.item_type_is_equivalent_to<int16_t>()) {
-    return ImageStreamIODataType::DataType::INT16;
-  }
-  if (info.item_type_is_equivalent_to<uint32_t>()) {
-    return ImageStreamIODataType::DataType::UINT32;
-  }
-  if (info.item_type_is_equivalent_to<int32_t>()) {
-    return ImageStreamIODataType::DataType::INT32;
-  }
-  if (info.item_type_is_equivalent_to<uint64_t>()) {
-    return ImageStreamIODataType::DataType::UINT64;
-  }
-  if (info.item_type_is_equivalent_to<int64_t>()) {
-    return ImageStreamIODataType::DataType::INT64;
-  }
-  if (info.item_type_is_equivalent_to<float>()) {
-    return ImageStreamIODataType::DataType::FLOAT;
-  }
-  if (info.item_type_is_equivalent_to<double>()) {
-    return ImageStreamIODataType::DataType::DOUBLE;
-  }
-  // case ImageStreamIODataType::DataType::COMPLEX_FLOAT: return
-  // py::format_descriptor<(std::complex<float>>::format(); case
-  // ImageStreamIODataType::DataType::COMPLEX_DOUBLE: return
-  // py::format_descriptor<(std::complex<double>>::format();
-  throw std::runtime_error("PyFormatToImageStreamIODataType -- Not implemented datatype (possibly endianess issue.)");
+// Helper: map ndarray dtype to ImageStreamIO datatype
+template <typename... Args>
+uint8_t NdarrayDtypeToImageStreamIODataType(const nb::ndarray<Args...> &arr) {
+  auto dt = arr.dtype();
+  if (dt == nb::dtype<uint8_t>()) return _DATATYPE_UINT8;
+  if (dt == nb::dtype<int8_t>()) return _DATATYPE_INT8;
+  if (dt == nb::dtype<uint16_t>()) return _DATATYPE_UINT16;
+  if (dt == nb::dtype<int16_t>()) return _DATATYPE_INT16;
+  if (dt == nb::dtype<uint32_t>()) return _DATATYPE_UINT32;
+  if (dt == nb::dtype<int32_t>()) return _DATATYPE_INT32;
+  if (dt == nb::dtype<uint64_t>()) return _DATATYPE_UINT64;
+  if (dt == nb::dtype<int64_t>()) return _DATATYPE_INT64;
+  if (dt == nb::dtype<float>()) return _DATATYPE_FLOAT;
+  if (dt == nb::dtype<double>()) return _DATATYPE_DOUBLE;
+  throw std::runtime_error(
+      "NdarrayDtypeToImageStreamIODataType -- Not implemented datatype");
 }
 
 template <typename T>
-py::array_t<T> convert_img(const IMAGE &img) {
+nb::object convert_img(const IMAGE &img) {
   if (ImageStreamIO_typesize(img.md->datatype) != sizeof(T)) {
     throw std::runtime_error("IMAGE is not compatible with output format");
   }
 
-  std::vector<ssize_t> shape(img.md->naxis);
-  std::vector<ssize_t> strides(img.md->naxis);
-  ssize_t stride = sizeof(T);
+  size_t nelement = img.md->nelement;
+  T *data = new T[nelement];
 
-  // Row Major representation
-  // for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
-  // Col Major representation
-  for (int8_t axis(0); axis < img.md->naxis; ++axis) {
-    shape[axis] = img.md->size[axis];
-    strides[axis] = stride;
-    stride *= shape[axis];
-  }
-
-  auto ret_buffer = py::array_t<T>(shape, strides);
-  void *current_image = img.array.raw;
-  size_t size_data = img.md->nelement * sizeof(T);
   if (img.md->location == -1) {
-    memcpy(ret_buffer.mutable_data(), current_image, size_data);
+    memcpy(data, img.array.raw, nelement * sizeof(T));
   } else {
 #ifdef HAVE_CUDA
     cudaSetDevice(img.md->location);
-    cudaMemcpy(ret_buffer.mutable_data(), current_image, size_data,
+    cudaMemcpy(data, img.array.raw, nelement * sizeof(T),
                cudaMemcpyDeviceToHost);
 #else
+    delete[] data;
     throw std::runtime_error(
         "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
 #endif
   }
-  return ret_buffer;
+
+  nb::capsule owner(data, [](void *p) noexcept { delete[] (T *)p; });
+
+  std::vector<size_t> shape(img.md->naxis);
+  for (int8_t axis = 0; axis < img.md->naxis; ++axis) {
+    shape[axis] = img.md->size[axis];
+  }
+
+  return nb::cast(nb::ndarray<nb::numpy, T>(
+      data, img.md->naxis, shape.data(), owner, nullptr, nb::dtype<T>(),
+      nb::device::cpu::value, 0, 'F'));
 }
 
-template <typename T>
-void write(IMAGE &img,
-           py::array_t<T, py::array::f_style | py::array::forcecast> b) {
+void write_img(IMAGE &img, nb::ndarray<nb::f_contig, nb::device::cpu> b) {
   if (img.array.raw == nullptr) {
     throw std::runtime_error("image not initialized");
   }
-  /* Request a buffer descriptor from Python */
-  py::buffer_info info = b.request();
 
-  if (img.md->datatype !=
-      PyFormatToImageStreamIODataType(info)) {
+  uint8_t datatype = NdarrayDtypeToImageStreamIODataType(b);
+  if (img.md->datatype != datatype) {
     throw std::invalid_argument("incompatible type");
   }
-  if (info.ndim != img.md->naxis) {
+  if ((size_t)b.ndim() != (size_t)img.md->naxis) {
     throw std::invalid_argument("incompatible number of axis");
   }
-  const uint32_t *size_ptr = img.md->size;
-  for (auto &dim : info.shape) {
-    if (*size_ptr != dim) {
+  for (size_t i = 0; i < b.ndim(); ++i) {
+    if (b.shape(i) != img.md->size[i]) {
       throw std::invalid_argument("incompatible shape");
     }
-    ++size_ptr;
   }
 
-  ImageStreamIODataType dt(img.md->datatype);
-  uint8_t *buffer_ptr = (uint8_t *)info.ptr;
-  uint64_t size = img.md->nelement * dt.asize;
+  uint64_t size = img.md->nelement * ImageStreamIO_typesize(datatype);
 
   img.md->write = 1;  // set this flag to 1 when writing data
 
   void *current_image = img.array.raw;
 
   if (img.md->location == -1) {
-    memcpy(current_image, buffer_ptr, size);
+    memcpy(current_image, b.data(), size);
   } else {
 #ifdef HAVE_CUDA
     cudaSetDevice(img.md->location);
-    cudaMemcpy(current_image, buffer_ptr, size, cudaMemcpyHostToDevice);
+    cudaMemcpy(current_image, b.data(), size, cudaMemcpyHostToDevice);
 #else
     throw std::runtime_error(
         "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
@@ -253,7 +195,7 @@ void write(IMAGE &img,
   img.md->cnt1++;
 }
 
-PYBIND11_MODULE(ImageStreamIOWrap, m) {
+NB_MODULE(ImageStreamIOWrap, m) {
   m.doc() = "CACAO ImageStreamIO python module";
 
 #ifdef COVERAGE_BUILD
@@ -261,13 +203,10 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
 #endif
 
   auto imageDatatype =
-      py::class_<ImageStreamIODataType>(m, "ImageStreamIODataType")
-          .def(py::init([](uint8_t datatype) {
-            return std::unique_ptr<ImageStreamIODataType>(
-                new ImageStreamIODataType(datatype));
-          }))
-          .def_readonly("size", &ImageStreamIODataType::asize)
-          .def_readonly("type", &ImageStreamIODataType::datatype)
+      nb::class_<ImageStreamIODataType>(m, "ImageStreamIODataType")
+          .def(nb::init<uint8_t>())
+          .def_ro("size", &ImageStreamIODataType::asize)
+          .def_ro("type", &ImageStreamIODataType::datatype)
           .def("__repr__", [](const ImageStreamIODataType &img_datatype) {
             std::ostringstream tmp_str;
             tmp_str << "datatype: " << img_datatype.datatype << std::endl;
@@ -275,7 +214,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             return tmp_str.str();
           });
 
-  py::enum_<ImageStreamIODataType::DataType>(imageDatatype, "Type")
+  nb::enum_<ImageStreamIODataType::DataType>(imageDatatype, "Type")
       .value("UINT8", ImageStreamIODataType::DataType::UINT8)
       .value("INT8", ImageStreamIODataType::DataType::INT8)
       .value("UINT16", ImageStreamIODataType::DataType::UINT16)
@@ -292,13 +231,10 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .export_values();
 
   auto imagetype =
-      py::class_<ImageStreamIOType>(m, "ImageStreamIOType")
-          .def(py::init([](uint8_t type) {
-            return std::unique_ptr<ImageStreamIOType>(
-                new ImageStreamIOType(type));
-          }))
-          .def_property_readonly("axis", &ImageStreamIOType::get_axis)
-          .def_property_readonly("type", &ImageStreamIOType::get_type)
+      nb::class_<ImageStreamIOType>(m, "ImageStreamIOType")
+          .def(nb::init<uint8_t>())
+          .def_prop_ro("axis", &ImageStreamIOType::get_axis)
+          .def_prop_ro("type", &ImageStreamIOType::get_type)
           .def("__repr__", [](const ImageStreamIOType &image_type) {
             std::ostringstream tmp_str;
             tmp_str << "type: " << image_type.get_type() << std::endl;
@@ -306,7 +242,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             return tmp_str.str();
           });
 
-  py::enum_<ImageStreamIOType::Type>(imagetype, "Type")
+  nb::enum_<ImageStreamIOType::Type>(imagetype, "Type")
       .value("CIRCULAR_BUFFER_TYPE",
              ImageStreamIOType::Type::CIRCULAR_BUFFER_TYPE)
       .value("MATH_DATA_TYPE", ImageStreamIOType::Type::MATH_DATA_TYPE)
@@ -322,97 +258,98 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       .export_values();
 
   // IMAGE_KEYWORD interface
-  py::class_<IMAGE_KEYWORD>(m, "Image_kw")
-      .def(py::init(
-          []() { return std::unique_ptr<IMAGE_KEYWORD>(new IMAGE_KEYWORD()); }))
-      .def(py::init([](std::string name, int64_t numl, std::string comment) {
+  nb::class_<IMAGE_KEYWORD>(m, "Image_kw")
+      .def(nb::init<>())
+      .def("__init__",
+           [](IMAGE_KEYWORD *kw, std::string name, int64_t numl,
+              std::string comment) {
              if (name.size() > KEYWORD_MAX_STRING) {
                throw std::invalid_argument("name too long");
              }
              if (comment.size() > KEYWORD_MAX_COMMENT) {
                throw std::invalid_argument("comment too long");
              }
-             auto kw = std::unique_ptr<IMAGE_KEYWORD>(new IMAGE_KEYWORD());
+             new (kw) IMAGE_KEYWORD();
              std::copy(name.begin(), name.end(), kw->name);
              kw->type = 'L';
              kw->value.numl = numl;
              std::copy(comment.begin(), comment.end(), kw->comment);
-             return kw;
-           }),
-           py::arg("name"), py::arg("numl"), py::arg("comment") = "")
-      .def(py::init([](std::string name, double numf, std::string comment) {
+           },
+           nb::arg("name"), nb::arg("numl"), nb::arg("comment") = "")
+      .def("__init__",
+           [](IMAGE_KEYWORD *kw, std::string name, double numf,
+              std::string comment) {
              if (name.size() > KEYWORD_MAX_STRING) {
                throw std::invalid_argument("name too long");
              }
              if (comment.size() > KEYWORD_MAX_COMMENT) {
                throw std::invalid_argument("comment too long");
              }
-             auto kw = std::unique_ptr<IMAGE_KEYWORD>(new IMAGE_KEYWORD());
+             new (kw) IMAGE_KEYWORD();
              std::copy(name.begin(), name.end(), kw->name);
              kw->type = 'D';
              kw->value.numf = numf;
              std::copy(comment.begin(), comment.end(), kw->comment);
-             return kw;
-           }),
-           py::arg("name"), py::arg("numf"), py::arg("comment") = "")
-      .def(py::init(
-               [](std::string name, std::string valstr, std::string comment) {
-                 if (name.size() > KEYWORD_MAX_STRING) {
-                   throw std::invalid_argument("name too long");
-                 }
-                 if (valstr.size() > KEYWORD_MAX_STRING) {
-                   throw std::invalid_argument("valstr too long");
-                 }
-                 if (comment.size() > KEYWORD_MAX_COMMENT) {
-                   throw std::invalid_argument("comment too long");
-                 }
-                 auto kw = std::unique_ptr<IMAGE_KEYWORD>(new IMAGE_KEYWORD());
-                 std::copy(name.begin(), name.end(), kw->name);
-                 kw->type = 'S';
-                 std::copy(valstr.begin(), valstr.end(), kw->value.valstr);
-                 std::copy(comment.begin(), comment.end(), kw->comment);
-                 return kw;
-               }),
-           py::arg("name"), py::arg("valstr"), py::arg("comment") = "")
-      .def_readonly("name", &IMAGE_KEYWORD::name)
-      .def_readonly("type", &IMAGE_KEYWORD::type)
-      .def_property_readonly("value",
-                             [](const IMAGE_KEYWORD &kw) -> py::object {
+           },
+           nb::arg("name"), nb::arg("numf"), nb::arg("comment") = "")
+      .def("__init__",
+           [](IMAGE_KEYWORD *kw, std::string name, std::string valstr,
+              std::string comment) {
+             if (name.size() > KEYWORD_MAX_STRING) {
+               throw std::invalid_argument("name too long");
+             }
+             if (valstr.size() > KEYWORD_MAX_STRING) {
+               throw std::invalid_argument("valstr too long");
+             }
+             if (comment.size() > KEYWORD_MAX_COMMENT) {
+               throw std::invalid_argument("comment too long");
+             }
+             new (kw) IMAGE_KEYWORD();
+             std::copy(name.begin(), name.end(), kw->name);
+             kw->type = 'S';
+             std::copy(valstr.begin(), valstr.end(), kw->value.valstr);
+             std::copy(comment.begin(), comment.end(), kw->comment);
+           },
+           nb::arg("name"), nb::arg("valstr"), nb::arg("comment") = "")
+      .def_ro("name", &IMAGE_KEYWORD::name)
+      .def_ro("type", &IMAGE_KEYWORD::type)
+      .def_prop_ro("value",
+                             [](const IMAGE_KEYWORD &kw) -> nb::object {
                                switch (kw.type) {
                                  case 'L':
-                                   return py::int_(kw.value.numl);
+                                   return nb::int_(kw.value.numl);
                                  case 'D':
-                                   return py::float_(kw.value.numf);
+                                   return nb::float_(kw.value.numf);
                                  case 'S':
-                                   return py::str(kw.value.valstr);
+                                   return nb::str(kw.value.valstr);
                                  default:
                                    throw std::runtime_error("Unknown format");
                                }
                              })
       .def("__str__", [](const IMAGE_KEYWORD &kw) { return toString(kw); })
       .def("__repr__", [](const IMAGE_KEYWORD &kw) { return toString(kw); })
-      .def_readonly("comment", &IMAGE_KEYWORD::comment);
+      .def_ro("comment", &IMAGE_KEYWORD::comment);
 
   // STREAM_PROC_TRACE interface
-  py::class_<STREAM_PROC_TRACE>(m, "Proc_trace")
-      .def_readonly("triggermode", &STREAM_PROC_TRACE::triggermode)
-      .def_readonly("pid_write", &STREAM_PROC_TRACE::procwrite_PID)
-      .def_readonly("trigger_inode", &STREAM_PROC_TRACE::trigger_inode)
-      .def_readonly("ts_procstart", &STREAM_PROC_TRACE::ts_procstart)
-      .def_readonly("ts_streamupdate", &STREAM_PROC_TRACE::ts_streamupdate)
-      .def_readonly("trigger_semindex", &STREAM_PROC_TRACE::trigsemindex)
-      .def_readonly("trigger_status", &STREAM_PROC_TRACE::triggerstatus)
-      .def_readonly("cnt0", &STREAM_PROC_TRACE::cnt0);
+  nb::class_<STREAM_PROC_TRACE>(m, "Proc_trace")
+      .def_ro("triggermode", &STREAM_PROC_TRACE::triggermode)
+      .def_ro("pid_write", &STREAM_PROC_TRACE::procwrite_PID)
+      .def_ro("trigger_inode", &STREAM_PROC_TRACE::trigger_inode)
+      .def_ro("ts_procstart", &STREAM_PROC_TRACE::ts_procstart)
+      .def_ro("ts_streamupdate", &STREAM_PROC_TRACE::ts_streamupdate)
+      .def_ro("trigger_semindex", &STREAM_PROC_TRACE::trigsemindex)
+      .def_ro("trigger_status", &STREAM_PROC_TRACE::triggerstatus)
+      .def_ro("cnt0", &STREAM_PROC_TRACE::cnt0);
 
   // IMAGE_METADATA interface
-  py::class_<IMAGE_METADATA>(m, "Image_md")
-      // .def(py::init([]() {
+  nb::class_<IMAGE_METADATA>(m, "Image_md")
+      // .def(nb::init([]() {
       //     return std::unique_ptr<IMAGE_METADATA>(new IMAGE_METADATA());
       // }))
-      .def_readonly("version", &IMAGE_METADATA::version)
-      .def_readonly("name", &IMAGE_METADATA::name)
-      .def_readonly("naxis", &IMAGE_METADATA::naxis)
-      .def_property_readonly("size",
+      .def_ro("version", &IMAGE_METADATA::version)
+      .def_ro("name", &IMAGE_METADATA::name)
+      .def_ro("naxis", &IMAGE_METADATA::naxis)
+      .def_prop_ro("size",
                              [](const IMAGE_METADATA &md) {
                                std::vector<uint32_t> dims(md.naxis);
                                const uint32_t *ptr = md.size;
@@ -422,54 +359,44 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                                }
                                return dims;
                              })
-      .def_readonly("nelement", &IMAGE_METADATA::nelement)
-      .def_property_readonly(
+      .def_ro("nelement", &IMAGE_METADATA::nelement)
+      .def_prop_ro(
           "datatype",
           [](const IMAGE_METADATA &md) {
             return ImageStreamIODataType(md.datatype).datatype;
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "imagetype",
           [](const IMAGE_METADATA &md) {
             return ImageStreamIOType(md.imagetype).get_type();
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "creationtime",
           [](const IMAGE_METADATA &md) {
-            auto creation_time =
-                std::chrono::seconds{md.creationtime.tv_sec} +
-                std::chrono::nanoseconds{md.creationtime.tv_nsec};
-            std::chrono::system_clock::time_point tp{creation_time};
-            return tp;
+            return (double)md.creationtime.tv_sec +
+                   (double)md.creationtime.tv_nsec * 1e-9;
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "lastaccesstime",
           [](const IMAGE_METADATA &md) {
-            auto creation_time =
-                std::chrono::seconds{md.lastaccesstime.tv_sec} +
-                std::chrono::nanoseconds{md.lastaccesstime.tv_nsec};
-            std::chrono::system_clock::time_point tp{creation_time};
-            return tp;
+            return (double)md.lastaccesstime.tv_sec +
+                   (double)md.lastaccesstime.tv_nsec * 1e-9;
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "acqtime",
           [](const IMAGE_METADATA &md) {
-            auto acqtime = std::chrono::seconds{md.atime.tv_sec} +
-                           std::chrono::nanoseconds{md.atime.tv_nsec};
-            std::chrono::system_clock::time_point tp{acqtime};
-            return tp;
+            return (double)md.atime.tv_sec +
+                   (double)md.atime.tv_nsec * 1e-9;
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "writetime",
           [](const IMAGE_METADATA &md) {
-            auto writetime = std::chrono::seconds{md.writetime.tv_sec} +
-                             std::chrono::nanoseconds{md.writetime.tv_nsec};
-            std::chrono::system_clock::time_point tp{writetime};
-            return tp;
+            return (double)md.writetime.tv_sec +
+                   (double)md.writetime.tv_nsec * 1e-9;
           })
-      .def_readonly("shared", &IMAGE_METADATA::shared)
-      .def_readonly("location", &IMAGE_METADATA::location)
-      .def_property_readonly("location_str",
+      .def_ro("shared", &IMAGE_METADATA::shared)
+      .def_ro("location", &IMAGE_METADATA::location)
+      .def_prop_ro("location_str",
                              [](const IMAGE_METADATA &md) {
                                if (md.location < 0) {
                                  return std::string("CPU RAM");
@@ -479,16 +406,16 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                                tmp_str << "GPU" << int(md.location) << " RAM";
                                return tmp_str.str();
                              })
-      .def_readonly("status", &IMAGE_METADATA::status)
-      .def_readonly("inode", &IMAGE_METADATA::inode)
-      .def_readonly("logflag", &IMAGE_METADATA::logflag)
-      .def_readonly("sem", &IMAGE_METADATA::sem)
-      .def_readonly("cnt0", &IMAGE_METADATA::cnt0)
-      .def_readonly("cnt1", &IMAGE_METADATA::cnt1)
-      .def_readonly("cnt2", &IMAGE_METADATA::cnt2)
-      .def_readonly("write", &IMAGE_METADATA::write)
-      .def_readonly("flag", &IMAGE_METADATA::flag)
-      .def_readonly("NBkw", &IMAGE_METADATA::NBkw)
+      .def_ro("status", &IMAGE_METADATA::status)
+      .def_ro("inode", &IMAGE_METADATA::inode)
+      .def_ro("logflag", &IMAGE_METADATA::logflag)
+      .def_ro("sem", &IMAGE_METADATA::sem)
+      .def_ro("cnt0", &IMAGE_METADATA::cnt0)
+      .def_ro("cnt1", &IMAGE_METADATA::cnt1)
+      .def_ro("cnt2", &IMAGE_METADATA::cnt2)
+      .def_ro("write", &IMAGE_METADATA::write)
+      .def_ro("flag", &IMAGE_METADATA::flag)
+      .def_ro("NBkw", &IMAGE_METADATA::NBkw)
       .def("__repr__", [](const IMAGE_METADATA &md) {
         std::ostringstream tmp_str;
         tmp_str << "Name: " << md.name << std::endl;
@@ -502,25 +429,15 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
         // tmp_str << "datatype: " << md.datatype << std::endl;
         // tmp_str << "imagetype: " << md.imagetype << std::endl;
         {
-          auto creationtime = std::chrono::seconds{md.creationtime.tv_sec} +
-                              std::chrono::nanoseconds{md.creationtime.tv_nsec};
-          std::chrono::system_clock::time_point tp{creationtime};
-          std::time_t t = std::chrono::system_clock::to_time_t(tp);
+          std::time_t t = (std::time_t)md.creationtime.tv_sec;
           tmp_str << "creationtime: " << std::ctime(&t);
         }
         {
-          auto lastaccesstime =
-              std::chrono::seconds{md.lastaccesstime.tv_sec} +
-              std::chrono::nanoseconds{md.lastaccesstime.tv_nsec};
-          std::chrono::system_clock::time_point tp{lastaccesstime};
-          std::time_t t = std::chrono::system_clock::to_time_t(tp);
+          std::time_t t = (std::time_t)md.lastaccesstime.tv_sec;
           tmp_str << "lastaccesstime: " << std::ctime(&t);
         }
         {
-          auto acqtime = std::chrono::seconds{md.atime.tv_sec} +
-                         std::chrono::nanoseconds{md.atime.tv_nsec};
-          std::chrono::system_clock::time_point tp{acqtime};
-          std::time_t t = std::chrono::system_clock::to_time_t(tp);
+          std::time_t t = (std::time_t)md.atime.tv_sec;
           tmp_str << "acqtime: " << std::ctime(&t);
         }
         tmp_str << "shared: " << int(md.shared) << std::endl;
@@ -541,28 +458,27 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       });
 
   // IMAGE interface
-  py::class_<IMAGE>(m, "Image", py::buffer_protocol())
-      .def(py::init([]() { return std::unique_ptr<IMAGE>(new IMAGE()); }))
-      .def_readonly("used", &IMAGE::used)
-      .def_readonly("memsize", &IMAGE::memsize)
-      .def_readonly("md", &IMAGE::md)
-      .def_readonly("streamproctrace0", &IMAGE::streamproctrace)
-      .def_property_readonly(
+  nb::class_<IMAGE>(m, "Image")
+      .def(nb::init<>())
+      .def_ro("used", &IMAGE::used)
+      .def_ro("memsize", &IMAGE::memsize)
+      .def_ro("md", &IMAGE::md)
+      .def_ro("streamproctrace0", &IMAGE::streamproctrace)
+      .def_prop_ro(
           "shape",
           [](const IMAGE &img) {
             if (img.array.raw == nullptr) {
               throw std::runtime_error("image not initialized");
             }
-            py::tuple dims(img.md->naxis);
+            std::vector<uint32_t> dims(img.md->naxis);
             const uint32_t *ptr = img.md->size;
-            // std::copy(ptr, ptr + img.md->naxis, dims);
             for (int i{}; i < img.md->naxis; ++i) {
               dims[i] = ptr[i];
             }
             return dims;
           })
 
-      .def_property_readonly(
+      .def_prop_ro(
           "semReadPID",
           [](const IMAGE &img) {
             if (img.array.raw == nullptr) {
@@ -574,7 +490,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             }
             return semReadPID;
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "acqtimearray",
           [](const IMAGE &img) {
             if (img.array.raw == nullptr) {
@@ -583,18 +499,14 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             if (img.atimearray == NULL) {
               throw std::runtime_error("acqtimearray not initialized");
             }
-            std::vector<std::chrono::system_clock::time_point> acqtimearray(
-                img.md->size[2]);
+            std::vector<double> acqtimearray(img.md->size[2]);
             for (int i = 0; i < img.md->size[2]; ++i) {
-              auto acqtime =
-                  std::chrono::seconds{img.atimearray[i].tv_sec} +
-                  std::chrono::nanoseconds{img.atimearray[i].tv_nsec};
-              std::chrono::system_clock::time_point tp{acqtime};
-              acqtimearray[i] = tp;
+              acqtimearray[i] = (double)img.atimearray[i].tv_sec +
+                                (double)img.atimearray[i].tv_nsec * 1e-9;
             }
             return acqtimearray;
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "writetimearray",
           [](const IMAGE &img) {
             if (img.array.raw == nullptr) {
@@ -603,18 +515,14 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             if (img.writetimearray == NULL) {
               throw std::runtime_error("writetimearray not initialized");
             }
-            std::vector<std::chrono::system_clock::time_point> writetimearray(
-                img.md->size[2]);
+            std::vector<double> writetimearray(img.md->size[2]);
             for (int i = 0; i < img.md->size[2]; ++i) {
-              auto writetime =
-                  std::chrono::seconds{img.writetimearray[i].tv_sec} +
-                  std::chrono::nanoseconds{img.writetimearray[i].tv_nsec};
-              std::chrono::system_clock::time_point tp{writetime};
-              writetimearray[i] = tp;
+              writetimearray[i] = (double)img.writetimearray[i].tv_sec +
+                                  (double)img.writetimearray[i].tv_nsec * 1e-9;
             }
             return writetimearray;
           })
-      .def_property_readonly(
+      .def_prop_ro(
           "cntarray",
           [](const IMAGE &img) {
             if (img.array.raw == nullptr) {
@@ -630,7 +538,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             return cntarray;
           })
       // TODO: fix flagarray never allocated and cause segfaults
-      // .def_property_readonly(
+      // .def_prop_ro(
       //     "flagarray",
       //     [](const IMAGE &img) {
       //       if (img.array.raw == nullptr) {
@@ -645,7 +553,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       //       }
       //       return flagarray;
       //     })
-      .def_property_readonly(
+      .def_prop_ro(
           "semWritePID",
           [](const IMAGE &img) {
             if (img.array.raw == nullptr) {
@@ -729,42 +637,8 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             }
           })
 
-      .def_buffer([](const IMAGE &img) -> py::buffer_info {
-        if (img.array.raw == nullptr) {
-          py::print("image not initialized");
-          return py::buffer_info();
-        }
-        if (img.md->location >= 0) {
-          py::print("Can not use this with a GPU buffer");
-          return py::buffer_info();
-        }
-
-        ImageStreamIODataType dt(img.md->datatype);
-        std::string format = ImageStreamIODataTypeToPyFormat(dt);
-        std::vector<ssize_t> shape(img.md->naxis);
-        std::vector<ssize_t> strides(img.md->naxis);
-        ssize_t stride = dt.asize;
-
-        // Row Major representation
-        // for (int8_t axis(img.md->naxis-1); axis >= 0; --axis) {
-        // Col Major representation
-        for (int8_t axis(0); axis < img.md->naxis; ++axis) {
-          shape[axis] = img.md->size[axis];
-          strides[axis] = stride;
-          stride *= shape[axis];
-        }
-        return py::buffer_info(
-            img.array.raw, /* Pointer to buffer */
-            dt.asize,      /* Size of one scalar */
-            format,        /* Python struct-style format descriptor */
-            img.md->naxis, /* Number of dimensions */
-            shape,         /* Buffer dimensions */
-            strides        /* Strides (in bytes) for each index */
-        );
-      })
-
       .def("copy",
-           [](const IMAGE &img) -> py::object {
+           [](const IMAGE &img) -> nb::object {
              if (img.array.raw == nullptr)
                throw std::runtime_error("image not initialized");
              ImageStreamIODataType dt(img.md->datatype);
@@ -802,145 +676,41 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
         return ImageStreamIO_UpdateIm(&img);
       })
 
-      .def("update_atime", [](IMAGE &img, std::chrono::system_clock::time_point &tp) {
+      .def("update_atime", [](IMAGE &img, double timestamp) {
         if (img.array.raw == nullptr)
             throw std::runtime_error("image not initialized");
-        auto secs = std::chrono::time_point_cast<std::chrono::seconds>(tp);
-        auto ns = std::chrono::time_point_cast<std::chrono::nanoseconds>(tp) -
-                  std::chrono::time_point_cast<std::chrono::nanoseconds>(secs);
-        
-        struct timespec atime = {secs.time_since_epoch().count(), ns.count()};
-
+        struct timespec atime;
+        atime.tv_sec = (time_t)timestamp;
+        atime.tv_nsec = (long)((timestamp - (double)atime.tv_sec) * 1e9);
         return ImageStreamIO_UpdateIm_atime(&img, &atime);
       })
 
-      .def("write", &write<uint8_t>,
+      .def("write", &write_img,
            R"pbdoc(
           Write into memory image stream
           Parameters:
             buffer [in]:  buffer to put into memory image stream
           )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<uint16_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<uint32_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<uint64_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<int8_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<int16_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<int32_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<int64_t>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<float>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
-
-      .def("write", &write<double>,
-           R"pbdoc(
-          Write into memory image stream
-          Parameters:
-            buffer [in]:  buffer to put into memory image stream
-          )pbdoc",
-           py::arg("buffer"))
+           nb::arg("buffer"))
 
       .def(
           "create",
-          [](IMAGE &img, const std::string &name, const py::buffer &buffer,
+          [](IMAGE &img, const std::string &name,
+             nb::ndarray<nb::f_contig, nb::device::cpu> buffer,
              int8_t location, uint8_t shared, int NBsem, int NBkw,
              uint64_t imagetype, uint32_t CBsize) {
-            py::buffer_info info = buffer.request();
+            uint8_t datatype = NdarrayDtypeToImageStreamIODataType(buffer);
 
-            auto buf = pybind11::array::ensure(buffer);
-
-            if (!buf) {
-              throw std::invalid_argument("input buffer is not an np.array");
-            }
-
-            uint8_t datatype = PyFormatToImageStreamIODataType(info);
-
-            uint32_t dims[buf.ndim()];
-            for (int i = 0; i < buf.ndim(); ++i) {
-              dims[i] = buf.shape()[i];
+            uint32_t dims[buffer.ndim()];
+            for (size_t i = 0; i < buffer.ndim(); ++i) {
+              dims[i] = buffer.shape(i);
             }
 
             int res = ImageStreamIO_createIm_gpu(
-                &img, name.c_str(), buf.ndim(), dims, datatype, location,
+                &img, name.c_str(), buffer.ndim(), dims, datatype, location,
                 shared, NBsem, NBkw, imagetype, CBsize);
             if (res == 0) {
-              if (info.item_type_is_equivalent_to<uint8_t>()) {
-                write<uint8_t>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<int8_t>()) {
-                write<int8_t>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<uint16_t>()) {
-                write<uint16_t>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<int16_t>()) {
-                write<int16_t>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<uint32_t>()) {
-                write<uint32_t>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<int32_t>()) {
-                write<int32_t>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<uint64_t>()) {
-                write<uint64_t>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<int64_t>()) {
-                write<int64_t>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<float>()) {
-                write<float>(img, buffer);
-              } else if (info.item_type_is_equivalent_to<double>()) {
-                write<double>(img, buffer);
-              } else {
-                throw std::invalid_argument("IMAGE::create -- unsupported array datatype");
-              }
+              write_img(img, buffer);
             }
             return res;
           },
@@ -958,10 +728,10 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             Return:
                 ret      [out]: error code
             )pbdoc",
-          py::arg("name"), py::arg("buffer"), py::arg("location") = -1,
-          py::arg("shared") = 1, py::arg("NBsem") = IMAGE_NB_SEMAPHORE,
-          py::arg("NBkw") = 1, py::arg("imagetype") = MATH_DATA,
-          py::arg("CBsize") = 0)
+          nb::arg("name"), nb::arg("buffer"), nb::arg("location") = -1,
+          nb::arg("shared") = 1, nb::arg("NBsem") = IMAGE_NB_SEMAPHORE,
+          nb::arg("NBkw") = 1, nb::arg("imagetype") = MATH_DATA,
+          nb::arg("CBsize") = 0)
 
       // .def(
       //     "create",
@@ -993,9 +763,9 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       //       Return:
       //           ret      [out]: error code
       //       )pbdoc",
-      //     py::arg("name"), py::arg("dims"),
-      //     py::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
-      //     py::arg("shared") = 1, py::arg("NBkw") = 1)
+      //     nb::arg("name"), nb::arg("dims"),
+      //     nb::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
+      //     nb::arg("shared") = 1, nb::arg("NBkw") = 1)
 
       // .def(
       //     "create",
@@ -1029,11 +799,11 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
       //       Return:
       //           ret       [out]: error code
       //       )pbdoc",
-      //     py::arg("name"), py::arg("dims"),
-      //     py::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
-      //     py::arg("location") = -1, py::arg("shared") = 1,
-      //     py::arg("NBsem") = IMAGE_NB_SEMAPHORE, py::arg("NBkw") = 1,
-      //     py::arg("imagetype") = MATH_DATA)
+      //     nb::arg("name"), nb::arg("dims"),
+      //     nb::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
+      //     nb::arg("location") = -1, nb::arg("shared") = 1,
+      //     nb::arg("NBsem") = IMAGE_NB_SEMAPHORE, nb::arg("NBkw") = 1,
+      //     nb::arg("imagetype") = MATH_DATA)
 
       .def(
           "open",
@@ -1047,7 +817,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             Return:
                 ret    [out]: error code
             )pbdoc",
-          py::arg("name"))
+          nb::arg("name"))
 
       .def(
           "close",
@@ -1101,7 +871,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
             Return:
                 ret    [out]: semaphore index available
             )pbdoc",
-          py::arg("index"))
+          nb::arg("index"))
 
       .def(
           "semwait",
@@ -1118,7 +888,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          py::arg("index"))
+          nb::arg("index"))
 
       .def(
           "semtimedwait",
@@ -1140,7 +910,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          py::arg("index"), py::arg("timeoutsec"))
+          nb::arg("index"), nb::arg("timeoutsec"))
 
       .def(
           "semtrywait",
@@ -1157,7 +927,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          py::arg("index"))
+          nb::arg("index"))
 
       .def(
           "sempost",
@@ -1174,7 +944,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          py::arg("index") = -1)
+          nb::arg("index") = -1)
 
       .def(
           "semflush",
@@ -1191,7 +961,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          py::arg("index"))
+          nb::arg("index"))
 
       .def(
         "semvalue",
@@ -1208,5 +978,5 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
               Return:
                   ret    [out]: error code
               )pbdoc",
-        py::arg("index"));
+        nb::arg("index"));
 }

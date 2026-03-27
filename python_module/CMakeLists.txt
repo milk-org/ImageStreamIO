@@ -21,6 +21,11 @@ message("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
 # =======================================
 # NANOBIND
 # =======================================
+find_package(Python 3.9 COMPONENTS Interpreter Development.Module REQUIRED)
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
+find_package(nanobind CONFIG REQUIRED)
 nanobind_add_module(${LIBNAME} ImageStreamIOWrap.cpp)
 
 # =======================================

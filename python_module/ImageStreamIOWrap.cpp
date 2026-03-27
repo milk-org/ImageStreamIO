@@ -153,6 +153,25 @@ nb::object convert_img(const IMAGE &img) {
       nb::device::cpu::value, 0, 'F'));
 }
 
+template <typename T>
+nb::object view_img(const IMAGE &img) {
+  if (ImageStreamIO_typesize(img.md->datatype) != sizeof(T)) {
+    throw std::runtime_error("IMAGE is not compatible with output format");
+  }
+
+  std::vector<size_t> shape(img.md->naxis);
+  for (int8_t axis = 0; axis < img.md->naxis; ++axis) {
+    shape[axis] = img.md->size[axis];
+  }
+
+  // No-op capsule: shared memory is externally managed
+  nb::capsule owner((void *)img.array.raw, [](void *) noexcept {});
+
+  return nb::cast(nb::ndarray<nb::numpy, T>(
+      (T *)img.array.raw, img.md->naxis, shape.data(), owner, nullptr,
+      nb::dtype<T>(), nb::device::cpu::value, 0, 'F'));
+}
+
 void write_img(IMAGE &img, nb::ndarray<nb::f_contig, nb::device::cpu> b) {
   if (img.array.raw == nullptr) {
     throw std::runtime_error("image not initialized");
@@ -665,6 +684,40 @@ NB_MODULE(ImageStreamIOWrap, m) {
                  return convert_img<double>(img);
                // case ImageStreamIODataType::DataType::COMPLEX_FLOAT: return ;
                // case ImageStreamIODataType::DataType::COMPLEX_DOUBLE: return ;
+               default:
+                 throw std::runtime_error("Not implemented");
+             }
+           })
+
+      .def("view",
+           [](const IMAGE &img) -> nb::object {
+             if (img.array.raw == nullptr)
+               throw std::runtime_error("image not initialized");
+             if (img.md->location >= 0)
+               throw std::runtime_error(
+                   "Cannot create a zero-copy view of a GPU buffer");
+             ImageStreamIODataType dt(img.md->datatype);
+             switch (dt.datatype) {
+               case ImageStreamIODataType::DataType::UINT8:
+                 return view_img<uint8_t>(img);
+               case ImageStreamIODataType::DataType::INT8:
+                 return view_img<int8_t>(img);
+               case ImageStreamIODataType::DataType::UINT16:
+                 return view_img<uint16_t>(img);
+               case ImageStreamIODataType::DataType::INT16:
+                 return view_img<int16_t>(img);
+               case ImageStreamIODataType::DataType::UINT32:
+                 return view_img<uint32_t>(img);
+               case ImageStreamIODataType::DataType::INT32:
+                 return view_img<int32_t>(img);
+               case ImageStreamIODataType::DataType::UINT64:
+                 return view_img<uint64_t>(img);
+               case ImageStreamIODataType::DataType::INT64:
+                 return view_img<int64_t>(img);
+               case ImageStreamIODataType::DataType::FLOAT:
+                 return view_img<float>(img);
+               case ImageStreamIODataType::DataType::DOUBLE:
+                 return view_img<double>(img);
                default:
                  throw std::runtime_error("Not implemented");
              }

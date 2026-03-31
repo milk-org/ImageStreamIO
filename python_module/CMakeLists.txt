@@ -32,6 +32,7 @@ nanobind_add_module(${LIBNAME} ImageStreamIOWrap.cpp)
 # COVERAGE BUILD
 # =======================================
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
+  target_compile_definitions(${LIBNAME} PRIVATE COVERAGE_BUILD=1)
   target_link_options(${LIBNAME} PRIVATE --coverage)
   target_link_libraries(${LIBNAME} PRIVATE gcov)
 endif()

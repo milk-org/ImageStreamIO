@@ -1894,12 +1894,19 @@ errno_t ImageStreamIO_closeIm(
 
     // Close file before unmap, in case unmap fails
     close(image->shmfd);
-
+    
     if (munmap(image->md, image->memsize) != 0)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "error unmapping memory");
         return IMAGESTREAMIO_MMAP;
     }
+
+    // Isn't that needed ??
+    image->used = 0;
+    image->semptr = NULL;
+    image->md = NULL;
+    image->kw = NULL;
+    image->array.raw = NULL;
 
     return IMAGESTREAMIO_SUCCESS;
 }

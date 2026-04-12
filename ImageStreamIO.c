@@ -1416,14 +1416,16 @@ errno_t ImageStreamIO_createIm_gpu(
     }
 
     // Shared vs. non-shared logic follows
+    // Names not used in case of non-shared but the alternance of scopes requires them
+    // defined here.
+    char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
+    char SM_fname_tmp[STRINGMAXLEN_FILE_NAME] = {0};
     if (shared == 1)
     {
 
         ////////////////////////////////////////////////////////////////
         // Open and map shmim file of the calculated size image->memsize
         ////////////////////////////////////////////////////////////////
-
-        char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
         if (IMAGESTREAMIO_SUCCESS
                 != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name))
         {
@@ -1439,11 +1441,17 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FILEEXISTS;
         }
 
+        char name_tmp[STRINGMAXLEN_IMAGE_NAME] = {0};
+        strcat(name_tmp, name);
+        strcat(name_tmp, "_tmpcreate");
+        if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_filename(SM_fname_tmp, sizeof(SM_fname_tmp), name_tmp))
+            return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
+
         // - Create and open shmim file as a new, empty (truncated) file
         //   - image->shmfd stores the shared memory file descriptor
         umask(0);
         errno = 0;
-        image->shmfd = open(SM_fname
+        image->shmfd = open(SM_fname_tmp
                             // (O_CREAT|O_EXCL) flags force new file
                             , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
                             , (mode_t)FILEMODE_ISIO
@@ -1451,9 +1459,9 @@ errno_t ImageStreamIO_createIm_gpu(
         if (image->shmfd == -1 && errno == EEXIST)
         {
             // - File was not created:  a file exists at path SM_fname;
-            unlink(SM_fname);  // - unlink that file from its directory;
+            unlink(SM_fname_tmp);  // - unlink that file from its directory;
             errno = 0;         // - ignore any error from unlink;
-            image->shmfd = open(SM_fname  // - and try again ...
+            image->shmfd = open(SM_fname_tmp  // - and try again ...
                                 , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
                                 , (mode_t)FILEMODE_ISIO
                                );
@@ -1622,9 +1630,18 @@ errno_t ImageStreamIO_createIm_gpu(
 
     image->used = 1;
     image->createcnt++;
-
     // Do this last so shmim cannot be used until it is ready
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
+    if (shared == 1) {
+        // - Atomically move the temp file to the final path
+        if (rename(SM_fname_tmp, SM_fname) != 0)
+        {
+            close(image->shmfd);
+            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEWRITE,
+                                     "Error renaming temp file to final path");
+            return IMAGESTREAMIO_FILEWRITE;
+        }
+    }
 
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_createIm_gpu(...)

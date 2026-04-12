@@ -207,11 +207,7 @@ void write_img(IMAGE &img, nb::ndarray<nb::f_contig, nb::device::cpu> b) {
         "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
 #endif
   }
-  ImageStreamIO_sempost(&img, -1);
-  clock_gettime(CLOCK_ISIO, &img.md->lastaccesstime);
-  img.md->write = 0;  // Done writing data
-  img.md->cnt0++;
-  img.md->cnt1++;
+  ImageStreamIO_UpdateIm(&img);
 }
 
 NB_MODULE(ImageStreamIOWrap, m) {
@@ -458,6 +454,10 @@ NB_MODULE(ImageStreamIOWrap, m) {
         {
           std::time_t t = (std::time_t)md.atime.tv_sec;
           tmp_str << "acqtime: " << std::ctime(&t);
+        }
+        {
+          std::time_t t = (std::time_t)md.writetime.tv_sec;
+          tmp_str << "writetime: " << std::ctime(&t);
         }
         tmp_str << "shared: " << int(md.shared) << std::endl;
         tmp_str << "location: ";

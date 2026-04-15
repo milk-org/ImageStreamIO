@@ -1873,7 +1873,7 @@ __attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
                  name, IMAGESTRUCT_VERSION);
         ImageStreamIO_printERROR(IMAGESTREAMIO_VERSION, errmsg);
         munmap(image->md, image->memsize);
-        close(image->shmfd);
+        close(SM_fd);
         return IMAGESTREAMIO_VERSION;
     }
 
@@ -1883,7 +1883,7 @@ __attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", image->md->name);
         fflush(stdout);
         munmap(image->md, image->memsize);
-        close(image->shmfd);
+        close(SM_fd);
         return IMAGESTREAMIO_FAILURE;
     }
 
@@ -1923,15 +1923,26 @@ errno_t ImageStreamIO_closeIm(
     IMAGE *image)
 {
     free(image->semptr);
+    image->semptr = NULL;
 
     // Close file before unmap, in case unmap fails
     close(image->shmfd);
+    image->shmfd = -1;
 
     if (munmap(image->md, image->memsize) != 0)
     {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "error unmapping memory");
+        ImageStreamIO_printERROR(
+            IMAGESTREAMIO_MMAP,
+            "error unmapping memory");
+        image->md = NULL;
+        image->kw = NULL;
+        image->used = 0;
         return IMAGESTREAMIO_MMAP;
     }
+
+    image->md = NULL;
+    image->kw = NULL;
+    image->used = 0;
 
     return IMAGESTREAMIO_SUCCESS;
 }

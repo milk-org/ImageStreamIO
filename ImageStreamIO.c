@@ -1783,7 +1783,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         file_stat.st_size = 0;
         fstat(SM_fd, &file_stat);
-        if ((int) file_stat.st_size <= (int) sizeof(IMAGE_METADATA))
+        if (file_stat.st_size <= (off_t) sizeof(IMAGE_METADATA))
         {
             close(SM_fd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file (too small)");
@@ -1803,7 +1803,9 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     image->md = (IMAGE_METADATA *)map_root;
 
     ierrno = ImageStreamIO_image_sizing(image, map_root);
-    if (IMAGESTREAMIO_SUCCESS != ierrno || ((int) image->memsize != (int) file_stat.st_size))
+    if (IMAGESTREAMIO_SUCCESS != ierrno
+            || file_stat.st_size < 0
+            || image->memsize != (uint64_t) file_stat.st_size)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file");
         munmap(image->md, file_stat.st_size);

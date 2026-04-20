@@ -22,7 +22,12 @@ message("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
 # PYBIND11
 # =======================================
 set(PYBIND11_FINDPYTHON ON)
-find_package(pybind11)
+execute_process(
+  COMMAND ${PYTHON_EXECUTABLE} -m pybind11 --cmakedir
+  OUTPUT_VARIABLE pybind11_DIR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+find_package(pybind11 REQUIRED HINTS ${pybind11_DIR})
 
 pybind11_add_module(${LIBNAME} ${LIBNAME}.cpp)
 

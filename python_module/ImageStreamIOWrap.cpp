@@ -204,6 +204,29 @@ py::array_t<T> convert_img(const IMAGE &img) {
 }
 
 template <typename T>
+py::object view_img(const IMAGE &img) {
+  if (ImageStreamIO_typesize(img.md->datatype) != sizeof(T)) {
+    throw std::runtime_error("IMAGE is not compatible with output format");
+  }
+
+  std::vector<ssize_t> shape(img.md->naxis);
+  std::vector<ssize_t> strides(img.md->naxis);
+  ssize_t stride = sizeof(T);
+
+  // Col Major (Fortran order) representation
+  for (int8_t axis = 0; axis < img.md->naxis; ++axis) {
+    shape[axis] = img.md->size[axis];
+    strides[axis] = stride;
+    stride *= shape[axis];
+  }
+
+  // No-op capsule: shared memory is externally managed
+  py::capsule owner((void *)img.array.raw, [](void *) {});
+
+  return py::array_t<T>(shape, strides, (T *)img.array.raw, owner);
+}
+
+template <typename T>
 void write(IMAGE &img,
            py::array_t<T, py::array::f_style | py::array::forcecast> b) {
   if (img.array.raw == nullptr) {
@@ -246,11 +269,7 @@ void write(IMAGE &img,
         "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
 #endif
   }
-  ImageStreamIO_sempost(&img, -1);
-  clock_gettime(CLOCK_ISIO, &img.md->lastaccesstime);
-  img.md->write = 0;  // Done writing data
-  img.md->cnt0++;
-  img.md->cnt1++;
+  ImageStreamIO_UpdateIm(&img);
 }
 
 PYBIND11_MODULE(ImageStreamIOWrap, m) {
@@ -523,6 +542,13 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
           std::time_t t = std::chrono::system_clock::to_time_t(tp);
           tmp_str << "acqtime: " << std::ctime(&t);
         }
+        {
+          auto writetime = std::chrono::seconds{md.writetime.tv_sec} +
+                         std::chrono::nanoseconds{md.writetime.tv_nsec};
+          std::chrono::system_clock::time_point tp{writetime};
+          std::time_t t = std::chrono::system_clock::to_time_t(tp);
+          tmp_str << "writetime: " << std::ctime(&t);
+        }
         tmp_str << "shared: " << int(md.shared) << std::endl;
         tmp_str << "location: ";
         if (md.location < 0) {
@@ -791,6 +817,40 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
                  return convert_img<double>(img);
                // case ImageStreamIODataType::DataType::COMPLEX_FLOAT: return ;
                // case ImageStreamIODataType::DataType::COMPLEX_DOUBLE: return ;
+               default:
+                 throw std::runtime_error("Not implemented");
+             }
+           })
+
+        .def("view",
+           [](const IMAGE &img) -> py::object {
+             if (img.array.raw == nullptr)
+               throw std::runtime_error("image not initialized");
+             if (img.md->location >= 0)
+               throw std::runtime_error(
+                   "Cannot create a zero-copy view of a GPU buffer");
+             ImageStreamIODataType dt(img.md->datatype);
+             switch (dt.datatype) {
+               case ImageStreamIODataType::DataType::UINT8:
+                 return view_img<uint8_t>(img);
+               case ImageStreamIODataType::DataType::INT8:
+                 return view_img<int8_t>(img);
+               case ImageStreamIODataType::DataType::UINT16:
+                 return view_img<uint16_t>(img);
+               case ImageStreamIODataType::DataType::INT16:
+                 return view_img<int16_t>(img);
+               case ImageStreamIODataType::DataType::UINT32:
+                 return view_img<uint32_t>(img);
+               case ImageStreamIODataType::DataType::INT32:
+                 return view_img<int32_t>(img);
+               case ImageStreamIODataType::DataType::UINT64:
+                 return view_img<uint64_t>(img);
+               case ImageStreamIODataType::DataType::INT64:
+                 return view_img<int64_t>(img);
+               case ImageStreamIODataType::DataType::FLOAT:
+                 return view_img<float>(img);
+               case ImageStreamIODataType::DataType::DOUBLE:
+                 return view_img<double>(img);
                default:
                  throw std::runtime_error("Not implemented");
              }

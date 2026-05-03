@@ -945,14 +945,13 @@ errno_t ImageStreamIO_autorelink_if_need_if_can(IMAGE *image)
     // mmap. This would result in a use-after-free.
 
     IMAGE candidate_img = {0}; // stack temp image.
-    IMAGE* new_candidate_img = &candidate_img;
 
-    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_openIm(new_candidate_img, image->name)) {
+    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_openIm(&candidate_img, image->name)) {
         printf("_openIm failed @ _autorelink_if_need_if_can\n");
         return IMAGESTREAMIO_FAILURE;
     }
 
-    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_new_image_compatible(image, new_candidate_img)) {
+    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_new_image_compatible(image, &candidate_img)) {
         printf("New image incompatible @ _autorelink_if_need_if_can\n");
         return IMAGESTREAMIO_FAILURE;
     }
@@ -963,7 +962,7 @@ errno_t ImageStreamIO_autorelink_if_need_if_can(IMAGE *image)
         printf("_closeIm failed @ _autorelink_if_need_if_can\n");
     }
     // 2. Copy the temp stack frame into the caller struct, including pointers to the new mappings.
-    memcpy(image, new_candidate_img, sizeof(IMAGE));
+    memcpy(image, &candidate_img, sizeof(IMAGE));
 
     return IMAGESTREAMIO_SUCCESS;
 }
@@ -1893,6 +1892,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         image->semptr[semindex] = &image->semfile[semindex].semdata;
     }
 
+    image->used = 1;
     image->shmfd = SM_fd;
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)

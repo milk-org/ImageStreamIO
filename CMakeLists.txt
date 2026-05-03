@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 
-set(LIBNAME "ImageStreamIOpyMilk") # FIXME !!
+set(LIBNAME "ImageStreamIO")
 set(LIBNAME_PCFILES "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
@@ -58,15 +58,9 @@ endif()
 message("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
 
 
-# Setting these PRIVATE/PUBLIC tags means that sibling folders
-# do NOT inherit this folder as a valid -I<> target.
-# So a sibling project MUST #include "ImageStreamIO/ImageStruct.h"
-# instead of just #include "ImageStruct.h"
-target_include_directories(${LIBNAME} PRIVATE ${PROJECT_SOURCE_DIR})
-target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
-                                             $<INSTALL_INTERFACE:include/${SRCNAME}>
-                                             $<INSTALL_INTERFACE:include>)
-
+target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+                                              $<INSTALL_INTERFACE:include/${SRCNAME}>
+                                              $<INSTALL_INTERFACE:include>)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(CFITSIO cfitsio)

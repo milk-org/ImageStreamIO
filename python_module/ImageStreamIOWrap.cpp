@@ -9,8 +9,8 @@
 #include <iostream>
 #include <sstream>
 
-#include "../ImageStreamIO.h"
-#include "../ImageStruct.h"
+#include "ImageStreamIO.h"
+#include "ImageStruct.h"
 
 namespace nb = nanobind;
 

@@ -39,7 +39,7 @@ endif()
 
 
 
-target_link_libraries(${LIBNAME} PUBLIC ImageStreamIOpyMilk)
+target_link_libraries(${LIBNAME} PUBLIC ImageStreamIO)
 
 install(TARGETS ${LIBNAME}
         EXPORT ${LIBNAME}Config

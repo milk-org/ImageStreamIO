@@ -1883,7 +1883,6 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     image->used = 1;
     image->shmfd = SM_fd;
-    image->used = 1;
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
 

@@ -443,7 +443,7 @@ NB_MODULE(ImageStreamIOWrap, m) {
         tmp_str << "nelement: " << md.nelement << std::endl;
         // tmp_str << "datatype: " << md.datatype << std::endl;
         // tmp_str << "imagetype: " << md.imagetype << std::endl;
-        {
+        { // FIXME we lost the time decimals in this process !
           std::time_t t = (std::time_t)md.creationtime.tv_sec;
           tmp_str << "creationtime: " << std::ctime(&t);
         }
@@ -898,7 +898,7 @@ NB_MODULE(ImageStreamIOWrap, m) {
           },
           R"pbdoc(
             For a shared image:
-            Closes all semaphores, deallcoates sem pointers,
+            Closes all semaphores, deallocates sem pointers,
             and removes associated files. Unmaps the shared memory
             segment, and finally removes the file. Sets the metadata and
             keyword pointers to NULL.

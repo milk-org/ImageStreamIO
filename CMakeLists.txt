@@ -30,7 +30,7 @@ else()
   set(IPC_REGISTRY_SRC "")
 endif()
 
-add_library(${LIBNAME} SHARED ${SRCNAME}.c timeutils.c ${IPC_REGISTRY_SRC})
+add_library(${LIBNAME} SHARED ${SRCNAME}.c ${IPC_REGISTRY_SRC})
 
 # set -C99 flag for 'for' loop initial declartaions
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)

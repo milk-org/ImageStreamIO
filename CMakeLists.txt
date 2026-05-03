@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 
-set(LIBNAME "ImageStreamIOpyMilk")
+set(LIBNAME "ImageStreamIOpyMilk") # FIXME !!
 set(LIBNAME_PCFILES "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
@@ -24,7 +24,13 @@ configure_file (
   )
 message(" VERSION = ${PROJECT_VERSION}")
 
-add_library(${LIBNAME} SHARED ${SRCNAME}.c timeutils.c)
+if(USE_CUDA)
+  set(IPC_REGISTRY_SRC ImageStreamIO_ipc_registry.c)
+else()
+  set(IPC_REGISTRY_SRC "")
+endif()
+
+add_library(${LIBNAME} SHARED ${SRCNAME}.c timeutils.c ${IPC_REGISTRY_SRC})
 
 # set -C99 flag for 'for' loop initial declartaions
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)

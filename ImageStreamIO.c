@@ -1652,56 +1652,24 @@ errno_t ImageStreamIO_createIm_gpu(
  * \returns IMAGESTREAMIO_SUCCESS
  *
  */
-errno_t ImageStreamIO_destroyIm(
-    IMAGE *image)
+errno_t ImageStreamIO_destroyIm(IMAGE *image)
 {
-    if(image->used == 1)
-    {
-        if (image->semptr)
-        {
-            for (int semindex=0; semindex<image->md->sem; ++semindex)
-            {
-                sem_destroy(image->semptr[semindex]);
-            }
-            free(image->semptr);
-            image->semptr = NULL;
-        }
-        if (image->semlog)
-        {
-            sem_destroy(image->semlog);
-            image->semlog = NULL;
-        }
+    if(image->used == 0)
+        return IMAGESTREAMIO_SUCCESS;
 
-        if (image->md->shared != 1)
-        {
-            if (image->kw != NULL)
-            {
-                free(image->kw);
-            }
-        }
-        image->kw = NULL;
+    if (image->semptr)
+        for (int semindex=0; semindex<image->md->sem; ++semindex)
+            sem_destroy(image->semptr[semindex]);
+    if (image->semlog)
+        sem_destroy(image->semlog);
+    if (image->md->shared == 0 && image->kw != NULL)
+        free(image->kw);
 
-
-        if (image->memsize > 0)
-        {
-            char fname[512];
-            close(image->shmfd);
-            // Get this before unmapping.
-            ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
-            munmap(image->md, image->memsize);
-            image->md = NULL;
-            image->kw = NULL;
-            // Remove the file
-            remove(fname);
-        }
-        else
-        {
-            free(image->array.UI8);
-        }
-        image->array.UI8 = NULL;
-
-        image->used = 0;
-    }
+    char fname[512];
+    ImageStreamIO_filename(fname, sizeof(fname), image->md->name); // image->md->name will be dealloc'd by closeIm
+    
+    ImageStreamIO_closeIm(image); 
+    remove(fname);
 
     return IMAGESTREAMIO_SUCCESS;
 }
@@ -1894,6 +1862,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
     image->used = 1;
     image->shmfd = SM_fd;
+    image->used = 1;
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
 
@@ -1904,9 +1873,11 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
 
 
-errno_t ImageStreamIO_closeIm(
-    IMAGE *image)
+errno_t ImageStreamIO_closeIm(IMAGE *image)
 {
+    if(image->used == 0)
+        return IMAGESTREAMIO_SUCCESS;
+
     free(image->semptr);
 
     // Close file before unmap, in case unmap fails
@@ -1923,7 +1894,9 @@ errno_t ImageStreamIO_closeIm(
     image->semptr = NULL;
     image->md = NULL;
     image->kw = NULL;
+
     image->array.raw = NULL;
+
 
     return IMAGESTREAMIO_SUCCESS;
 }

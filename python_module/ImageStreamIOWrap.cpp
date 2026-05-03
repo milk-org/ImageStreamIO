@@ -1135,7 +1135,7 @@ PYBIND11_MODULE(ImageStreamIOWrap, m) {
           },
           R"pbdoc(
             For a shared image:
-            Closes all semaphores, deallcoates sem pointers,
+            Closes all semaphores, deallocates sem pointers,
             and removes associated files. Unmaps the shared memory
             segment, and finally removes the file. Sets the metadata and
             keyword pointers to NULL.

@@ -1440,15 +1440,6 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
         }
 
-        // - Ensure GPU SHM buffer file does not exist
-        struct stat buffer;
-        if ((stat(SM_fname, &buffer) == 0) && (location > -1))
-        {
-            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEEXISTS,
-                                     "Error creating GPU SHM buffer on an existing file");
-            return IMAGESTREAMIO_FILEEXISTS;
-        }
-
         char name_tmp[STRINGMAXLEN_IMAGE_NAME] = {0};
         strcat(name_tmp, name);
         strcat(name_tmp, "_tmpcreate");

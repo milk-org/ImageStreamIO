@@ -121,7 +121,6 @@ cudaError_t check(cudaError_t result, char const *const func, const char *const 
 {
     if (result)
     {
-        cudaDeviceReset();
         int _errno = errno; // CUDA doesn't use errno, could be a stale errno
         errno = 0;
         char to_print[100] = "";
@@ -1655,6 +1654,42 @@ errno_t ImageStreamIO_createIm_gpu(
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_createIm_gpu(...)
 
+errno_t _destroyIm_unshared_nochecks(IMAGE* image) {
+    free(image->array.raw);
+    free(image->kw);
+    free(image->md);
+
+    image->used = 0;
+    image->semptr = NULL;
+    image->md = NULL;
+    image->kw = NULL;
+    image->array.raw = NULL;
+    image->shmfd = 0;
+    image->memsize = 0;
+
+    return IMAGESTREAMIO_SUCCESS;
+}
+errno_t _destroyIm_shared_nochecks(IMAGE* image) {
+    if (image->semptr)
+        for (int semindex=0; semindex<image->md->sem; ++semindex)
+            sem_destroy(image->semptr[semindex]);
+    if (image->semlog)
+        sem_destroy(image->semlog);
+
+    char fname[512];
+    errno_t ierrno;
+    if((ierrno = ImageStreamIO_filename(fname, sizeof(fname), image->md->name))
+            != IMAGESTREAMIO_SUCCESS)
+        return ierrno;
+
+    if((ierrno = ImageStreamIO_closeIm(image)) != IMAGESTREAMIO_SUCCESS)
+        return ierrno;
+
+    if (remove(fname) != 0)
+        return IMAGESTREAMIO_FAILURE;
+
+    return IMAGESTREAMIO_SUCCESS;
+}
 
 /**
  * @brief Unmap and destroy shmim created by ImageStreamIO_createIm_gpu
@@ -1664,24 +1699,19 @@ errno_t ImageStreamIO_createIm_gpu(
  */
 errno_t ImageStreamIO_destroyIm(IMAGE *image)
 {
+    if(image == NULL)
+        return IMAGESTREAMIO_INVALIDARG;
+
     if(image->used == 0)
         return IMAGESTREAMIO_SUCCESS;
 
-    if (image->semptr)
-        for (int semindex=0; semindex<image->md->sem; ++semindex)
-            sem_destroy(image->semptr[semindex]);
-    if (image->semlog)
-        sem_destroy(image->semlog);
-    if (image->md->shared == 0 && image->kw != NULL)
-        free(image->kw);
+    if(image->md == NULL)
+        return IMAGESTREAMIO_INVALIDARG;
 
-    char fname[512];
-    ImageStreamIO_filename(fname, sizeof(fname), image->md->name); // image->md->name will be dealloc'd by closeIm
-    
-    ImageStreamIO_closeIm(image); 
-    remove(fname);
-
-    return IMAGESTREAMIO_SUCCESS;
+    if (image->md->shared == 0)
+        return _destroyIm_unshared_nochecks(image);
+    else
+        return _destroyIm_shared_nochecks(image);
 }
 
 
@@ -1896,8 +1926,21 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 
 errno_t ImageStreamIO_closeIm(IMAGE *image)
 {
+    if(image == NULL)
+        return IMAGESTREAMIO_INVALIDARG;
+
     if(image->used == 0)
         return IMAGESTREAMIO_SUCCESS;
+
+    if(image->md == NULL)
+        return IMAGESTREAMIO_INVALIDARG;
+
+    if(image->md->shared == 0)
+    {
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
+                                 "closeIm called on process-local image (shared=0)");
+        return IMAGESTREAMIO_INVALIDARG;
+    }
 
     free(image->semptr);
 

@@ -766,10 +766,18 @@ uint64_t ImageStreamIO_initialize_buffer(
         }
         else
         {
-            image->array.raw = calloc((size_t)image->md->nelement,
-                size_element);
-            if (image->array.raw == NULL)
+            size_t alloc_size = (size_t)image->md->nelement * size_element;
+            if (alloc_size == 0) alloc_size = 1; // prevent 0-byte allocation issues
+            void *ptr = NULL;
+            int ret = posix_memalign(&ptr, 64, alloc_size);
+            if (ret == 0 && ptr != NULL)
             {
+                memset(ptr, 0, alloc_size);
+                image->array.raw = ptr;
+            }
+            else
+            {
+                image->array.raw = NULL;
                 ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC,
                     "memory allocation failed");
                 fprintf(stderr, "%c[%d;%dm", (char)27, 1, 31);

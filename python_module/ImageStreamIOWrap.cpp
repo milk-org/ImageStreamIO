@@ -148,6 +148,7 @@ nb::object convert_img(const IMAGE &img) {
     shape[axis] = img.md->size[axis];
   }
 
+  // Always return a CPU copy
   return nb::cast(nb::ndarray<nb::numpy, T>(
       data, img.md->naxis, shape.data(), owner, nullptr, nb::dtype<T>(),
       nb::device::cpu::value, 0, 'F'));
@@ -167,12 +168,23 @@ nb::object view_img(const IMAGE &img) {
   // No-op capsule: shared memory is externally managed
   nb::capsule owner((void *)img.array.raw, [](void *) noexcept {});
 
-  return nb::cast(nb::ndarray<nb::numpy, T>(
-      (T *)img.array.raw, img.md->naxis, shape.data(), owner, nullptr,
-      nb::dtype<T>(), nb::device::cpu::value, 0, 'F'));
+  // Return a CPU or a GPU view!
+  if (img.md->location == -1) {
+    return nb::cast(nb::ndarray<nb::numpy, T>(
+        (T *)img.array.raw, img.md->naxis, shape.data(), owner, nullptr,
+        nb::dtype<T>(), nb::device::cpu::value, 0, 'F'));
+  } else {
+    #ifdef HAVE_CUDA
+    return nb::cast(nb::ndarray<nb::cupy, T>(
+        (T *)img.array.raw, img.md->naxis, shape.data(), owner, nullptr,
+        nb::dtype<T>(), nb::device::cuda::value, 0, 'F'));
+    #else
+    throw std::runtime_error("location >= 0 in view but HAVE_CUDA is not set.");
+    #endif
+  }
 }
 
-void write_img(IMAGE &img, nb::ndarray<nb::f_contig, nb::device::cpu> b) {
+void write_img(IMAGE &img, nb::ndarray<nb::f_contig> b) {
   if (img.array.raw == nullptr) {
     throw std::runtime_error("image not initialized");
   }
@@ -191,22 +203,35 @@ void write_img(IMAGE &img, nb::ndarray<nb::f_contig, nb::device::cpu> b) {
   }
 
   uint64_t size = img.md->nelement * ImageStreamIO_typesize(datatype);
+  img.md->write = 1;
 
-  img.md->write = 1;  // set this flag to 1 when writing data
-
-  void *current_image = img.array.raw;
-
-  if (img.md->location == -1) {
-    memcpy(current_image, b.data(), size);
+  if (b.device_type() == nb::device::cpu::value) { // np array
+    if (img.md->location == -1) { // np array -> CPU SHM
+      memcpy(img.array.raw, b.data(), size);
+    } else { // np array -> GPU SHM
+      #ifdef HAVE_CUDA
+      cudaSetDevice(img.md->location);
+      cudaMemcpy(img.array.raw, b.data(), size, cudaMemcpyHostToDevice);
+      
+      #else
+      throw std::runtime_error("unsupported location, needs -DUSE_CUDA=ON");
+      #endif
+    }
+  } else if (b.device_type() == nb::device::cuda::value) {  // cp array
+    #ifdef HAVE_CUDA
+    if (img.md->location == -1) {  // cp array -> CPU SHM
+      cudaMemcpy(img.array.raw, b.data(), size, cudaMemcpyDeviceToHost);
+    } else {  // cp array -> GPU SHM | Handles both same device and peer access.
+      cudaMemcpyPeer(img.array.raw, img.md->location, b.data(), b.device_id(), size);
+    }
+    
+    #else
+    throw std::runtime_error("CUDA array passed but needs -DUSE_CUDA=ON");
+    #endif
   } else {
-#ifdef HAVE_CUDA
-    cudaSetDevice(img.md->location);
-    cudaMemcpy(current_image, b.data(), size, cudaMemcpyHostToDevice);
-#else
-    throw std::runtime_error(
-        "unsupported location, CACAO needs to be compiled with -DUSE_CUDA=ON");
-#endif
+    throw std::runtime_error("unsupported device type");
   }
+
   ImageStreamIO_UpdateIm(&img);
 }
 
@@ -215,6 +240,12 @@ NB_MODULE(ImageStreamIOWrap, m) {
 
 #ifdef COVERAGE_BUILD
   m.def("_gcov_dump", &_gcov_dump);
+#endif
+
+#ifdef HAVE_CUDA
+  m.attr("IMAGESTREAMIO_HAVE_CUDA") = 1;
+#else
+  m.attr("IMAGESTREAMIO_HAVE_CUDA") = 0;
 #endif
 
   auto imageDatatype =
@@ -693,9 +724,6 @@ NB_MODULE(ImageStreamIOWrap, m) {
            [](const IMAGE &img) -> nb::object {
              if (img.array.raw == nullptr)
                throw std::runtime_error("image not initialized");
-             if (img.md->location >= 0)
-               throw std::runtime_error(
-                   "Cannot create a zero-copy view of a GPU buffer");
              ImageStreamIODataType dt(img.md->datatype);
              switch (dt.datatype) {
                case ImageStreamIODataType::DataType::UINT8:
@@ -749,7 +777,7 @@ NB_MODULE(ImageStreamIOWrap, m) {
       .def(
           "create",
           [](IMAGE &img, const std::string &name,
-             nb::ndarray<nb::f_contig, nb::device::cpu> buffer,
+             nb::ndarray<nb::f_contig> buffer,
              int8_t location, uint8_t shared, int NBsem, int NBkw,
              uint64_t imagetype, uint32_t CBsize) {
             uint8_t datatype = NdarrayDtypeToImageStreamIODataType(buffer);
@@ -785,78 +813,6 @@ NB_MODULE(ImageStreamIOWrap, m) {
           nb::arg("shared") = 1, nb::arg("NBsem") = IMAGE_NB_SEMAPHORE,
           nb::arg("NBkw") = 1, nb::arg("imagetype") = MATH_DATA,
           nb::arg("CBsize") = 0)
-
-      // .def(
-      //     "create",
-      //     [](IMAGE &img, std::string name, py::array_t<uint32_t> dims,
-      //        uint8_t datatype, uint8_t shared, uint16_t NBkw) {
-      //       /* Request a buffer descriptor from Python */
-      //       py::buffer_info info = dims.request();
-
-      //       // uint8_t datatype =
-      //       // PyFormatToImageStreamIODataType(info);
-      //       // std::vector<uint32_t> ushape(info.ndim);
-      //       // std::copy(info.shape.begin(), info.shape.end(),
-      //       ushape.begin());
-
-      //       return ImageStreamIO_createIm(&img, name.c_str(), info.size,
-      //                                     (uint32_t *)info.ptr, datatype,
-      //                                     shared, NBkw);
-      //     },
-      //     R"pbdoc(
-      //       Create shared memory image stream
-      //       Parameters:
-      //           name     [in]:  the name of the shared memory file will be
-      //           SHAREDMEMDIR/<name>_im.shm dims     [in]:  np.array of the
-      //           image. datatype [in]:  data type code,
-      //           pyImageStreamIO.Datatype shared   [in]:  if true then a
-      //           shared memory buffer is allocated.  If false, only local
-      //           storage is used. NBkw     [in]:  the number of keywords to
-      //           allocate.
-      //       Return:
-      //           ret      [out]: error code
-      //       )pbdoc",
-      //     nb::arg("name"), nb::arg("dims"),
-      //     nb::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
-      //     nb::arg("shared") = 1, nb::arg("NBkw") = 1)
-
-      // .def(
-      //     "create",
-      //     [](IMAGE &img, std::string name, py::array_t<uint32_t> dims,
-      //        uint8_t datatype, int8_t location, uint8_t shared, int NBsem,
-      //        int NBkw, uint64_t imagetype) {
-      //       /* Request a buffer descriptor from Python */
-      //       py::buffer_info info = dims.request();
-
-      //       // uint8_t datatype =
-      //       // PyFormatToImageStreamIODataType(info);
-      //       // std::vector<uint32_t> ushape(info.ndim);
-      //       // std::copy(info.shape.begin(), info.shape.end(),
-      //       ushape.begin());
-
-      //       return ImageStreamIO_createIm_gpu(
-      //           &img, name.c_str(), info.size, (uint32_t *)info.ptr,
-      //           datatype, location, shared, NBsem, NBkw, imagetype);
-      //     },
-      //     R"pbdoc(
-      //       Create shared memory image stream
-      //       Parameters:
-      //           name      [in]:  the name of the shared memory file will be
-      //           SHAREDMEMDIR/<name>_im.shm dims      [in]:  np.array of the
-      //           image. datatype  [in]:  data type code,
-      //           pyImageStreamIO.Datatype shared    [in]:  if true then a
-      //           shared memory buffer is allocated.  If false, only local
-      //           storage is used. NBsem     [in]:  the number of semaphores to
-      //           allocate. NBkw      [in]:  the number of keywords to
-      //           allocate. imagetype [in]:  type of the stream.
-      //       Return:
-      //           ret       [out]: error code
-      //       )pbdoc",
-      //     nb::arg("name"), nb::arg("dims"),
-      //     nb::arg("datatype") = ImageStreamIODataType::DataType::FLOAT,
-      //     nb::arg("location") = -1, nb::arg("shared") = 1,
-      //     nb::arg("NBsem") = IMAGE_NB_SEMAPHORE, nb::arg("NBkw") = 1,
-      //     nb::arg("imagetype") = MATH_DATA)
 
       .def(
           "open",

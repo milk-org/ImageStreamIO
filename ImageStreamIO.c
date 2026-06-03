@@ -114,7 +114,6 @@ errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
 
 
 #ifdef HAVE_CUDA
-int IMAGESTRUCT_COMPILED_HAVE_CUDA = 1;
 
 cudaError_t check(cudaError_t result, char const *const func, const char *const file,
            int const line)
@@ -137,8 +136,6 @@ cudaError_t check(cudaError_t result, char const *const func, const char *const 
 
 #include "ImageStreamIO_ipc_registry.h"
 
-#else
-int IMAGESTRUCT_COMPILED_HAVE_CUDA = 0;
 #endif
 
 // Technical function for coverage build.

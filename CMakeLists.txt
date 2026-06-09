@@ -8,6 +8,7 @@ message(" SRCNAME = ${SRCNAME} -> LIBNAME = ${LIBNAME}")
 
 option(build_python_module "Compile Python Wrappers" OFF)
 option(gtest_build_tests "Build Unit Tests" OFF)
+option(USE_CFITSIO "Enable CFITSIO support" ON)
 
 project(${LIBNAME} LANGUAGES C)
 
@@ -31,12 +32,14 @@ add_library(${LIBNAME} SHARED ${SRCNAME}.c)
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(CFITSIO cfitsio)
-if(${CFITSIO_FOUND})
-  link_directories(${CFITSIO_LIBRARY_DIRS})
-  target_compile_definitions(${LIBNAME} PUBLIC USE_CFITSIO=1)
-  target_include_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
-  target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
+if(USE_CFITSIO)
+  pkg_check_modules(CFITSIO cfitsio)
+  if(${CFITSIO_FOUND})
+    link_directories(${CFITSIO_LIBRARY_DIRS})
+    target_compile_definitions(${LIBNAME} PUBLIC USE_CFITSIO=1)
+    target_include_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
+    target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
+  endif()
 endif()
 
 target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>

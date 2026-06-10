@@ -71,17 +71,25 @@ int main()
 
     free(imsize);
 
-    strcpy(imarray.kw[0].name, "keyword_long");
+    snprintf(imarray.kw[0].name,
+             sizeof(imarray.kw[0].name),
+             "%s", "keyword_long");
     imarray.kw[0].type = 'L';
     imarray.kw[0].value.numl = 42;
 
-    strcpy(imarray.kw[1].name, "keyword_float");
+    snprintf(imarray.kw[1].name,
+             sizeof(imarray.kw[1].name),
+             "%s", "keyword_float");
     imarray.kw[1].type = 'D';
     imarray.kw[1].value.numf = 3.141592;
 
-    strcpy(imarray.kw[2].name, "keyword_string");
+    snprintf(imarray.kw[2].name,
+             sizeof(imarray.kw[2].name),
+             "%s", "keyword_string");
     imarray.kw[2].type = 'S';
-    strcpy(imarray.kw[2].value.valstr, "Hello!");
+    snprintf(imarray.kw[2].value.valstr,
+             sizeof(imarray.kw[2].value.valstr),
+             "%s", "Hello!");
 
     float angle;
     float r;
@@ -109,7 +117,7 @@ int main()
         yc = y0 + r*sin(angle);
 
 
-        imarray.md->write = 1; // set this flag to 1 when writing data
+        SHMIM_WRITE_ACQUIRE(imarray.md);
 
         for(ii=0; ii<imarray.md->size[0]; ii++)
             for(jj=0; jj<imarray.md->size[1]; jj++)
@@ -126,11 +134,11 @@ int main()
                 //	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0f;
             }
         imarray.md->cnt1 = 0;
-        imarray.md->cnt0++;
+        SHMIM_CNT0_INCREMENT(imarray.md);
         // POST ALL SEMAPHORES
         ImageStreamIO_sempost(&imarray, -1);
 
-        imarray.md->write = 0; // Done writing data
+        SHMIM_WRITE_RELEASE(imarray.md);
 
         usleep(dtus);
         angle += dangle;

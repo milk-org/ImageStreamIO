@@ -68,7 +68,7 @@ int main()
         angle += dangle;
         if(angle > 2.0*M_PI) { angle -= 2.0 * M_PI; }
 
-        imarray->md->write = 1;         // Poor-man's mutex when writing
+        SHMIM_WRITE_ACQUIRE(imarray->md);
 
         // ->array is union; ->array.F is float pointer to image
         float* dotF = imarray->array.F;
@@ -88,8 +88,8 @@ int main()
         // Post all semaphores (index = -1)
         ImageStreamIO_sempost(imarray, -1);
 
-        imarray->md->write = 0; // Done writing; release mutex
-        imarray->md->cnt0++;
+        SHMIM_WRITE_RELEASE(imarray->md);
+        SHMIM_CNT0_INCREMENT(imarray->md);
         imarray->md->cnt1++;
 
         usleep(dtus);           // Wait 1ms

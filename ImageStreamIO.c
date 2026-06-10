@@ -1592,7 +1592,7 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
     clock_gettime(CLOCK_ISIO, &image->md->lastaccesstime);
     clock_gettime(CLOCK_ISIO, &image->md->creationtime);
 
-    image->md->write = 0;
+    SHMIM_WRITE_RELEASE(image->md);
     image->md->cnt0 = 0;
     image->md->cnt1 = 0;
 
@@ -2353,8 +2353,8 @@ long ImageStreamIO_UpdateIm_atime( IMAGE *image,
             image->md->atime = *atime;
         }
 
-        image->md->cnt0++;
-        image->md->write = 0;
+        SHMIM_CNT0_INCREMENT(image->md);
+        SHMIM_WRITE_RELEASE(image->md);
 
         #ifdef IMAGESTRUCT_WRITEHISTORY
         // Update image write history
@@ -2414,12 +2414,12 @@ long ImageStreamIO_UpdateIm( IMAGE *image )
  **/
 long ImageStreamIO_BusywaitForNoWrite(IMAGE *image, int acquire)
 {
-    while(image->md->write)
+    while(SHMIM_WRITE_LOAD(image->md))
     {
     }
     if(acquire)
     {
-        image->md->write = 1;
+        SHMIM_WRITE_ACQUIRE(image->md);
     }
     return IMAGESTREAMIO_SUCCESS;
 }

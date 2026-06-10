@@ -345,7 +345,18 @@ typedef struct
     uint64_t cnt1;               	/**< in 3D rolling buffer image, this is the last slice written                   */
     uint64_t cnt2;                      /**< in cnt2-based syncronization, proceed until cnt0=cnt2                        */
 
-    uint8_t  write;               	/**< 1 if image is being written                                                  */
+    /**
+     * Cross-process write mutex flag.
+     *
+     * Writers set to 1 before copying data, then to 0
+     * after. Readers spin on it to avoid partial frames.
+     *
+     * volatile prevents the compiler from caching the
+     * value in a register (critical for spin loops).
+     * Use SHMIM_WRITE_* macros for proper CPU memory
+     * fences via atomic builtins.
+     */
+    volatile uint8_t  write;
 
 
     uint16_t NBkw;                  /**< number of keywords (max: 65536)                                              */
@@ -561,6 +572,83 @@ typedef struct /**< structure used to store data arrays                      */
 #endif
 
 } IMAGE;
+
+
+/*
+ * =========================================================
+ * Atomic accessors for IMAGE_METADATA fields
+ * =========================================================
+ *
+ * These macros provide proper CPU memory fences for
+ * cross-process synchronization of shared memory fields.
+ *
+ * On x86-64 (TSO), release/acquire compile to plain
+ * mov instructions plus a compiler barrier — zero
+ * runtime overhead.  On ARM/other weak-memory
+ * architectures, appropriate dmb fences are emitted.
+ *
+ * Usage:
+ *   SHMIM_WRITE_ACQUIRE(md) — set write=1
+ *   SHMIM_WRITE_RELEASE(md) — set write=0
+ *   SHMIM_WRITE_LOAD(md)    — read write flag
+ *   SHMIM_CNT0_INCREMENT(md) — atomically cnt0++
+ *   SHMIM_CNT0_LOAD(md)     — read cnt0
+ */
+
+#if defined(__STDC_VERSION__) \
+    && __STDC_VERSION__ >= 201112L \
+    && !defined(__STDC_NO_ATOMICS__)
+#include <stdatomic.h>
+
+#define SHMIM_WRITE_ACQUIRE(md) \
+    atomic_store_explicit(      \
+        (_Atomic uint8_t *)&(md)->write, \
+        1, memory_order_release)
+
+#define SHMIM_WRITE_RELEASE(md) \
+    atomic_store_explicit(      \
+        (_Atomic uint8_t *)&(md)->write, \
+        0, memory_order_release)
+
+#define SHMIM_WRITE_LOAD(md) \
+    atomic_load_explicit(    \
+        (_Atomic uint8_t *)&(md)->write, \
+        memory_order_acquire)
+
+#define SHMIM_CNT0_INCREMENT(md) \
+    atomic_fetch_add_explicit(   \
+        (_Atomic uint64_t *)&(md)->cnt0, \
+        1, memory_order_release)
+
+#define SHMIM_CNT0_LOAD(md) \
+    atomic_load_explicit(    \
+        (_Atomic uint64_t *)&(md)->cnt0, \
+        memory_order_acquire)
+
+#else
+/* GCC/Clang __atomic builtins fallback */
+
+#define SHMIM_WRITE_ACQUIRE(md) \
+    __atomic_store_n(           \
+        &(md)->write, 1, __ATOMIC_RELEASE)
+
+#define SHMIM_WRITE_RELEASE(md) \
+    __atomic_store_n(           \
+        &(md)->write, 0, __ATOMIC_RELEASE)
+
+#define SHMIM_WRITE_LOAD(md) \
+    __atomic_load_n(         \
+        &(md)->write, __ATOMIC_ACQUIRE)
+
+#define SHMIM_CNT0_INCREMENT(md) \
+    __atomic_add_fetch(          \
+        &(md)->cnt0, 1, __ATOMIC_RELEASE)
+
+#define SHMIM_CNT0_LOAD(md) \
+    __atomic_load_n(         \
+        &(md)->cnt0, __ATOMIC_ACQUIRE)
+
+#endif
 
 
 #ifdef __cplusplus

@@ -96,7 +96,7 @@ int main()
 
 	printf("ImCreate_test_gpuipc is waiting update\n");
 	ImageStreamIO_semwait(&imarray[0], 0);
-	while(imarray[0].md[0].write );
+	while(SHMIM_WRITE_LOAD(&imarray[0].md[0]));
 
 	printf("ImCreate_test_gpuipc reads in SHM\n");
 	cudaMemcpy(h_ptr, d_ptr, imsize[0]*imsize[1]*sizeof(float),

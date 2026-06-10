@@ -74,8 +74,8 @@ int main()
 	printf("ImCreate_test_gpuipc2 is sending update\n");
 	ImageStreamIO_sempost(&imarray[0], -1);
 
-	imarray[0].md[0].write = 0; // Done writing data
-	imarray[0].md[0].cnt0++;
+	SHMIM_WRITE_RELEASE(&imarray[0].md[0]); // Done writing data
+	SHMIM_CNT0_INCREMENT(&imarray[0].md[0]);
 	imarray[0].md[0].cnt1++;
 
 	free(imarray);

@@ -121,7 +121,7 @@ int main()
 		yc = y0 + r*sin(angle);
 
 
-		imarray.md->write = 1; // set this flag to 1 when writing data
+		SHMIM_WRITE_ACQUIRE(imarray.md);
 
 		index = imarray.md->cnt1 +1;
 		if(index == imarray.md->size[2])
@@ -146,13 +146,13 @@ int main()
 				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0f;
 			}
 		imarray.md->cnt1 = index;
-		imarray.md->cnt0++;
+		SHMIM_CNT0_INCREMENT(imarray.md);
 		clock_gettime(CLOCK_ISIO, &imarray.md[0].lastaccesstime);
 
 		// POST ALL SEMAPHORES
 		ImageStreamIO_sempost(&imarray, -1);
 
-		imarray.md->write = 0; // Done writing data
+		SHMIM_WRITE_RELEASE(imarray.md);
 
 		usleep(dtus);
 		angle += dangle;

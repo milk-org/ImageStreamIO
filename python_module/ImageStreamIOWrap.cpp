@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Arnaud Sevin et al
+//
+// SPDX-License-Identifier: MIT
+
 #include <pybind11/chrono.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>

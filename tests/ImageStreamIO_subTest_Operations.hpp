@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Brian Carcich
+//
+// SPDX-License-Identifier: MIT
+
 #ifndef __ImageStreamIO_subTest_Operations_hpp__
 #define __ImageStreamIO_subTest_Operations_hpp__
 void ImageStreamIO_subTest_Operations(int&,int&);

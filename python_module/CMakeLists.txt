@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Arnaud Sevin et al
+#
+# SPDX-License-Identifier: MIT
+
 cmake_minimum_required(VERSION 3.8)
 
 project(ImageStreamIOWrap LANGUAGES CXX)

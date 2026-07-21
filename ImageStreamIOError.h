@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Olivier Guyon
+//
+// SPDX-License-Identifier: MIT
+
 #ifndef IMAGESTREAMIO_ERROR_H
 #define IMAGESTREAMIO_ERROR_H
 

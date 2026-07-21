@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Vincent Deo
+//
+// SPDX-License-Identifier: MIT
+
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/string.h>

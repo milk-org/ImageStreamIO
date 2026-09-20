@@ -32,6 +32,9 @@ add_library(${LIBNAME} SHARED ${SRCNAME}.c)
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
 
 find_package(PkgConfig REQUIRED)
+
+target_link_libraries(${LIBNAME} PUBLIC pthread)
+
 if(USE_CFITSIO)
   pkg_check_modules(CFITSIO cfitsio)
   if(${CFITSIO_FOUND})
@@ -153,6 +156,7 @@ if(USE_STATIC_LTO)
   add_library(${LIBNAME}_static STATIC ${SRCNAME}.c)
   set_target_properties(${LIBNAME}_static
       PROPERTIES OUTPUT_NAME ${LIBNAME})
+  target_link_libraries(${LIBNAME}_static PUBLIC pthread)
   target_include_directories(${LIBNAME}_static PUBLIC
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/..>

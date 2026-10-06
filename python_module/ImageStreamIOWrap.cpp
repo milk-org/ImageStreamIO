@@ -901,7 +901,7 @@ NB_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          nb::arg("index"))
+          nb::arg("index"), nb::call_guard<nb::gil_scoped_release>())
 
       .def(
           "semtimedwait",
@@ -923,7 +923,7 @@ NB_MODULE(ImageStreamIOWrap, m) {
                 Return:
                     ret    [out]: error code
                 )pbdoc",
-          nb::arg("index"), nb::arg("timeoutsec"))
+          nb::arg("index"), nb::arg("timeoutsec"), nb::call_guard<nb::gil_scoped_release>())
 
       .def(
           "semtrywait",

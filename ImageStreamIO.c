@@ -749,7 +749,7 @@ uint64_t ImageStreamIO_offset_data(
  *
  * \returns size in bytes of CPU-based shmim data area image->array.raw
  * \returns 0 for GPU-based shmim
- * \returns exits process if calloc of non-shared, process-local memory failed
+ * \returns abort on memory allocation failure
  *
  */
 uint64_t ImageStreamIO_initialize_buffer(
@@ -766,8 +766,16 @@ uint64_t ImageStreamIO_initialize_buffer(
         }
         else
         {
-            image->array.raw = calloc((size_t)image->md->nelement,
-                size_element);
+            // 64-byte aligned memory for SIMD optimizations
+            size_t alloc_bytes = (size_t)image->md->nelement * size_element;
+            if (posix_memalign((void **)&image->array.raw, 64, alloc_bytes) != 0)
+            {
+                image->array.raw = NULL;
+            }
+            else
+            {
+                memset(image->array.raw, 0, alloc_bytes);
+            }
             if (image->array.raw == NULL)
             {
                 ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC,
@@ -1334,7 +1342,7 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm(
  *
  * \returns IMAGESTREAMIO_SUCCESS on success
  * \returns not IMAGESTREAMIO_SUCCESS on failure
- * \returns abort on malloc/calloc failure
+ * \returns abort on memory allocation failure
  *
  */
 __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
@@ -1586,7 +1594,7 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
 #   endif
 
     // Initialize the image->array.* data memory to zeros
-    // N.B. Also calloc's memory for non-shared, process-local memory
+    // Initialize data memory for non-shared, process-local memory
     ImageStreamIO_initialize_buffer(image);
 
     clock_gettime(CLOCK_ISIO, &image->md->lastaccesstime);

@@ -18,11 +18,10 @@ set ( VERSION_MINOR 00 )
 set ( VERSION_PATCH 00 )
 set ( VERSION_OPTION "" )
 set ( PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" )
-# Generated into the build tree: the source tree is shared across
-# out-of-source builds with differing options.
+
 configure_file (
   "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}_config.h.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/config/${PROJECT_NAME}_config.h"
+  "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}_config.h"
   )
 message(" VERSION = ${PROJECT_VERSION}")
 
@@ -49,7 +48,6 @@ endif()
 
 target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
                                               $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/..>
-                                              $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/config>
                                               $<INSTALL_INTERFACE:include/${SRCNAME}>
                                               $<INSTALL_INTERFACE:include>)
 
@@ -163,14 +161,11 @@ if(USE_STATIC_LTO)
   target_include_directories(${LIBNAME}_static PUBLIC
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/..>
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/configfiles>
       $<INSTALL_INTERFACE:include/${SRCNAME}>
       $<INSTALL_INTERFACE:include>)
   if(${CFITSIO_FOUND})
-    target_compile_definitions(${LIBNAME}_static
-        PUBLIC USE_CFITSIO=1)
-    target_include_directories(${LIBNAME}_static
-        PUBLIC ${CFITSIO_INCLUDE_DIRS})
+    target_compile_definitions(${LIBNAME}_static PUBLIC USE_CFITSIO=1)
+    target_include_directories(${LIBNAME}_static PUBLIC ${CFITSIO_INCLUDE_DIRS})
   endif()
   if(USE_CUDA)
     target_include_directories(${LIBNAME}_static

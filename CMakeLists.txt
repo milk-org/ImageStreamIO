@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 
 set(LIBNAME "ImageStreamIO")
+set(LIBNAME_PCFILES "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
 message("")
@@ -13,24 +14,55 @@ project(${LIBNAME} LANGUAGES C)
 
 # Version number
 set ( VERSION_MAJOR 2 )
-set ( VERSION_MINOR 00 )
+set ( VERSION_MINOR 01 )
 set ( VERSION_PATCH 00 )
 set ( VERSION_OPTION "" )
 set ( PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" )
 configure_file (
-  "${PROJECT_SOURCE_DIR}/${PROJECT_NAME}_config.h.in"
-  "${PROJECT_SOURCE_DIR}//${PROJECT_NAME}_config.h"
+  "${PROJECT_SOURCE_DIR}/${LIBNAME_PCFILES}_config.h.in"
+  "${PROJECT_SOURCE_DIR}//${LIBNAME_PCFILES}_config.h"
   )
 message(" VERSION = ${PROJECT_VERSION}")
 
-add_compile_options(-Ofast)
+if(USE_CUDA)
+  set(IPC_REGISTRY_SRC ImageStreamIO_ipc_registry.c)
+else()
+  set(IPC_REGISTRY_SRC "")
+endif()
 
-add_library(${LIBNAME} SHARED ${SRCNAME}.c)
+add_library(${LIBNAME} SHARED ${SRCNAME}.c ${IPC_REGISTRY_SRC})
 
 # set -C99 flag for 'for' loop initial declartaions
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
 
+# =======================================
+# BUILD TYPE
+# =======================================
+# cmake -DCMAKE_BUILD_TYPE=Debug
+# option: add -fanalyzer if gcc10+ (warning: this will take a while to run)
+set(CMAKE_C_FLAGS_DEBUG     "-O0 -g -Wall -Wextra -std=gnu17 -Wno-sign-compare")
+# cmake -DCMAKE_BUILD_TYPE=Coverage
+set(CMAKE_C_FLAGS_COVERAGE     "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
+set(CMAKE_CXX_FLAGS_COVERAGE     "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
+# cmake -DCMAKE_BUILD_TYPE=Release
+set(CMAKE_C_FLAGS_RELEASE     "-Ofast -DNDEBUG -std=gnu17")
+
+
+# Set a default build type if none was specified
+set(default_build_type "Release")
+if(NOT CMAKE_BUILD_TYPE)
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}")
+endif()
+
+message("CMAKE_BUILD_TYPE : ${CMAKE_BUILD_TYPE}")
+
+
+target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+                                              $<INSTALL_INTERFACE:include/${SRCNAME}>
+                                              $<INSTALL_INTERFACE:include>)
 find_package(PkgConfig REQUIRED)
+
 pkg_check_modules(CFITSIO cfitsio)
 if(${CFITSIO_FOUND})
   link_directories(${CFITSIO_LIBRARY_DIRS})
@@ -39,14 +71,10 @@ if(${CFITSIO_FOUND})
   target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
 endif()
 
-target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-                                              $<INSTALL_INTERFACE:include/${SRCNAME}>
-                                              $<INSTALL_INTERFACE:include>)
-
 if(USE_CUDA)
-	find_package(CUDAToolkit 9.0 REQUIRED)
-	message(STATUS "Found CUDA ${CUDAToolkit_VERSION} at ${CUDAToolkit_LIBRARY_DIR}")
-	message("---- CUDA_INCLUDE_DIRS = ${CUDAToolkit_INCLUDE_DIRS}")
+  find_package(CUDAToolkit 9.0 REQUIRED)
+  message(STATUS "Found CUDA ${CUDAToolkit_VERSION} at ${CUDAToolkit_LIBRARY_DIR}")
+  message("---- CUDA_INCLUDE_DIRS = ${CUDAToolkit_INCLUDE_DIRS}")
   target_include_directories(${LIBNAME} PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
   target_link_libraries(${LIBNAME} PRIVATE CUDA::toolkit CUDA::cudart)
   target_compile_options(${LIBNAME} PUBLIC -DHAVE_CUDA)
@@ -54,9 +82,19 @@ if(USE_CUDA)
   set(BUILD_FLAGS "${BUILD_FLAGS} -DHAVE_CUDA" )
 endif(USE_CUDA)
 
+# =======================================
+# COVERAGE BUILD
+# =======================================
+if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
+  target_compile_definitions(${LIBNAME} PRIVATE COVERAGE_BUILD=1)
+  target_link_options(${LIBNAME} PRIVATE --coverage)
+  target_link_libraries(${LIBNAME} PRIVATE gcov)
+endif()
+
 if(DAO_COMPAT)
   target_compile_options(${LIBNAME} PUBLIC -DDAO_COMPAT)
 endif(DAO_COMPAT)
+
 #
 # Python wrap.
 #
@@ -67,6 +105,7 @@ endif(DAO_COMPAT)
 if(build_python_module)
   add_subdirectory(python_module)
 endif()
+
 
 ########################################################################
 #
@@ -107,7 +146,6 @@ install(FILES
     DESTINATION lib/cmake
 )
 
-
 ########################################################################
 #
 # pkg-config
@@ -116,10 +154,10 @@ string(APPEND LINKSTRING "-l${LIBNAME} ")
 set(INSTALL_PKGCONFIG_DIR "lib/pkgconfig"
     CACHE PATH "Installation directory for pkgconfig (.pc) files")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${LIBNAME}.pc.in
-               ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}.pc @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${LIBNAME_PCFILES}.pc.in
+               ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME_PCFILES}.pc @ONLY)
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME}.pc
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LIBNAME_PCFILES}.pc
         DESTINATION "${INSTALL_PKGCONFIG_DIR}")
 
 
@@ -141,5 +179,8 @@ endif()
 
 
 install(TARGETS ${LIBNAME} EXPORT ${LIBNAME}Targets DESTINATION lib)
-install(FILES ${SRCNAME}.h DESTINATION include/${SRCNAME})
-install(FILES ImageStruct.h ImageStreamIOError.h DESTINATION include/${SRCNAME})
+install(FILES
+  ${SRCNAME}.h
+  ImageStruct.h
+  ImageStreamIOError.h
+  DESTINATION include/${SRCNAME})

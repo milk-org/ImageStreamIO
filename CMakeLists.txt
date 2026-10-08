@@ -168,9 +168,8 @@ if(USE_STATIC_LTO)
     target_include_directories(${LIBNAME}_static PUBLIC ${CFITSIO_INCLUDE_DIRS})
   endif()
   if(USE_CUDA)
-    target_include_directories(${LIBNAME}_static
-        PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
-    target_compile_options(${LIBNAME}_static
-        PUBLIC -DHAVE_CUDA)
+    target_include_directories(${LIBNAME}_static PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+    target_compile_options(${LIBNAME}_static PUBLIC -DHAVE_CUDA)
+    target_link_libraries(ImageStreamIO_static PRIVATE CUDA::toolkit CUDA::cudart)
   endif()
 endif()

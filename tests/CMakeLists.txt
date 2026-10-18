@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Brian Carcich
+#
+# SPDX-License-Identifier: MIT
+
 project(ISIO_Catch2)
 
 add_executable(ISIO_Catch2

@@ -1,3 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Arnaud Sevin et al
+# SPDX-FileCopyrightText: 2026 Vincent Deo
+#
+# SPDX-License-Identifier: MIT
+
 cmake_minimum_required(VERSION 3.17)
 
 set(LIBNAME "ImageStreamIOWrap")

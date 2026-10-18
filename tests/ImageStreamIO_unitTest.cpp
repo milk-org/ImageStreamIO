@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Brian Carcich
+//
+// SPDX-License-Identifier: MIT
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>

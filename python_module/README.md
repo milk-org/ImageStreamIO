@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 Arnaud Sevin et al
+
+SPDX-License-Identifier: MIT
+-->
+
 # ImageStreamIOWrap
 
 - [ImageStreamIOWrap](#imagestreamiowrap)

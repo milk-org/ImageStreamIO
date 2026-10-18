@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Olivier Guyon
+//
+// SPDX-License-Identifier: MIT
+
 /**
  * @file    ImageStruct.h
  * @brief   Image structure definition

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Brian Carcich
+//
+// SPDX-License-Identifier: MIT
+
 #include <cerrno>
 #include <cstring>
 #include <fcntl.h>

@@ -210,25 +210,21 @@ errno_t ImageStreamIO_printERROR_(
     {
         char buff[256];
 
-        // Test for which version of strerror_r we're using (XSI or GNU)
-#       if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && \
-            !defined(_GNU_SOURCE))
-        if (strerror_r(errno, buff, sizeof(buff)) == 0)
-        {
-            fprintf(stderr, "C Error: %s\n", buff);
-        }
-        else
-        {
-            fprintf(stderr, "Unknown C Error\n");
-        }
-#       else
-        // GNU strerror_r does not necessarily use buff, and uses errno to report
-        // errors.
         int _errno = errno;
-        errno = 0;
-        char *estr = strerror_r(_errno, buff, sizeof(buff));
+        char *estr = NULL;
 
-        if (errno == 0)
+        // GNU strerror_r returns char* (may not use buff); XSI (e.g. macOS) returns int.
+#       if defined(__GLIBC__) && defined(_GNU_SOURCE)
+        errno = 0;
+        estr = strerror_r(_errno, buff, sizeof(buff));
+        if (errno != 0)
+            estr = NULL;
+#       else
+        if (strerror_r(_errno, buff, sizeof(buff)) == 0)
+            estr = buff;
+#       endif
+
+        if (estr != NULL)
             fprintf(stderr, "%c[%d;%dmC Error: %s%c[%d;m\n", (char)27, 1, 31, estr,
                     27, 0);
         else
@@ -236,7 +232,6 @@ errno_t ImageStreamIO_printERROR_(
                     0);
 
         errno = _errno; // restore it in case it's used later.
-#       endif
     }
     else
         fprintf(stderr, "%c[%d;%dmNo C error (errno = 0)%c[%d;m\n", (char)27, 1, 31,

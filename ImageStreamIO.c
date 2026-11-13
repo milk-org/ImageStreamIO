@@ -246,6 +246,27 @@ errno_t ImageStreamIO_printWARNING(
 }
 
 
+/**
+ * Lock a stream's memory in RAM to prevent swap ejections; warn once per process when it fails
+ * (it needs CAP_IPC_LOCK or an adequate RLIMIT_MEMLOCK)
+ */
+static void ImageStreamIO_mlock(void *addr, size_t len)
+{
+    static int warned = 0;
+
+    if (mlock(addr, len) != 0 && !warned)
+    {
+        char msg[200];
+        warned = 1;
+        snprintf(msg, sizeof(msg),
+                 "mlock failed (%s): streams can be swapped out. Raise RLIMIT_MEMLOCK "
+                 "(ulimit -l, limits.d memlock) or grant CAP_IPC_LOCK",
+                 strerror(errno));
+        ImageStreamIO_printWARNING(msg);
+    }
+}
+
+
 /* ============================================================================================================================================================================================== */
 /* @name 0. Utilities */
 /* ============================================================================================================================================================================================== */
@@ -1525,8 +1546,7 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
 #endif
 
         // Lock the memory in physical RAM to prevent swap ejections
-        // Note: This requires CAP_IPC_LOCK or adequate RLIMIT_MEMLOCK
-        mlock(map, image->memsize);
+        ImageStreamIO_mlock(map, image->memsize);
 
         ////////////////////////////////////////////////////////////////
         // Load IMAGE_METADATA struct at address map with all parameters
@@ -1852,8 +1872,7 @@ __attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
 #endif
 
     // Lock the memory in physical RAM to prevent swap ejections
-    // Note: This requires CAP_IPC_LOCK or adequate RLIMIT_MEMLOCK
-    mlock(map_root, file_stat.st_size);
+    ImageStreamIO_mlock(map_root, file_stat.st_size);
 
     // mmap() was successful. We'll need to unmap image->md for any failed exit
 

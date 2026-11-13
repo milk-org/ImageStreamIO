@@ -1422,7 +1422,7 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
 
         // - Create and open shmim file as a new, empty (truncated) file
         //   - image->shmfd stores the shared memory file descriptor
-        umask(0);
+        //   - its mode is set with fchmod() below: umask() would change it for the whole process
         errno = 0;
         image->shmfd = open(SM_fname
                             // (O_CREAT|O_EXCL) flags force new file
@@ -1443,6 +1443,14 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
         {
             ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,
                                      "Error opening file for writing");
+            return IMAGESTREAMIO_FILEOPEN;
+        }
+
+        // - Give the file FILEMODE_ISIO whatever the process umask
+        if (fchmod(image->shmfd, (mode_t) FILEMODE_ISIO) != 0)
+        {
+            close(image->shmfd);
+            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error setting the file mode");
             return IMAGESTREAMIO_FILEOPEN;
         }
 

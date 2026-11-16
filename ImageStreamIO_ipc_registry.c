@@ -26,13 +26,14 @@ void *_isio_ipc_lookup(const cudaIpcMemHandle_t *h)
     return NULL;
 }
 
-void _isio_ipc_insert(const cudaIpcMemHandle_t *h, void *ptr)
+void _isio_ipc_insert(const cudaIpcMemHandle_t *h, void *ptr, int owned)
 {
     for (int i = 0; i < ISIO_MAX_IPC_HANDLES; i++) {
         if (_isio_ipc_registry[i].refcount == 0) {
             _isio_ipc_registry[i].handle   = *h;
             _isio_ipc_registry[i].ptr      = ptr;
             _isio_ipc_registry[i].refcount = 1;
+            _isio_ipc_registry[i].owned    = owned;
             return;
         }
     }
@@ -56,7 +57,10 @@ void _isio_ipc_release(const cudaIpcMemHandle_t *h)
                 memcmp(&_isio_ipc_registry[i].handle, h, sizeof(*h)) == 0) {
             _isio_ipc_registry[i].refcount--;
             if (_isio_ipc_registry[i].refcount == 0) {
-                cudaIpcCloseMemHandle(_isio_ipc_registry[i].ptr);
+                if (_isio_ipc_registry[i].owned)
+                    cudaFree(_isio_ipc_registry[i].ptr);
+                else
+                    cudaIpcCloseMemHandle(_isio_ipc_registry[i].ptr);
                 _isio_ipc_registry[i].ptr = NULL;
             }
             return;

@@ -857,7 +857,7 @@ uint64_t ImageStreamIO_initialize_buffer(
             cudaError_t err = checkCudaErrors(
                 cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
             if (err == cudaSuccess)
-                _isio_ipc_insert(&image->md->cudaMemHandle, image->array.raw);
+                _isio_ipc_insert(&image->md->cudaMemHandle, image->array.raw, 1);
         }
 #       else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
@@ -1716,6 +1716,14 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
     if (shared == 1) {
         // - Atomically move the temp file to the final path
+        // WARNING: if a stream with this name already exists, it is replaced
+        // without being opened or released:
+        //  - its readers keep the old (unlinked) mapping and stop seeing updates
+        //    until they reopen (see ImageStreamIO_check_image_inode);
+        //  - for a GPU SHM, its device buffer stays allocated in the old
+        //    creator process until that process closes it or exits;
+        //  - a later ImageStreamIO_destroyIm by the old owner remove()s the
+        //    path by name, i.e. deletes THIS new stream's file.
         if (rename(SM_fname_tmp, SM_fname) != 0)
         {
             close(image->shmfd);
@@ -1839,7 +1847,7 @@ void *ImageStreamIO_get_image_d_ptr(
             checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr, image->md->cudaMemHandle,
                                                  cudaIpcMemLazyEnablePeerAccess));
             if (d_ptr != NULL)
-                _isio_ipc_insert(&image->md->cudaMemHandle, d_ptr);
+                _isio_ipc_insert(&image->md->cudaMemHandle, d_ptr, 0);
         }
 #       else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
@@ -2031,8 +2039,8 @@ errno_t ImageStreamIO_closeIm(IMAGE *image)
     image->semptr = NULL;
 
 #   ifdef HAVE_CUDA
-    // Decrement the refcount; cudaIpcCloseMemHandle and slot removal happen
-    // automatically inside _isio_ipc_release when the count reaches 0.
+    // Decrement the refcount; at 0, _isio_ipc_release frees the slot and calls
+    // cudaFree (creator-owned buffer) or cudaIpcCloseMemHandle (imported).
     if (image->md != NULL && image->md->location >= 0)
         _isio_ipc_release(&image->md->cudaMemHandle);
 #   endif

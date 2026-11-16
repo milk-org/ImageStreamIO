@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 
-set(LIBNAME "ImageStreamIOpyMilk") # FIXME
-set(LIBNAME_PCFILES "ImageStreamIO")
+set(LIBNAME "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
 message("")
@@ -15,14 +14,14 @@ project(${LIBNAME} LANGUAGES C)
 
 # Version number
 set ( VERSION_MAJOR 2 )
-set ( VERSION_MINOR 01 ) # FIXME
+set ( VERSION_MINOR 01 )
 set ( VERSION_PATCH 00 )
 set ( VERSION_OPTION "" )
 set ( PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" )
 
 configure_file (
-  "${PROJECT_SOURCE_DIR}/${LIBNAME_PCFILES}_config.h.in" # FIXME
-  "${PROJECT_SOURCE_DIR}//${LIBNAME_PCFILES}_config.h" # FIXME
+  "${PROJECT_SOURCE_DIR}/${LIBNAME}_config.h.in"
+  "${PROJECT_SOURCE_DIR}/${LIBNAME}_config.h"
   )
 message(" VERSION = ${PROJECT_VERSION}")
 

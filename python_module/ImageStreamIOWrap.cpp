@@ -9,6 +9,7 @@
 #include <nanobind/stl/vector.h>
 #include <nanobind/stl/list.h>
 
+#include <cstdio>
 #include <ctime>
 #include <iostream>
 #include <sstream>
@@ -478,22 +479,22 @@ NB_MODULE(ImageStreamIOWrap, m) {
         tmp_str << "nelement: " << md.nelement << std::endl;
         // tmp_str << "datatype: " << md.datatype << std::endl;
         // tmp_str << "imagetype: " << md.imagetype << std::endl;
-        { // FIXME we lost the time decimals in this process !
-          std::time_t t = (std::time_t)md.creationtime.tv_sec;
-          tmp_str << "creationtime: " << std::ctime(&t);
-        }
-        {
-          std::time_t t = (std::time_t)md.lastaccesstime.tv_sec;
-          tmp_str << "lastaccesstime: " << std::ctime(&t);
-        }
-        {
-          std::time_t t = (std::time_t)md.atime.tv_sec;
-          tmp_str << "acqtime: " << std::ctime(&t);
-        }
-        {
-          std::time_t t = (std::time_t)md.writetime.tv_sec;
-          tmp_str << "writetime: " << std::ctime(&t);
-        }
+        // ctime()-like local time, with nanoseconds after the seconds field
+        auto fmt_ts = [](const struct timespec &ts) {
+          std::time_t t = (std::time_t)ts.tv_sec;
+          struct tm tm_loc;
+          localtime_r(&t, &tm_loc);
+          char hms[32], yr[8], out[64];
+          std::strftime(hms, sizeof(hms), "%a %b %e %H:%M:%S", &tm_loc);
+          std::strftime(yr, sizeof(yr), "%Y", &tm_loc);
+          std::snprintf(out, sizeof(out), "%s.%09ld %s", hms, (long)ts.tv_nsec, yr);
+          return std::string(out);
+        };
+        
+        tmp_str << "creationtime: " << fmt_ts(md.creationtime) << std::endl;
+        tmp_str << "lastaccesstime: " << fmt_ts(md.lastaccesstime) << std::endl;
+        tmp_str << "acqtime: " << fmt_ts(md.atime) << std::endl;
+        tmp_str << "writetime: " << fmt_ts(md.writetime) << std::endl;
         tmp_str << "shared: " << int(md.shared) << std::endl;
         tmp_str << "location: ";
         if (md.location < 0) {

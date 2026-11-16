@@ -25,8 +25,6 @@
  */
 
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -34,7 +32,6 @@
 #include "ImageStreamIO.h"
 
 #include <cuda_runtime_api.h>
-
 
 
 int main()
@@ -72,7 +69,17 @@ int main()
 	NBkw = 1;
 
 	// create an image in shared memory
-	ImageStreamIO_createIm_gpu(&imarray[0], "imtest00", naxis, imsize, atype, location, shared, IMAGE_NB_SEMAPHORE, NBkw, CIRCULAR_BUFFER | ZAXIS_TEMPORAL, 0);
+	ImageStreamIO_createIm_gpu(&imarray[0],
+	    "imtest00",
+	    naxis,
+	    imsize,
+	    atype,
+	    location,
+	    shared,
+	    IMAGE_NB_SEMAPHORE,
+	    NBkw,
+	    CIRCULAR_BUFFER | ZAXIS_TEMPORAL,
+	    0);
 	void *d_ptr = ImageStreamIO_get_image_d_ptr(&imarray[0]);
 
 	// cudaMemset(d_ptr, 0, imsize[0]*imsize[1]*sizeof(float));
@@ -102,7 +109,6 @@ int main()
 		printf("%f ", h_ptr[i]);
 	}
 	printf("\n");
-
 
 
 	free(h_ptr);

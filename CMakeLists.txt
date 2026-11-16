@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 
-set(LIBNAME "ImageStreamIOpyMilk") # FIXME !!
+set(LIBNAME "ImageStreamIOpyMilk") # FIXME
 set(LIBNAME_PCFILES "ImageStreamIO")
 set(SRCNAME "ImageStreamIO")
 
@@ -9,18 +9,20 @@ message(" SRCNAME = ${SRCNAME} -> LIBNAME = ${LIBNAME}")
 
 option(build_python_module "Compile Python Wrappers" OFF)
 option(gtest_build_tests "Build Unit Tests" OFF)
+option(USE_CFITSIO "Enable CFITSIO support" ON)
 
 project(${LIBNAME} LANGUAGES C)
 
 # Version number
 set ( VERSION_MAJOR 2 )
-set ( VERSION_MINOR 01 )
+set ( VERSION_MINOR 01 ) # FIXME
 set ( VERSION_PATCH 00 )
 set ( VERSION_OPTION "" )
 set ( PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}" )
+
 configure_file (
-  "${PROJECT_SOURCE_DIR}/${LIBNAME_PCFILES}_config.h.in"
-  "${PROJECT_SOURCE_DIR}//${LIBNAME_PCFILES}_config.h"
+  "${PROJECT_SOURCE_DIR}/${LIBNAME_PCFILES}_config.h.in" # FIXME
+  "${PROJECT_SOURCE_DIR}//${LIBNAME_PCFILES}_config.h" # FIXME
   )
 message(" VERSION = ${PROJECT_VERSION}")
 
@@ -69,13 +71,21 @@ target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DI
 
 find_package(PkgConfig REQUIRED)
 
-pkg_check_modules(CFITSIO cfitsio)
-if(${CFITSIO_FOUND})
-  link_directories(${CFITSIO_LIBRARY_DIRS})
-  target_compile_definitions(${LIBNAME} PUBLIC USE_CFITSIO=1)
-  target_include_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
-  target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
+
+if(USE_CFITSIO)
+  pkg_check_modules(CFITSIO cfitsio)
+  if(${CFITSIO_FOUND})
+    link_directories(${CFITSIO_LIBRARY_DIRS})
+    target_compile_definitions(${LIBNAME} PUBLIC USE_CFITSIO=1)
+    target_include_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
+    target_link_directories(${LIBNAME} PUBLIC ${CFITSIO_INCLUDE_DIRS})
+  endif()
 endif()
+
+target_include_directories(${LIBNAME} PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+                                              $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/..>
+                                              $<INSTALL_INTERFACE:include/${SRCNAME}>
+                                              $<INSTALL_INTERFACE:include>)
 
 if(USE_CUDA)
   find_package(CUDAToolkit 9.0 REQUIRED)
@@ -185,8 +195,27 @@ endif()
 
 
 install(TARGETS ${LIBNAME} EXPORT ${LIBNAME}Targets DESTINATION lib)
-install(FILES
-  ${SRCNAME}.h
-  ImageStruct.h
-  ImageStreamIOError.h
-  DESTINATION include/${SRCNAME})
+install(FILES ${SRCNAME}.h DESTINATION include/${SRCNAME})
+install(FILES ImageStruct.h ImageStreamIOError.h DESTINATION include/${SRCNAME})
+
+# Static archive for standalone LTO builds
+if(USE_STATIC_LTO)
+  add_library(${LIBNAME}_static STATIC ${SRCNAME}.c)
+  set_target_properties(${LIBNAME}_static
+      PROPERTIES OUTPUT_NAME ${LIBNAME})
+  target_link_libraries(${LIBNAME}_static PUBLIC pthread)
+  target_include_directories(${LIBNAME}_static PUBLIC
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/..>
+      $<INSTALL_INTERFACE:include/${SRCNAME}>
+      $<INSTALL_INTERFACE:include>)
+  if(${CFITSIO_FOUND})
+    target_compile_definitions(${LIBNAME}_static PUBLIC USE_CFITSIO=1)
+    target_include_directories(${LIBNAME}_static PUBLIC ${CFITSIO_INCLUDE_DIRS})
+  endif()
+  if(USE_CUDA)
+    target_include_directories(${LIBNAME}_static PUBLIC ${CUDAToolkit_INCLUDE_DIRS})
+    target_compile_options(${LIBNAME}_static PUBLIC -DHAVE_CUDA)
+    target_link_libraries(ImageStreamIO_static PRIVATE CUDA::toolkit CUDA::cudart)
+  endif()
+endif()

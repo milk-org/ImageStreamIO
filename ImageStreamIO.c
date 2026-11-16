@@ -802,9 +802,12 @@ uint64_t ImageStreamIO_initialize_buffer(
     {
 #       ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
+        const size_t pix_bytes = ROUND_UP_8(size_element * image->md->nelement);
         checkCudaErrors(
-            cudaMalloc(&image->array.raw,
-                size_element * image->md->nelement + GPU_IMAGE_PLACEHOLDER));
+            cudaMalloc(&image->array.raw, pix_bytes + GPU_IMAGE_PLACEHOLDER));
+        // IMAGE_GPU_SYNC block, after the pixel data
+        checkCudaErrors(
+            cudaMemset((char *)image->array.raw + pix_bytes, 0, GPU_IMAGE_PLACEHOLDER));
         if (image->md->shared == 1)
         {
             checkCudaErrors(
@@ -1774,6 +1777,33 @@ void *ImageStreamIO_get_image_d_ptr(
                                  "Error calling ImageStreamIO_get_image_d_ptr(), wrong location"); ///\todo should this return a NULL?
     }
     return d_ptr;
+}
+
+/**
+ * @brief Get the device pointer to the sync block of a GPU-based shmim
+ *
+ * Offset must match the allocation in ImageStreamIO_initialize_buffer.
+ *
+ * \returns pointer to the IMAGE_GPU_SYNC block for GPU-based shmim
+ * \returns NULL for CPU-based shmim
+ *
+ */
+IMAGE_GPU_SYNC *ImageStreamIO_get_image_d_sync_ptr(
+    IMAGE *image)
+{
+    if (image->md->location < 0)
+    {
+        return NULL;
+    }
+
+    char *d_ptr = (char *)ImageStreamIO_get_image_d_ptr(image);
+    if (d_ptr == NULL)
+    {
+        return NULL;
+    }
+
+    const size_t size_element = ImageStreamIO_typesize(image->md->datatype);
+    return (IMAGE_GPU_SYNC *)(d_ptr + ROUND_UP_8(size_element * image->md->nelement));
 }
 
 /**

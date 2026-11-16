@@ -75,7 +75,21 @@ extern "C" {
 
 #define IMAGE_NB_PROCTRACE      10     /**< Number of STREAM_PROC_TRACE entries per image */
 
-#define GPU_IMAGE_PLACEHOLDER    0     /**< GPU memory placeholder for image info */
+/** @brief Sync block of a GPU image, stored on the device after the pixel data
+ *
+ * Lives in the device buffer shared through cudaMemHandle, at the 8-byte aligned offset
+ * following the pixels (see ImageStreamIO_get_image_d_sync_ptr). Lets a kernel of another
+ * process detect a new frame without a host round trip. Zeroed at image creation.
+ */
+typedef struct
+{
+    uint64_t cnt0;     /**< frame counter, written last by the writer's CUDA stream */
+    uint64_t progress; /**< reserved: partial-frame progress */
+    uint32_t status;   /**< reserved: writer status flags */
+    uint32_t pad;
+} IMAGE_GPU_SYNC;
+
+#define GPU_IMAGE_PLACEHOLDER    sizeof(IMAGE_GPU_SYNC) /**< device bytes after the pixel data */
 
 // Data types are defined as machine-independent types for portability
 

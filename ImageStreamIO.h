@@ -301,6 +301,12 @@ errno_t ImageStreamIO_openIm(
 
 void *ImageStreamIO_get_image_d_ptr(IMAGE *image);
 
+/** @brief Device pointer to the IMAGE_GPU_SYNC block of a GPU image
+  *
+  * \returns NULL for a CPU image, or if the device pointer cannot be obtained
+  */
+IMAGE_GPU_SYNC *ImageStreamIO_get_image_d_sync_ptr(IMAGE *image);
+
 
 /** @brief Read / connect to existing shared memory image stream */
 errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(

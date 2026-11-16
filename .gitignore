@@ -15,3 +15,5 @@ ImCreate_cube
 ImageStreamIOWrap.egg-info
 setup.cfg
 ImageStreamIO_config.h
+
+*.so

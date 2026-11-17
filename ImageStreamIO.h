@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Olivier Guyon
+//
+// SPDX-License-Identifier: MIT
+
 /**
  * @file    ImageStreamIO.h
  * @brief   Function prototypes for ImageStreamIO
@@ -26,6 +30,10 @@ extern "C"
 
 #include "ImageStruct.h"
 
+#ifdef COVERAGE_BUILD
+void _gcov_dump();
+#endif
+
 void __attribute__((constructor)) libinit_ImageStreamIO();
 
 #define ROUND_UP_8(x) (((x) + 7) & (-8))
@@ -49,7 +57,7 @@ errno_t ImageStreamIO_set_default_printError();
   * \returns IMAGESTREAMIO_FAILURE on an error
   */
 errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
-                                     const char *, int, errno_t, char *));
+                                     const char *, int, errno_t, const char *));
 
 
 /* =============================================================================================== */

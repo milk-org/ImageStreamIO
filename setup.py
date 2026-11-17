@@ -1,9 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Arnaud Sevin et al
+#
+# SPDX-License-Identifier: MIT
+
 import os
 import platform
-import re
 import subprocess
 import sys
-from distutils.version import LooseVersion
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
@@ -18,20 +20,12 @@ class CMakeExtension(Extension):
 class CMakeBuildExt(build_ext):
     def run(self):
         try:
-            import pybind11 # Will raise ModuleNotFoundError
-            if pybind11.version_info < (2, 11):
-                raise ModuleNotFoundError('pybind version nok')
-            out = subprocess.check_output(['cmake', '--version']) # Will raise FileNotFoundError
-        except:
+            import nanobind  # Will raise ModuleNotFoundError
+            subprocess.check_output(['cmake', '--version'])  # Will raise FileNotFoundError
+        except (ModuleNotFoundError, FileNotFoundError):
             raise RuntimeError(
-                "CMake and pybind11 must be installed to build the following extensions: " +
-                ", ".join(e.name for e in self.extensions) + "\n and pybind must be > 2.11 (pip install --upgrade pybind11)")
-
-        if platform.system() == "Windows":
-            cmake_version = LooseVersion(
-                re.search(r'version\s*([\d.]+)', out.decode()).group(1))
-            if cmake_version < '3.1.0':
-                raise RuntimeError("CMake >= 3.1.0 is required on Windows")
+                "CMake and nanobind must be installed to build the following extensions: " +
+                ", ".join(e.name for e in self.extensions) + "\n (pip install nanobind)")
 
         for ext in self.extensions:
             self.build_extension(ext)
@@ -46,7 +40,7 @@ class CMakeBuildExt(build_ext):
 
         cmake_args = [
             '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
-            '-DPYTHON_EXECUTABLE=' + sys.executable,
+            '-DPython_EXECUTABLE=' + sys.executable,
         ]
 
         cfg = 'Debug' if self.debug else 'Release'
@@ -92,14 +86,12 @@ class CMakeBuildExt(build_ext):
 
 setup(
     name='ImageStreamIOWrap',
-    version='1.0.0',
+    version='2.0.0',
     author=['Arnaud Sevin'],
     author_email=['Arnaud.Sevin@obspm.fr'],
     description='A wrap project to use ImageStreamIO with python',
     long_description='A wrap project to use ImageStreamIO with python',
     ext_modules=[CMakeExtension('ImageStreamIOWrap')],
-    # install_requires=['pybind11>=2.4'],
-    # setup_requires=['pybind11>=2.4'],
     # python_requires='>=3',
     cmdclass={'build_ext': CMakeBuildExt},
     zip_safe=False, )

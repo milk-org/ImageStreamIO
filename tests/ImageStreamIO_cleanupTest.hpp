@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Brian Carcich
+//
+// SPDX-License-Identifier: MIT
+
 #ifndef __IMAGESTREAMIO_CLEANUPTEST_HPP__
 #define __IMAGESTREAMIO_CLEANUPTEST_HPP__
 #include <cerrno>

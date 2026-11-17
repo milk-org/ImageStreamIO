@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Brian Carcich
+//
+// SPDX-License-Identifier: MIT
+
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -808,7 +812,7 @@ SECTION("###SKIPPED:  TestCreation.ImageGPUSharedCreation") {
 }
 #endif
 
-// For GPU-located shmim, creating an existing file is an error
+// For GPU-located shmim, creating over an existing file succeeds (atomic tmp + rename)
 SECTION("TestLocation.InitCpuLocationFailure") {
 
   // Ensure file exists by using CPU Location
@@ -818,7 +822,7 @@ SECTION("TestLocation.InitCpuLocationFailure") {
                                       ,cpuLocn, 1, 10, 10, MATH_DATA,0)
            );
 
-  CHECK(IMAGESTREAMIO_FILEEXISTS
+  CHECK(IMAGESTREAMIO_SUCCESS
            == ImageStreamIO_createIm_gpu(&imageTest, SHM_NAME_LocnTest
                                       ,2, dims2, _DATATYPE_FLOAT
                                       ,gpuLocn, 1, 10, 10, MATH_DATA,0)

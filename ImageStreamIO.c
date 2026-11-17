@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 Olivier Guyon
+//
+// SPDX-License-Identifier: MIT
+
 /**
  * @file    ImageStreamIO.c
  * @brief   Read and Create image
@@ -10,13 +14,17 @@
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#endif//_GNU_SOURCE
+#endif//_GNU_SOURCE // IS IT NEEDED ?????
 
+#include <math.h>
 #include <limits.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -24,9 +32,13 @@
 
 #include <dirent.h>
 
+#include <arpa/inet.h>
 #include <errno.h>
-#include <fcntl.h>
+#include <fcntl.h> // for open
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <semaphore.h>
+#include <unistd.h> // for close
 
 #include "ImageStreamIO_config.h" // For IMAGESTRUCT_VERSION
 
@@ -85,11 +97,11 @@ errno_t init_ImageStreamIO()
 
 // Forward dec'l
 errno_t ImageStreamIO_printERROR_(const char *file, const char *func, int line,
-                                  errno_t code, char *errmessage);
+                                  errno_t code, const char *errmessage);
 errno_t ImageStreamIO_printWARNING(char *warnmessage);
 
 errno_t (*internal_printError)(const char *, const char *, int, errno_t,
-                               char *) = &ImageStreamIO_printERROR_;
+                               const char *) = &ImageStreamIO_printERROR_;
 
 errno_t ImageStreamIO_set_default_printError()
 {
@@ -99,7 +111,7 @@ errno_t ImageStreamIO_set_default_printError()
 }
 
 errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
-                                     const char *, int, errno_t, char *))
+                                     const char *, int, errno_t, const char *))
 {
     internal_printError = new_printError;
 
@@ -110,23 +122,39 @@ errno_t ImageStreamIO_set_printError(errno_t (*new_printError)(const char *,
     if (internal_printError)                \
         internal_printError(__FILE__, __func__, __LINE__, code, (char*)msg);
 
+
 #ifdef HAVE_CUDA
-void check(cudaError_t result, char const *const func, const char *const file,
+
+cudaError_t check(cudaError_t result, char const *const func, const char *const file,
            int const line)
 {
     if (result)
     {
-        cudaDeviceReset();
-        // Make sure we call CUDA Device Reset
-        ImageStreamIO_printERROR_(file, func, line, result, "CUDA error");
+        int _errno = errno; // CUDA doesn't use errno, could be a stale errno
+        errno = 0;
+        char to_print[100] = "";
+        snprintf(to_print, 100, "CUDA error: %s", cudaGetErrorString(result));
+        ImageStreamIO_printERROR_(file, func, line, result, to_print);
+        errno = _errno; // Restore for later use.
     }
+    return result;
 }
 
 // This will output the proper CUDA error strings in the event
 // that a CUDA host call returns an error
 #define checkCudaErrors(val) check((val), #val, __FILE__, __LINE__)
+
+#include "ImageStreamIO_ipc_registry.h"
+
 #endif
 
+// Technical function for coverage build.
+#ifdef COVERAGE_BUILD
+extern void __gcov_dump(); // From libgcov, may not exist outside of coverage build
+void _gcov_dump() {
+    __gcov_dump();
+}
+#endif
 
 /**
  * @brief Write entry into debug log
@@ -167,6 +195,7 @@ errno_t ImageStreamIO_write_process_log(
 }
 
 
+
 /**
  * @brief Print error to stderr
  *
@@ -178,7 +207,7 @@ errno_t ImageStreamIO_printERROR_(
     const char *func,
     int line,
     __attribute__((unused)) errno_t code,
-    char *errmessage)
+    const char *errmessage)
 {
     fprintf(stderr,
             "%c[%d;%dmERROR [ FILE: %s   FUNCTION: %s   LINE: %d ]  %c[%d;m\n",
@@ -187,25 +216,21 @@ errno_t ImageStreamIO_printERROR_(
     {
         char buff[256];
 
-        // Test for which version of strerror_r we're using (XSI or GNU)
-#       if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && \
-            !defined(_GNU_SOURCE))
-        if (strerror_r(errno, buff, sizeof(buff)) == 0)
-        {
-            fprintf(stderr, "C Error: %s\n", buff);
-        }
-        else
-        {
-            fprintf(stderr, "Unknown C Error\n");
-        }
-#       else
-        // GNU strerror_r does not necessarily use buff, and uses errno to report
-        // errors.
         int _errno = errno;
-        errno = 0;
-        char *estr = strerror_r(_errno, buff, sizeof(buff));
+        char *estr = NULL;
 
-        if (errno == 0)
+        // GNU strerror_r returns char* (may not use buff); XSI (e.g. macOS) returns int.
+#       if defined(__GLIBC__) && defined(_GNU_SOURCE)
+        errno = 0;
+        estr = strerror_r(_errno, buff, sizeof(buff));
+        if (errno != 0)
+            estr = NULL;
+#       else
+        if (strerror_r(_errno, buff, sizeof(buff)) == 0)
+            estr = buff;
+#       endif
+
+        if (estr != NULL)
             fprintf(stderr, "%c[%d;%dmC Error: %s%c[%d;m\n", (char)27, 1, 31, estr,
                     27, 0);
         else
@@ -213,7 +238,6 @@ errno_t ImageStreamIO_printERROR_(
                     0);
 
         errno = _errno; // restore it in case it's used later.
-#       endif
     }
     else
         fprintf(stderr, "%c[%d;%dmNo C error (errno = 0)%c[%d;m\n", (char)27, 1, 31,
@@ -224,6 +248,7 @@ errno_t ImageStreamIO_printERROR_(
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
 
 
 /**
@@ -267,9 +292,9 @@ static void ImageStreamIO_mlock(void *addr, size_t len)
 }
 
 
-/* ============================================================================================================================================================================================== */
+/* ============================================== */
 /* @name 0. Utilities */
-/* ============================================================================================================================================================================================== */
+/* ============================================== */
 
 errno_t ImageStreamIO_readBufferAt(
     const IMAGE *image,
@@ -294,6 +319,7 @@ errno_t ImageStreamIO_readBufferAt(
 
     return IMAGESTREAMIO_SUCCESS;
 }
+
 
 
 /**
@@ -736,6 +762,7 @@ int ImageStreamIO_FITSIObitpix(
 }
 
 
+
 /**
  * @brief Assign map to image->array.raw shmim data ptr, get data size
  *
@@ -763,6 +790,7 @@ uint64_t ImageStreamIO_offset_data(
 
     return offset;
 }
+
 
 
 /**
@@ -799,8 +827,7 @@ uint64_t ImageStreamIO_initialize_buffer(
             }
             if (image->array.raw == NULL)
             {
-                ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC,
-                    "memory allocation failed");
+                ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC, "memory allocation failed");
                 fprintf(stderr, "%c[%d;%dm", (char)27, 1, 31);
                 fprintf(stderr, "Image name = %s\n", image->name);
                 fprintf(stderr, "Image size = ");
@@ -824,13 +851,13 @@ uint64_t ImageStreamIO_initialize_buffer(
 #       ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
         checkCudaErrors(
-            cudaMalloc(&image->array.raw,
-                size_element * image->md->nelement + GPU_IMAGE_PLACEHOLDER));
+            cudaMalloc(&image->array.raw, size_element * image->md->nelement + GPU_IMAGE_PLACEHOLDER));
         if (image->md->shared == 1)
         {
-            checkCudaErrors(
-                cudaIpcGetMemHandle(&image->md->cudaMemHandle,
-                    image->array.raw));
+            cudaError_t err = checkCudaErrors(
+                cudaIpcGetMemHandle(&image->md->cudaMemHandle, image->array.raw));
+            if (err == cudaSuccess)
+                _isio_ipc_insert(&image->md->cudaMemHandle, image->array.raw, 1);
         }
 #       else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
@@ -840,6 +867,7 @@ uint64_t ImageStreamIO_initialize_buffer(
 
     return ImageStreamIO_offset_data(image, image->array.raw);
 } // uint64_t ImageStreamIO_initialize_buffer(IMAGE *image)
+
 
 
 /**
@@ -864,6 +892,7 @@ ImageStreamIO_store_image_inode(IMAGE* image)
     image->md->inode = file_stat.st_ino;
     return IMAGESTREAMIO_SUCCESS;
 }
+
 
 
 /**
@@ -918,8 +947,7 @@ errno_t ImageStreamIO_check_image_endpoint_inode(IMAGE *image)
     char resolved_path[PATH_MAX] = {'\0'};
     if(realpath(SM_fname, resolved_path) == NULL)
     {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE,
-            "Error getting realpath");
+        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, "Error getting realpath");
         return IMAGESTREAMIO_FAILURE;
     }
 
@@ -927,8 +955,7 @@ errno_t ImageStreamIO_check_image_endpoint_inode(IMAGE *image)
     struct stat file_stat;
     if(stat(resolved_path, &file_stat) < 0)
     {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE,
-            "Error getting realpath inode");
+        ImageStreamIO_printERROR(IMAGESTREAMIO_FAILURE, "Error getting realpath inode");
         return IMAGESTREAMIO_FAILURE;
     }
 
@@ -957,14 +984,13 @@ errno_t ImageStreamIO_autorelink_if_need_if_can(IMAGE *image)
     // mmap. This would result in a use-after-free.
 
     IMAGE candidate_img = {0}; // stack temp image.
-    IMAGE* new_candidate_img = &candidate_img;
 
-    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_openIm(new_candidate_img, image->name)) {
+    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_openIm(&candidate_img, image->name)) {
         printf("_openIm failed @ _autorelink_if_need_if_can\n");
         return IMAGESTREAMIO_FAILURE;
     }
 
-    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_new_image_compatible(image, new_candidate_img)) {
+    if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_new_image_compatible(image, &candidate_img)) {
         printf("New image incompatible @ _autorelink_if_need_if_can\n");
         return IMAGESTREAMIO_FAILURE;
     }
@@ -975,7 +1001,7 @@ errno_t ImageStreamIO_autorelink_if_need_if_can(IMAGE *image)
         printf("_closeIm failed @ _autorelink_if_need_if_can\n");
     }
     // 2. Copy the temp stack frame into the caller struct, including pointers to the new mappings.
-    memcpy(image, new_candidate_img, sizeof(IMAGE));
+    memcpy(image, &candidate_img, sizeof(IMAGE));
 
     return IMAGESTREAMIO_SUCCESS;
 }
@@ -1014,6 +1040,7 @@ errno_t ImageStreamIO_new_image_compatible(IMAGE* source_image, IMAGE* new_image
         return IMAGESTREAMIO_FAILURE;
     }
 }
+
 
 
 /**
@@ -1242,6 +1269,10 @@ errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 } // errno_t ImageStreamIO_image_sizing(IMAGE *image, uint8_t* map)
 
 
+
+
+
+
 /**
  * @brief Initialze metadata, write sizes and pointers to IMAGE struct
  *
@@ -1322,17 +1353,15 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
 } // errno_t ImageStreamIO_image_sizing_from_scratch(...)
 
 
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+
+
+
+
+/* ================================================== */
+/* ================================================== */
 /* @name 1. READ / WRITE STREAM
- *
- */
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+/* ================================================== */
+/* ================================================== */
 
 
 /**
@@ -1356,6 +1385,7 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm(
                                       shared, IMAGE_NB_SEMAPHORE, NBkw,
                                       MATH_DATA, (uint32_t)CBsize);
 }
+
 
 
 /**
@@ -1418,34 +1448,33 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
     }
 
     // Shared vs. non-shared logic follows
+    // Names not used in case of non-shared but the alternance of scopes requires them
+    // defined here.
+    char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
+    char SM_fname_tmp[STRINGMAXLEN_FILE_NAME] = {0};
     if (shared == 1)
     {
 
         ////////////////////////////////////////////////////////////////
         // Open and map shmim file of the calculated size image->memsize
         ////////////////////////////////////////////////////////////////
-
-        char SM_fname[STRINGMAXLEN_FILE_NAME] = {0};
         if (IMAGESTREAMIO_SUCCESS
                 != ImageStreamIO_filename(SM_fname, sizeof(SM_fname), name))
         {
             return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
         }
 
-        // - Ensure GPU SHM buffer file does not exist
-        struct stat buffer;
-        if ((stat(SM_fname, &buffer) == 0) && (location > -1))
-        {
-            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEEXISTS,
-                                     "Error creating GPU SHM buffer on an existing file");
-            return IMAGESTREAMIO_FILEEXISTS;
-        }
+        char name_tmp[STRINGMAXLEN_IMAGE_NAME] = {0};
+        strcat(name_tmp, name);
+        strcat(name_tmp, "_tmpcreate");
+        if (IMAGESTREAMIO_SUCCESS != ImageStreamIO_filename(SM_fname_tmp, sizeof(SM_fname_tmp), name_tmp))
+            return IMAGESTREAMIO_FAILURE;  // _filename did _printERROR
 
         // - Create and open shmim file as a new, empty (truncated) file
         //   - image->shmfd stores the shared memory file descriptor
         //   - its mode is set with fchmod() below: umask() would change it for the whole process
         errno = 0;
-        image->shmfd = open(SM_fname
+        image->shmfd = open(SM_fname_tmp
                             // (O_CREAT|O_EXCL) flags force new file
                             , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
                             , (mode_t)FILEMODE_ISIO
@@ -1453,9 +1482,9 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
         if (image->shmfd == -1 && errno == EEXIST)
         {
             // - File was not created:  a file exists at path SM_fname;
-            unlink(SM_fname);  // - unlink that file from its directory;
+            unlink(SM_fname_tmp);  // - unlink that file from its directory;
             errno = 0;         // - ignore any error from unlink;
-            image->shmfd = open(SM_fname  // - and try again ...
+            image->shmfd = open(SM_fname_tmp  // - and try again ...
                                 , O_RDWR | O_CREAT | O_EXCL | O_TRUNC
                                 , (mode_t)FILEMODE_ISIO
                                );
@@ -1543,8 +1572,7 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
         if (map == MAP_FAILED)
         {
             close(image->shmfd);
-            ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP,
-                "Error mmapping the file");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
             return IMAGESTREAMIO_MMAP;
         }
 
@@ -1684,13 +1712,66 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
 
     image->used = 1;
     image->createcnt++;
-
     // Do this last so shmim cannot be used until it is ready
     strncpy(image->md->version, IMAGESTRUCT_VERSION, 32);
+    if (shared == 1) {
+        // - Atomically move the temp file to the final path
+        // WARNING: if a stream with this name already exists, it is replaced
+        // without being opened or released:
+        //  - its readers keep the old (unlinked) mapping and stop seeing updates
+        //    until they reopen (see ImageStreamIO_check_image_inode);
+        //  - for a GPU SHM, its device buffer stays allocated in the old
+        //    creator process until that process closes it or exits;
+        //  - a later ImageStreamIO_destroyIm by the old owner remove()s the
+        //    path by name, i.e. deletes THIS new stream's file.
+        if (rename(SM_fname_tmp, SM_fname) != 0)
+        {
+            close(image->shmfd);
+            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEWRITE,
+                                     "Error renaming temp file to final path");
+            return IMAGESTREAMIO_FILEWRITE;
+        }
+    }
 
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_createIm_gpu(...)
 
+errno_t _destroyIm_unshared_nochecks(IMAGE* image) {
+    free(image->array.raw);
+    free(image->kw);
+    free(image->md);
+
+    image->used = 0;
+    image->semptr = NULL;
+    image->md = NULL;
+    image->kw = NULL;
+    image->array.raw = NULL;
+    image->shmfd = 0;
+    image->memsize = 0;
+
+    return IMAGESTREAMIO_SUCCESS;
+}
+errno_t _destroyIm_shared_nochecks(IMAGE* image) {
+    if (image->semptr)
+        for (int semindex=0; semindex<image->md->sem; ++semindex)
+            sem_destroy(image->semptr[semindex]);
+    if (image->semlog)
+        sem_destroy(image->semlog);
+
+    char fname[512];
+    errno_t ierrno;
+    if((ierrno = ImageStreamIO_filename(fname, sizeof(fname), image->md->name))
+            != IMAGESTREAMIO_SUCCESS)
+        return ierrno;
+
+    if((ierrno = ImageStreamIO_closeIm(image)) != IMAGESTREAMIO_SUCCESS)
+        return ierrno;
+
+    if (remove(fname) != 0)
+        return IMAGESTREAMIO_FAILURE;
+
+    return IMAGESTREAMIO_SUCCESS;
+}
 
 /**
  * @brief Unmap and destroy shmim created by ImageStreamIO_createIm_gpu
@@ -1698,59 +1779,27 @@ __attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
  * \returns IMAGESTREAMIO_SUCCESS
  *
  */
-__attribute__((cold)) errno_t ImageStreamIO_destroyIm(
+errno_t ImageStreamIO_destroyIm(
     IMAGE *image)
 {
-    if(image->used == 1)
-    {
-        if (image->semptr)
-        {
-            for (int semindex=0; semindex<image->md->sem; ++semindex)
-            {
-                sem_destroy(image->semptr[semindex]);
-            }
-            free(image->semptr);
-            image->semptr = NULL;
-        }
-        if (image->semlog)
-        {
-            sem_destroy(image->semlog);
-            image->semlog = NULL;
-        }
+    if(image == NULL)
+        return IMAGESTREAMIO_INVALIDARG;
 
-        if (image->md->shared != 1)
-        {
-            if (image->kw != NULL)
-            {
-                free(image->kw);
-            }
-        }
-        image->kw = NULL;
+    if(image->used == 0)
+        return IMAGESTREAMIO_SUCCESS;
 
+    if(image->md == NULL)
+        return IMAGESTREAMIO_INVALIDARG;
 
-        if (image->memsize > 0)
-        {
-            char fname[512];
-            close(image->shmfd);
-            // Get this before unmapping.
-            ImageStreamIO_filename(fname, sizeof(fname), image->md->name);
-            munmap(image->md, image->memsize);
-            image->md = NULL;
-            image->kw = NULL;
-            // Remove the file
-            remove(fname);
-        }
-        else
-        {
-            free(image->array.UI8);
-        }
-        image->array.UI8 = NULL;
-
-        image->used = 0;
-    }
-
-    return IMAGESTREAMIO_SUCCESS;
+    if (image->md->shared == 0)
+        return _destroyIm_unshared_nochecks(image);
+    else
+        return _destroyIm_shared_nochecks(image);
 }
+
+
+
+
 
 
 /**
@@ -1760,12 +1809,13 @@ __attribute__((cold)) errno_t ImageStreamIO_destroyIm(
  * \returns not IMAGESTREAMIO_SUCCESS on failure
  *
  */
-__attribute__((cold)) errno_t ImageStreamIO_openIm(
+errno_t ImageStreamIO_openIm(
     IMAGE *image,
     const char *name)
 {
     return ImageStreamIO_read_sharedmem_image_toIMAGE(name, image);
 }
+
 
 
 /**
@@ -1788,8 +1838,17 @@ void *ImageStreamIO_get_image_d_ptr(
     {
 #       ifdef HAVE_CUDA
         checkCudaErrors(cudaSetDevice(image->md->location));
-        checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr, image->md->cudaMemHandle,
-                                             cudaIpcMemLazyEnablePeerAccess));
+        // Check process-local registry first: cudaIpcOpenMemHandle may only be
+        // called once per handle per process; a second call returns cudaErrorInvalidDeviceContext.
+        if ((d_ptr = _isio_ipc_lookup(&image->md->cudaMemHandle)) != NULL) {
+            // Already open in this process: increment refcount, reuse pointer.
+            _isio_ipc_retain(&image->md->cudaMemHandle);
+        } else {
+            checkCudaErrors(cudaIpcOpenMemHandle(&d_ptr, image->md->cudaMemHandle,
+                                                 cudaIpcMemLazyEnablePeerAccess));
+            if (d_ptr != NULL)
+                _isio_ipc_insert(&image->md->cudaMemHandle, d_ptr, 0);
+        }
 #       else
         ImageStreamIO_printERROR(IMAGESTREAMIO_NOTIMPL,
                                  "Error calling ImageStreamIO_get_image_d_ptr(), CACAO needs to be "
@@ -1815,7 +1874,7 @@ void *ImageStreamIO_get_image_d_ptr(
  *
  */
 
-__attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
+errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     const char *name,
     IMAGE *image)
 {
@@ -1829,10 +1888,7 @@ __attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
     {
         image->used = 0;
         char wmsg[STRINGMAXLEN_IMAGE_NAME+50];
-        snprintf(wmsg,
-            sizeof(wmsg),
-            "Cannot build file name from \"%s\"\n",
-            name);
+        snprintf(wmsg, sizeof(wmsg), "Cannot build file name from \"%s\"\n", name);
         ImageStreamIO_printWARNING(wmsg);
         return IMAGESTREAMIO_FILEOPEN;
     }
@@ -1857,8 +1913,7 @@ __attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         if (file_stat.st_size <= (off_t) sizeof(IMAGE_METADATA))
         {
             close(SM_fd);
-            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN,
-                "Error in the file (too small)");
+            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file (too small)");
             return IMAGESTREAMIO_FILEOPEN;
         }
     }
@@ -1922,10 +1977,10 @@ __attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         return IMAGESTREAMIO_FAILURE;
     }
 
-    // gain image data array pointer
+    // gain image data array pointer for GPU SHMs. array.raw was NULL'd by image_sizing
     if (image->md->location >= 0)
     {
-        ImageStreamIO_offset_data(image, image->array.raw);
+        image->array.raw = ImageStreamIO_get_image_d_ptr(image);
     }
     if (image->array.raw == NULL)
     {
@@ -1949,16 +2004,46 @@ __attribute__((cold)) errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         image->semptr[semindex] = &image->semfile[semindex].semdata;
     }
 
+    image->used = 1;
     image->shmfd = SM_fd;
+    image->used = 1;
     return IMAGESTREAMIO_SUCCESS;
 } // errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(const char *name, IMAGE *image)
 
 
-errno_t ImageStreamIO_closeIm(
-    IMAGE *image)
+
+
+
+
+
+
+errno_t ImageStreamIO_closeIm(IMAGE *image)
 {
+    if(image == NULL)
+        return IMAGESTREAMIO_INVALIDARG;
+
+    if(image->used == 0)
+        return IMAGESTREAMIO_SUCCESS;
+
+    if(image->md == NULL)
+        return IMAGESTREAMIO_INVALIDARG;
+
+    if(image->md->shared == 0)
+    {
+        ImageStreamIO_printERROR(IMAGESTREAMIO_INVALIDARG,
+                                 "closeIm called on process-local image (shared=0)");
+        return IMAGESTREAMIO_INVALIDARG;
+    }
+
     free(image->semptr);
     image->semptr = NULL;
+
+#   ifdef HAVE_CUDA
+    // Decrement the refcount; at 0, _isio_ipc_release frees the slot and calls
+    // cudaFree (creator-owned buffer) or cudaIpcCloseMemHandle (imported).
+    if (image->md != NULL && image->md->location >= 0)
+        _isio_ipc_release(&image->md->cudaMemHandle);
+#   endif
 
     // Close file before unmap, in case unmap fails
     close(image->shmfd);
@@ -1975,24 +2060,25 @@ errno_t ImageStreamIO_closeIm(
         return IMAGESTREAMIO_MMAP;
     }
 
+    // Isn't that needed ??
+    image->used = 0;
+    image->semptr = NULL;
     image->md = NULL;
     image->kw = NULL;
-    image->used = 0;
+
+    image->array.raw = NULL;
+
 
     return IMAGESTREAMIO_SUCCESS;
 }
 
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+/* ================================================== */
+/* ================================================== */
 /* @name 2. MANAGE SEMAPHORES
  *
  */
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+/* ================================================== */
+/* ================================================== */
 
 /**
  * ## Purpose

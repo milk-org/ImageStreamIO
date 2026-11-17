@@ -199,7 +199,7 @@ install(FILES ImageStruct.h ImageStreamIOError.h DESTINATION include/${SRCNAME})
 
 # Static archive for standalone LTO builds
 if(USE_STATIC_LTO)
-  add_library(${LIBNAME}_static STATIC ${SRCNAME}.c)
+  add_library(${LIBNAME}_static STATIC ${SRCNAME}.c ${IPC_REGISTRY_SRC})
   set_target_properties(${LIBNAME}_static
       PROPERTIES OUTPUT_NAME ${LIBNAME})
   target_link_libraries(${LIBNAME}_static PUBLIC pthread)

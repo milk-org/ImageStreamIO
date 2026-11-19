@@ -16,11 +16,7 @@
 
 //If CLOCK_ISIO is not defined, define it as CLOCK_TAI if available, fallback to CLOCK_REALTIME
 #ifndef CLOCK_ISIO
-    #ifdef CLOCK_TAI
-        #define CLOCK_ISIO CLOCK_TAI
-    #else
-        #define CLOCK_ISIO CLOCK_REALTIME
-    #endif
+    #define CLOCK_ISIO CLOCK_REALTIME
 #endif
 
 #ifdef __cplusplus

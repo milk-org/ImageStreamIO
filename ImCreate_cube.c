@@ -26,8 +26,6 @@
  */
 
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -35,8 +33,6 @@
 #include <string.h>
 #include "ImageStruct.h"
 #include "ImageStreamIO.h"
-
-
 
 
 int main()
@@ -69,7 +65,16 @@ int main()
 	NBkw = 3;
 
 	// create an image in shared memory
-	ImageStreamIO_createIm_gpu(&imarray, "imtest00", naxis, imsize, atype, -1, shared, 10, NBkw, 2);
+	ImageStreamIO_createIm_gpu(&imarray,
+	    "imtest00",
+	    naxis,
+	    imsize,
+	    atype,
+	    -1,
+	    shared,
+	    10,
+	    NBkw,
+	    2);
 
     strncpy(imarray.kw[0].name, "symcode", KEYWORD_MAX_STRING-1);
     imarray.kw[0].type = 'L';
@@ -79,7 +84,10 @@ int main()
     strncpy(imarray.kw[1].name, "exposure", KEYWORD_MAX_STRING-1);
     imarray.kw[1].type = 'D';
     imarray.kw[1].value.numf = 8000.;
-    strncpy(imarray.kw[1].comment, "in us, exposure value", KEYWORD_MAX_COMMENT-1);
+    strncpy(imarray.kw[1].comment,
+        "in us,
+        exposure value",
+        KEYWORD_MAX_COMMENT-1);
 
     strncpy(imarray.kw[2].name, "source", KEYWORD_MAX_STRING-1);
     imarray.kw[2].type = 'S';
@@ -137,9 +145,9 @@ int main()
 				current_image[ii*imarray.md->size[1]+jj] = cos(0.03*dx)*cos(0.03*dy)*exp(-1.0e-4*(dx*dx+dy*dy));
 
 				//if( (x-xc<squarerad) && (x-xc>-squarerad) && (y-yc<squarerad) && (y-yc>-squarerad))
-				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0;
+				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 1.0f;
 				//else
-				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0;
+				//	imarray.array.F[jj*imarray.md->size[0]+ii] = 0.0f;
 			}
 		imarray.md->cnt1 = index;
 		imarray.md->cnt0++;

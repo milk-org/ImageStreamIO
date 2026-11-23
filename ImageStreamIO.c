@@ -14,7 +14,7 @@
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#endif//_GNU_SOURCE
+#endif//_GNU_SOURCE // IS IT NEEDED ?????
 
 #include <math.h>
 #include <limits.h>
@@ -72,6 +72,12 @@
 #include "ImageStreamIO.h"
 
 static int INITSTATUS_ImageStreamIO = 0;
+
+#ifdef __GNUC__
+#define ISIO_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define ISIO_UNLIKELY(x) (!!(x))
+#endif
 
 void __attribute__((constructor)) libinit_ImageStreamIO()
 {
@@ -210,25 +216,21 @@ errno_t ImageStreamIO_printERROR_(
     {
         char buff[256];
 
-        // Test for which version of strerror_r we're using (XSI or GNU)
-#       if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && \
-            !defined(_GNU_SOURCE))
-        if (strerror_r(errno, buff, sizeof(buff)) == 0)
-        {
-            fprintf(stderr, "C Error: %s\n", buff);
-        }
-        else
-        {
-            fprintf(stderr, "Unknown C Error\n");
-        }
-#       else
-        // GNU strerror_r does not necessarily use buff, and uses errno to report
-        // errors.
         int _errno = errno;
-        errno = 0;
-        char *estr = strerror_r(_errno, buff, sizeof(buff));
+        char *estr = NULL;
 
-        if (errno == 0)
+        // GNU strerror_r returns char* (may not use buff); XSI (e.g. macOS) returns int.
+#       if defined(__GLIBC__) && defined(_GNU_SOURCE)
+        errno = 0;
+        estr = strerror_r(_errno, buff, sizeof(buff));
+        if (errno != 0)
+            estr = NULL;
+#       else
+        if (strerror_r(_errno, buff, sizeof(buff)) == 0)
+            estr = buff;
+#       endif
+
+        if (estr != NULL)
             fprintf(stderr, "%c[%d;%dmC Error: %s%c[%d;m\n", (char)27, 1, 31, estr,
                     27, 0);
         else
@@ -236,7 +238,6 @@ errno_t ImageStreamIO_printERROR_(
                     0);
 
         errno = _errno; // restore it in case it's used later.
-#       endif
     }
     else
         fprintf(stderr, "%c[%d;%dmNo C error (errno = 0)%c[%d;m\n", (char)27, 1, 31,
@@ -270,11 +271,30 @@ errno_t ImageStreamIO_printWARNING(
 }
 
 
+/**
+ * Lock a stream's memory in RAM to prevent swap ejections; warn once per process when it fails
+ * (it needs CAP_IPC_LOCK or an adequate RLIMIT_MEMLOCK)
+ */
+static void ImageStreamIO_mlock(void *addr, size_t len)
+{
+    static int warned = 0;
+
+    if (mlock(addr, len) != 0 && !warned)
+    {
+        char msg[200];
+        warned = 1;
+        snprintf(msg, sizeof(msg),
+                 "mlock failed (%s): streams can be swapped out. Raise RLIMIT_MEMLOCK "
+                 "(ulimit -l, limits.d memlock) or grant CAP_IPC_LOCK",
+                 strerror(errno));
+        ImageStreamIO_printWARNING(msg);
+    }
+}
 
 
-/* ============================================================================================================================================================================================== */
+/* ============================================== */
 /* @name 0. Utilities */
-/* ============================================================================================================================================================================================== */
+/* ============================================== */
 
 errno_t ImageStreamIO_readBufferAt(
     const IMAGE *image,
@@ -778,7 +798,7 @@ uint64_t ImageStreamIO_offset_data(
  *
  * \returns size in bytes of CPU-based shmim data area image->array.raw
  * \returns 0 for GPU-based shmim
- * \returns exits process if calloc of non-shared, process-local memory failed
+ * \returns abort on memory allocation failure
  *
  */
 uint64_t ImageStreamIO_initialize_buffer(
@@ -795,7 +815,16 @@ uint64_t ImageStreamIO_initialize_buffer(
         }
         else
         {
-            image->array.raw = calloc((size_t)image->md->nelement, size_element);
+            // 64-byte aligned memory for SIMD optimizations
+            size_t alloc_bytes = (size_t)image->md->nelement * size_element;
+            if (posix_memalign((void **)&image->array.raw, 64, alloc_bytes) != 0)
+            {
+                image->array.raw = NULL;
+            }
+            else
+            {
+                memset(image->array.raw, 0, alloc_bytes);
+            }
             if (image->array.raw == NULL)
             {
                 ImageStreamIO_printERROR(IMAGESTREAMIO_BADALLOC, "memory allocation failed");
@@ -1328,17 +1357,11 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
 
 
 
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+/* ================================================== */
+/* ================================================== */
 /* @name 1. READ / WRITE STREAM
- *
- */
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+/* ================================================== */
+/* ================================================== */
 
 
 /**
@@ -1348,7 +1371,7 @@ errno_t ImageStreamIO_image_sizing_from_scratch(
  * \returns IMAGESTREAMIO_INVALIDARG if image->md has any invalid values
  *
  */
-errno_t ImageStreamIO_createIm(
+__attribute__((cold)) errno_t ImageStreamIO_createIm(
     IMAGE *image,
     const char *name,
     long naxis,
@@ -1370,10 +1393,10 @@ errno_t ImageStreamIO_createIm(
  *
  * \returns IMAGESTREAMIO_SUCCESS on success
  * \returns not IMAGESTREAMIO_SUCCESS on failure
- * \returns abort on malloc/calloc failure
+ * \returns abort on memory allocation failure
  *
  */
-errno_t ImageStreamIO_createIm_gpu(
+__attribute__((cold)) errno_t ImageStreamIO_createIm_gpu(
     IMAGE *image,
     const char *name,
     long naxis,
@@ -1449,7 +1472,7 @@ errno_t ImageStreamIO_createIm_gpu(
 
         // - Create and open shmim file as a new, empty (truncated) file
         //   - image->shmfd stores the shared memory file descriptor
-        umask(0);
+        //   - its mode is set with fchmod() below: umask() would change it for the whole process
         errno = 0;
         image->shmfd = open(SM_fname_tmp
                             // (O_CREAT|O_EXCL) flags force new file
@@ -1473,6 +1496,14 @@ errno_t ImageStreamIO_createIm_gpu(
             return IMAGESTREAMIO_FILEOPEN;
         }
 
+        // - Give the file FILEMODE_ISIO whatever the process umask
+        if (fchmod(image->shmfd, (mode_t) FILEMODE_ISIO) != 0)
+        {
+            close(image->shmfd);
+            ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error setting the file mode");
+            return IMAGESTREAMIO_FILEOPEN;
+        }
+
         // - Seek to the end of the currently empty shmim file, ...
         if (lseek(image->shmfd, image->memsize - 1, SEEK_SET)
                 != (off_t)(image->memsize-1))
@@ -1493,14 +1524,65 @@ errno_t ImageStreamIO_createIm_gpu(
         }
 
         // - Map the file into memory, address will be pointed to by map
-        map = (uint8_t *)mmap(0, image->memsize, PROT_READ | PROT_WRITE, MAP_SHARED,
-                              image->shmfd, 0);
+        {
+            // Pre-fault memory to reduce real-time latency jitter by resolving page faults during setup.
+            int mmap_flags = MAP_SHARED | MAP_POPULATE;
+
+            /* Opt-in to huge pages for large streams.
+             * Set MILK_SHM_HUGETLB=1 and ensure
+             * /proc/sys/vm/nr_hugepages is nonzero.
+             */
+            const size_t HUGEPAGE_THRESHOLD = 2 * 1024 * 1024;
+            int try_huge = 0;
+            {
+                char *env = getenv("MILK_SHM_HUGETLB");
+                if (env && env[0] == '1'
+                    && image->memsize >= HUGEPAGE_THRESHOLD)
+                {
+                    try_huge = 1;
+                }
+            }
+
+            if (try_huge)
+            {
+                map = (uint8_t *)mmap(
+                    0, image->memsize,
+                    PROT_READ | PROT_WRITE,
+                    mmap_flags | MAP_HUGETLB,
+                    image->shmfd, 0);
+                if (map == MAP_FAILED)
+                {
+                    /* Fallback to normal pages */
+                    map = (uint8_t *)mmap(
+                        0, image->memsize,
+                        PROT_READ | PROT_WRITE,
+                        mmap_flags,
+                        image->shmfd, 0);
+                }
+            }
+            else
+            {
+                map = (uint8_t *)mmap(
+                    0, image->memsize,
+                    PROT_READ | PROT_WRITE,
+                    mmap_flags,
+                    image->shmfd, 0);
+            }
+        }
         if (map == MAP_FAILED)
         {
             close(image->shmfd);
             ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
             return IMAGESTREAMIO_MMAP;
         }
+
+        // Advise the kernel to use Transparent Huge Pages (THP) to reduce TLB misses
+#ifdef MADV_HUGEPAGE
+        madvise(map, image->memsize, MADV_HUGEPAGE);
+#endif
+
+        // Lock the memory in physical RAM to prevent swap ejections
+        ImageStreamIO_mlock(map, image->memsize);
 
         ////////////////////////////////////////////////////////////////
         // Load IMAGE_METADATA struct at address map with all parameters
@@ -1568,7 +1650,7 @@ errno_t ImageStreamIO_createIm_gpu(
 #   endif
 
     // Initialize the image->array.* data memory to zeros
-    // N.B. Also calloc's memory for non-shared, process-local memory
+    // Initialize data memory for non-shared, process-local memory
     ImageStreamIO_initialize_buffer(image);
 
     clock_gettime(CLOCK_ISIO, &image->md->lastaccesstime);
@@ -1689,7 +1771,8 @@ errno_t _destroyIm_shared_nochecks(IMAGE* image) {
  * \returns IMAGESTREAMIO_SUCCESS
  *
  */
-errno_t ImageStreamIO_destroyIm(IMAGE *image)
+errno_t ImageStreamIO_destroyIm(
+    IMAGE *image)
 {
     if(image == NULL)
         return IMAGESTREAMIO_INVALIDARG;
@@ -1826,22 +1909,32 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
             return IMAGESTREAMIO_FILEOPEN;
         }
     }
+    // Pre-fault memory to reduce real-time latency jitter by resolving page faults during setup.
+    int mmap_flags = MAP_SHARED | MAP_POPULATE;
+
     uint8_t *map_root = (uint8_t *)mmap(0, file_stat.st_size, PROT_READ | PROT_WRITE,
-                                        MAP_SHARED, SM_fd, 0);
+                                        mmap_flags, SM_fd, 0);
     if (map_root == MAP_FAILED)
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "Error mmapping the file");
         close(SM_fd);
         return IMAGESTREAMIO_MMAP;
     }
+
+    // Advise the kernel to use Transparent Huge Pages (THP) to reduce TLB misses
+#ifdef MADV_HUGEPAGE
+    madvise(map_root, file_stat.st_size, MADV_HUGEPAGE);
+#endif
+
+    // Lock the memory in physical RAM to prevent swap ejections
+    ImageStreamIO_mlock(map_root, file_stat.st_size);
+
     // mmap() was successful. We'll need to unmap image->md for any failed exit
 
     image->md = (IMAGE_METADATA *)map_root;
 
     ierrno = ImageStreamIO_image_sizing(image, map_root);
-    if (IMAGESTREAMIO_SUCCESS != ierrno
-            || file_stat.st_size < 0
-            || image->memsize != (uint64_t) file_stat.st_size)
+    if (IMAGESTREAMIO_SUCCESS != ierrno || (image->memsize != (uint64_t) file_stat.st_size))
     {
         ImageStreamIO_printERROR(IMAGESTREAMIO_FILEOPEN, "Error in the file");
         munmap(image->md, file_stat.st_size);
@@ -1862,7 +1955,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
                  name, IMAGESTRUCT_VERSION);
         ImageStreamIO_printERROR(IMAGESTREAMIO_VERSION, errmsg);
         munmap(image->md, image->memsize);
-        close(image->shmfd);
+        close(SM_fd);
         return IMAGESTREAMIO_VERSION;
     }
 
@@ -1872,7 +1965,7 @@ errno_t ImageStreamIO_read_sharedmem_image_toIMAGE(
         printf("IMAGE \"%s\" SEEMS BIG... NOT LOADING\n", image->md->name);
         fflush(stdout);
         munmap(image->md, image->memsize);
-        close(image->shmfd);
+        close(SM_fd);
         return IMAGESTREAMIO_FAILURE;
     }
 
@@ -1935,6 +2028,7 @@ errno_t ImageStreamIO_closeIm(IMAGE *image)
     }
 
     free(image->semptr);
+    image->semptr = NULL;
 
 #   ifdef HAVE_CUDA
     // Decrement the refcount; cudaIpcCloseMemHandle and slot removal happen
@@ -1945,10 +2039,16 @@ errno_t ImageStreamIO_closeIm(IMAGE *image)
 
     // Close file before unmap, in case unmap fails
     close(image->shmfd);
-    
+    image->shmfd = -1;
+
     if (munmap(image->md, image->memsize) != 0)
     {
-        ImageStreamIO_printERROR(IMAGESTREAMIO_MMAP, "error unmapping memory");
+        ImageStreamIO_printERROR(
+            IMAGESTREAMIO_MMAP,
+            "error unmapping memory");
+        image->md = NULL;
+        image->kw = NULL;
+        image->used = 0;
         return IMAGESTREAMIO_MMAP;
     }
 
@@ -1964,17 +2064,13 @@ errno_t ImageStreamIO_closeIm(IMAGE *image)
     return IMAGESTREAMIO_SUCCESS;
 }
 
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+/* ================================================== */
+/* ================================================== */
 /* @name 2. MANAGE SEMAPHORES
  *
  */
-/* ===============================================================================================
- */
-/* ===============================================================================================
- */
+/* ================================================== */
+/* ================================================== */
 
 /**
  * ## Purpose
@@ -1997,34 +2093,39 @@ long ImageStreamIO_sempost(
     IMAGE *image,
     long index)
 {
+    /* Cache PID — getpid() is a syscall */
+    static __thread pid_t writeProcessPID;
+    static __thread int pid_cached;
+    if (ISIO_UNLIKELY(!pid_cached))
+    {
+        writeProcessPID = getpid();
+        pid_cached = 1;
+    }
+
     if (index < 0)
     {
-        // Inhibit per-semaphore posts to semlog
-        sem_t* save_semlog = image->semlog;
-        image->semlog = NULL;
-
-        // Post to all semaphores
         for (long semindex = 0; semindex < image->md->sem; semindex++)
         {
-            ImageStreamIO_sempost(image, semindex);
+            int semval;
+            sem_getvalue(image->semptr[semindex], &semval);
+            if (semval < SEMAPHORE_MAXVAL)
+            {
+                sem_post(image->semptr[semindex]);
+                image->semWritePID[semindex] = writeProcessPID;
+            }
         }
-
-        // Restore semlog pointer
-        image->semlog = save_semlog;
     }
     else
     {
-        pid_t writeProcessPID;
-
-        writeProcessPID = getpid();
-
-        if (index > image->md->sem - 1)
-            printf("ERROR: image %s semaphore # %ld does not exist\n"
-                   , image->md->name, index);
+        if (ISIO_UNLIKELY(index > image->md->sem - 1))
+        {
+            ImageStreamIO_printERROR(
+                IMAGESTREAMIO_INVALIDARG,
+                "semaphore index out of range");
+        }
         else
         {
             int semval;
-
             sem_getvalue(image->semptr[index], &semval);
             if (semval < SEMAPHORE_MAXVAL)
             {
@@ -2037,7 +2138,6 @@ long ImageStreamIO_sempost(
     if (image->semlog != NULL)
     {
         int semval;
-
         sem_getvalue(image->semlog, &semval);
         if (semval < SEMAPHORE_MAXVAL)
         {
@@ -2067,13 +2167,39 @@ long ImageStreamIO_sempost_excl(
     IMAGE *image,
     long index)
 {
+    /* Cache PID — getpid() is a syscall */
+    static __thread pid_t writeProcessPID;
+    static __thread int pid_cached;
+    if (ISIO_UNLIKELY(!pid_cached))
+    {
+        writeProcessPID = getpid();
+        pid_cached = 1;
+    }
+
     for (long semindex = 0; semindex < image->md->sem; semindex++)
     {
         if (semindex != index)
         {
-            ImageStreamIO_sempost(image, semindex);
+            int semval;
+            sem_getvalue(image->semptr[semindex], &semval);
+            if (semval < SEMAPHORE_MAXVAL)
+            {
+                sem_post(image->semptr[semindex]);
+                image->semWritePID[semindex] = writeProcessPID;
+            }
         }
     }
+
+    if (image->semlog != NULL)
+    {
+        int semval;
+        sem_getvalue(image->semlog, &semval);
+        if (semval < SEMAPHORE_MAXVAL)
+        {
+            sem_post(image->semlog);
+        }
+    }
+    
     return IMAGESTREAMIO_SUCCESS;
 }
 
@@ -2193,7 +2319,7 @@ int ImageStreamIO_semwait(
     IMAGE *image,
     int index)
 {
-    if (index < 0 || index > image->md->sem - 1)
+    if (ISIO_UNLIKELY(index < 0 || index > image->md->sem - 1))
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);
@@ -2206,7 +2332,7 @@ int ImageStreamIO_semtrywait(
     IMAGE *image,
     int index)
 {
-    if (index < 0 || index > image->md->sem - 1)
+    if (ISIO_UNLIKELY(index < 0 || index > image->md->sem - 1))
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);
@@ -2220,7 +2346,7 @@ int ImageStreamIO_semtimedwait(
     int index,
     const struct timespec *semwts)
 {
-    if (index < 0 || index > image->md->sem - 1)
+    if (ISIO_UNLIKELY(index < 0 || index > image->md->sem - 1))
     {
         printf("ERROR: image %s semaphore # %d does not exist\n", image->md->name,
                index);
@@ -2281,7 +2407,7 @@ long ImageStreamIO_semvalue(
     IMAGE *image,
     long index)
 {
-    if(index < 0 || index > image->md->sem - 1)
+    if(ISIO_UNLIKELY(index < 0 || index > image->md->sem - 1))
     {
         printf("ERROR: image %s semaphore # %ld does not exist\n",
                image->md->name, index);

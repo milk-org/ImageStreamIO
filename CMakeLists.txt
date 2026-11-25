@@ -32,6 +32,7 @@ else()
 endif()
 
 add_library(${LIBNAME} SHARED ${SRCNAME}.c ${IPC_REGISTRY_SRC})
+target_link_libraries(${LIBNAME} PUBLIC pthread)
 
 # set -C99 flag for 'for' loop initial declartaions
 set_property(TARGET ${LIBNAME} PROPERTY C_STANDARD 99)
